@@ -255,3 +255,9 @@ SELECT cron.schedule('nuq_group_crawl_clean', '*/5 * * * *', $$
   )
   SELECT 1;
 $$);
+
+-- pg_cron does not auto-prune cron.job_run_details; with sub-minute crons it
+-- grows unbounded and seq-scans get unusable. Keep the last 24h.
+SELECT cron.schedule('cron_job_run_details_prune', '0 * * * *', $$
+  DELETE FROM cron.job_run_details WHERE start_time < now() - interval '24 hours';
+$$);
