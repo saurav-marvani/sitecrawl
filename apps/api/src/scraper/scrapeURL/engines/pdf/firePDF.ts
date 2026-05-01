@@ -3,6 +3,7 @@ import { config } from "../../../../config";
 import { robustFetch } from "../../lib/fetch";
 import { z } from "zod";
 import type { PDFProcessorResult } from "./types";
+import type { PDFMode } from "../../../../controllers/v2/types";
 import { safeMarkdownToHtml } from "./markdownToHtml";
 import {
   createPdfCacheKey,
@@ -45,6 +46,7 @@ export async function scrapePDFWithFirePDF(
   base64Content: string,
   maxPages?: number,
   pagesProcessed?: number,
+  mode?: PDFMode,
 ): Promise<PDFProcessorResult> {
   const logger = meta.logger;
 
@@ -112,6 +114,7 @@ export async function scrapePDFWithFirePDF(
       pdf: base64Content,
       scrape_id: meta.id,
       ...(maxPages !== undefined && { max_pages: maxPages }),
+      ...(mode !== undefined && { mode }),
       // Enrichment for the fire-pdf jobs DB / dashboard. fire-pdf treats
       // these as optional — older fire-pdf builds will ignore unknown fields.
       team_id: meta.internalOptions.teamId,
