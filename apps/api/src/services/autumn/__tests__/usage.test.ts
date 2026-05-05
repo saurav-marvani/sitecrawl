@@ -189,11 +189,11 @@ describe("getTeamBalance", () => {
     mockEntitiesGet.mockResolvedValue({
       balances: {
         CREDITS: {
-          remaining: 50,
-          granted: 500,
+          remaining: 550,
+          granted: 1000,
           usage: 450,
           unlimited: false,
-          breakdown: [{ planId: "free", includedGrant: 500 }],
+          breakdown: [{ planId: "free", includedGrant: 1000 }],
         },
       },
       subscriptions: [

@@ -1239,7 +1239,7 @@ export type AuthCreditUsageChunk = {
   sub_current_period_end: string | null;
   sub_user_id: string | null;
   price_id: string | null;
-  price_credits: number; // credit limit with assoicated price, or free_credits (500) if free plan
+  price_credits: number; // credit limit with assoicated price, or free_credits (1000) if free plan
   price_should_be_graceful: boolean;
   price_associated_auto_recharge_price_id: string | null;
   credits_used: number;
