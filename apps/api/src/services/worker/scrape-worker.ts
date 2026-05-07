@@ -897,6 +897,11 @@ async function addKickoffSitemapJob(
     return;
   }
 
+  const maxAge =
+    sourceJob.data.mode === "kickoff_sitemap"
+      ? sourceJob.data.maxAge
+      : sourceJob.data.scrapeOptions?.maxAge;
+
   const jobId = uuidv7();
   await _addScrapeJobToBullMQ(
     {
@@ -905,6 +910,7 @@ async function addKickoffSitemapJob(
       zeroDataRetention:
         sourceJob.data.zeroDataRetention || (sc.zeroDataRetention ?? false),
       sitemapUrl: sitemapUrl,
+      maxAge,
       origin: sourceJob.data.origin,
       integration: sourceJob.data.integration,
       crawl_id: sourceJob.data.crawl_id,
@@ -1124,7 +1130,7 @@ async function processKickoffSitemapJob(job: NuQJob<ScrapeJobKickoffSitemap>) {
 
     const results = await scrapeSitemap({
       url: job.data.sitemapUrl,
-      maxAge: 48 * 60 * 60 * 1000,
+      maxAge: job.data.maxAge ?? 48 * 60 * 60 * 1000,
       zeroDataRetention: job.data.zeroDataRetention ?? false,
       location: job.data.location,
       crawlId: job.data.crawl_id,

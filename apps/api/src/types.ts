@@ -89,6 +89,7 @@ type ScrapeJobKickoffSitemapUnique = {
   crawl_id: string;
   sitemapUrl: string;
   location?: ScrapeOptions["location"];
+  maxAge?: number;
   origin: string;
   integration?: string | null;
   webhook?: z.infer<typeof webhookSchema>;

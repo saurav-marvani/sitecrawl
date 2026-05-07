@@ -95,6 +95,24 @@ describe("Crawl tests", () => {
   );
 
   concurrentIf(ALLOW_TEST_SUITE_WEBSITE)(
+    "sitemap: only honors scrapeOptions.maxAge: 0 (no stale cache)",
+    async () => {
+      const results = await crawl(
+        {
+          url: base,
+          limit: 10,
+          sitemap: "only",
+          scrapeOptions: { formats: ["markdown"], maxAge: 0 },
+        },
+        identity,
+      );
+
+      expect(results.completed).toBeGreaterThan(0);
+    },
+    10 * scrapeTimeout,
+  );
+
+  concurrentIf(ALLOW_TEST_SUITE_WEBSITE)(
     "sitemap-only results are subset of map-only + start URL",
     async () => {
       const mapResponse = await map(
