@@ -439,7 +439,8 @@ export type FormatObject =
   | QueryFormatWithOptions
   | { type: "branding" }
   | { type: "audio" }
-  | { type: "video" };
+  | { type: "video" }
+  | { type: "pii" };
 
 const pdfModeSchema = z.enum(["fast", "auto", "ocr"]);
 
@@ -552,6 +553,7 @@ const baseScrapeOptions = z.strictObject({
           queryFormatWithOptions,
           z.strictObject({ type: z.literal("audio") }),
           z.strictObject({ type: z.literal("video") }),
+          z.strictObject({ type: z.literal("pii") }),
         ])
         .array()
         .optional()
@@ -596,6 +598,7 @@ const baseScrapeOptions = z.strictObject({
   minAge: z.int().gte(0).optional(),
   storeInCache: z.boolean().prefault(true),
   lockdown: z.boolean().prefault(false),
+  redactPII: z.boolean().prefault(false),
 
   profile: z
     .object({
@@ -626,6 +629,17 @@ const waitForRefine = (obj?: ScrapeOptionsBase): boolean => {
 const waitForRefineOpts = {
   message: "waitFor must not exceed half of timeout",
   path: ["waitFor"],
+};
+
+const redactPIIRefine = (
+  obj?: Pick<ScrapeOptionsBase, "redactPII" | "formats">,
+): boolean => {
+  if (!obj || !obj.redactPII) return true;
+  return !!obj.formats?.some(f => f.type === "pii");
+};
+const redactPIIRefineOpts = {
+  message: "redactPII requires `pii` to be included in formats",
+  path: ["redactPII"],
 };
 
 // Base transform function that handles both nullable and non-nullable cases
@@ -701,6 +715,7 @@ export const scrapeOptions = strictWithMessage(baseScrapeOptions)
     },
   )
   .refine(waitForRefine, waitForRefineOpts)
+  .refine(redactPIIRefine, redactPIIRefineOpts)
   .transform(extractTransformRequired);
 
 export type BaseScrapeOptions = z.infer<typeof baseScrapeOptions>;
@@ -784,6 +799,10 @@ const extractOptions = z
     x => (x.scrapeOptions ? waitForRefine(x.scrapeOptions) : true),
     waitForRefineOpts,
   )
+  .refine(
+    x => (x.scrapeOptions ? redactPIIRefine(x.scrapeOptions) : true),
+    redactPIIRefineOpts,
+  )
   .transform(x => ({
     ...x,
     scrapeOptions: extractTransform(x.scrapeOptions),
@@ -854,6 +873,7 @@ const scrapeRequestSchemaBase = baseScrapeOptions.extend({
 
 export const scrapeRequestSchema = strictWithMessage(scrapeRequestSchemaBase)
   .refine(waitForRefine, waitForRefineOpts)
+  .refine(redactPIIRefine, redactPIIRefineOpts)
   .transform(extractTransformRequired);
 
 export type ScrapeRequest = z.infer<typeof scrapeRequestSchema>;
@@ -911,6 +931,7 @@ const parseRequestSchemaBase = baseScrapeOptions.extend({
 
 export const parseRequestSchema = strictWithMessage(parseRequestSchemaBase)
   .refine(waitForRefine, waitForRefineOpts)
+  .refine(redactPIIRefine, redactPIIRefineOpts)
   .transform(x => {
     const { file, ...scrapeLike } = x;
     return {
@@ -944,6 +965,7 @@ export const batchScrapeRequestSchema = strictWithMessage(
   batchScrapeRequestSchemaBase,
 )
   .refine(waitForRefine, waitForRefineOpts)
+  .refine(redactPIIRefine, redactPIIRefineOpts)
   .transform(extractTransformRequired);
 
 const batchScrapeRequestSchemaNoURLValidationBase = baseScrapeOptions.extend({
@@ -968,6 +990,7 @@ export const batchScrapeRequestSchemaNoURLValidation = strictWithMessage(
   batchScrapeRequestSchemaNoURLValidationBase,
 )
   .refine(waitForRefine, waitForRefineOpts)
+  .refine(redactPIIRefine, redactPIIRefineOpts)
   .transform(extractTransformRequired);
 
 export type BatchScrapeRequest = z.infer<typeof batchScrapeRequestSchema>;
@@ -1032,6 +1055,7 @@ const crawlRequestSchemaBase = crawlerOptions.extend({
 
 export const crawlRequestSchema = strictWithMessage(crawlRequestSchemaBase)
   .refine(x => waitForRefine(x.scrapeOptions), waitForRefineOpts)
+  .refine(x => redactPIIRefine(x.scrapeOptions), redactPIIRefineOpts)
   .transform(x => {
     const scrapeOptionsValue = x.scrapeOptions ?? baseScrapeOptions.parse({});
     return {
@@ -1088,6 +1112,28 @@ export const mapRequestSchema = strictWithMessage(mapRequestSchemaBase);
 export type MapRequest = z.infer<typeof mapRequestSchema>;
 export type MapRequestInput = z.input<typeof mapRequestSchema>;
 
+export type PIISpan = {
+  start: number;
+  end: number;
+  kind: string;
+  score: number;
+  source: string;
+};
+
+export type PIIStatus =
+  | "ok"
+  | "skipped"
+  | "error"
+  | "service_at_capacity"
+  | "timeout";
+
+export type PIIBlock = {
+  status: PIIStatus;
+  redactedMarkdown: string | null;
+  spans: PIISpan[];
+  truncatedAt: number | null;
+};
+
 export type Document = {
   title?: string;
   description?: string;
@@ -1107,6 +1153,7 @@ export type Document = {
   highlights?: string;
   branding?: BrandingProfile;
   warning?: string;
+  pii?: PIIBlock;
   attributes?: {
     selector: string;
     attribute: string;
