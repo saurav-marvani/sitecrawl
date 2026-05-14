@@ -1,9 +1,4 @@
-import {
-  describeIf,
-  HAS_PROXY,
-  HAS_SEARCH,
-  TEST_PRODUCTION,
-} from "../lib";
+import { describeIf, TEST_PRODUCTION } from "../lib";
 import {
   searchRawFull,
   searchFeedback,
@@ -30,7 +25,10 @@ beforeAll(async () => {
   });
 }, 20000);
 
-describeIf(TEST_PRODUCTION || HAS_SEARCH || HAS_PROXY)(
+// Skipped in self-hosted mode: depends on Supabase for the `searches` row
+// lookup, Autumn for credit refunds, and the per-team daily refund cap —
+// none of which exist in self-hosted setups.
+describeIf(TEST_PRODUCTION)(
   "Search feedback tests",
   () => {
     it.concurrent(
