@@ -1168,6 +1168,9 @@ export type PIISpan = {
 export type PIIStatus =
   | "ok"
   | "skipped"
+  // Input markdown exceeded the redaction-side byte ceiling (250KB). The
+  // client refused to attempt redaction rather than ship a partial result.
+  | "skipped_too_large"
   | "error"
   | "service_at_capacity"
   | "timeout";

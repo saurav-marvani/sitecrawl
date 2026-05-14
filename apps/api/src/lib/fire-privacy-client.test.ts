@@ -455,6 +455,166 @@ describe("redactText", () => {
     expect(out.redactedMarkdown).toBe("Alice Smith - email *****************");
   });
 
+  // ---- chunked path (input over single-chunk threshold) ------------------
+
+  it("chunks long input and merges spans with corrected offsets", async () => {
+    // Build a >28K-char input by repeating a paragraph with a marker name
+    // every block. Each chunk handler returns spans local to its own text;
+    // the client should lift them into source coordinates.
+    const para =
+      "Lorem ipsum dolor sit amet. Please contact Alice Carter today.\n\n";
+    const text = para.repeat(700); // ~44K chars → multiple chunks
+    expect(text.length).toBeGreaterThan(28_000);
+
+    // Per-chunk handler: scan the received text for "Alice Carter" and
+    // return spans local to that chunk. The handler echos a redacted_text
+    // built from the chunk's input with names replaced.
+    handler = async (req, res) => {
+      const buf: Buffer[] = [];
+      for await (const c of req) buf.push(c as Buffer);
+      const { text: chunkText } = JSON.parse(Buffer.concat(buf).toString());
+      const localSpans: Array<{
+        start: number;
+        end: number;
+        kind: string;
+        score: number;
+        source: string;
+      }> = [];
+      let idx = 0;
+      const needle = "Alice Carter";
+      while ((idx = chunkText.indexOf(needle, idx)) !== -1) {
+        localSpans.push({
+          start: idx,
+          end: idx + needle.length,
+          kind: "PERSON",
+          score: 0.95,
+          source: "test",
+        });
+        idx += needle.length;
+      }
+      const redacted = chunkText.replaceAll(needle, "<PERSON>");
+      res.statusCode = 200;
+      res.setHeader("content-type", "application/json");
+      res.end(
+        JSON.stringify({
+          redacted_text: redacted,
+          spans: localSpans,
+          model_status: "ok",
+        }),
+      );
+    };
+
+    const out = await redactText({ text });
+    expect(out.status).toBe("ok");
+    // Every occurrence of "Alice Carter" in the source text should appear
+    // as a span with source-coordinate offsets that match.
+    const expectedHits: number[] = [];
+    let i = 0;
+    while ((i = text.indexOf("Alice Carter", i)) !== -1) {
+      expectedHits.push(i);
+      i += "Alice Carter".length;
+    }
+    expect(out.spans.length).toBe(expectedHits.length);
+    for (let k = 0; k < expectedHits.length; k++) {
+      expect(out.spans[k].start).toBe(expectedHits[k]);
+      expect(out.spans[k].end).toBe(expectedHits[k] + "Alice Carter".length);
+      // Source-coordinate offsets must point at "Alice Carter" in the source.
+      expect(text.slice(out.spans[k].start, out.spans[k].end)).toBe(
+        "Alice Carter",
+      );
+    }
+  });
+
+  it("returns skipped_too_large above the byte ceiling without an HTTP call", async () => {
+    let called = false;
+    handler = (_req, res) => {
+      called = true;
+      res.statusCode = 500;
+      res.end();
+    };
+
+    // 260KB → above the 250KB ceiling.
+    const text = "x".repeat(260_000);
+    const out = await redactText({ text });
+
+    expect(called).toBe(false);
+    expect(out.status).toBe("skipped_too_large");
+    expect(out.redactedMarkdown).toBeNull();
+    expect(out.spans).toEqual([]);
+    expect(out.truncatedAt).toBeNull();
+  });
+
+  it("fails the whole response when any chunk errors (all-or-nothing)", async () => {
+    // Force a long input that will produce multiple chunks. First chunk
+    // returns 200; second chunk returns 503. The merged result must be
+    // service_at_capacity with no partial spans surfaced.
+    const text = "Filler. ".repeat(8000); // ~64K chars
+    expect(text.length).toBeGreaterThan(28_000);
+
+    let chunkIndex = 0;
+    handler = (_req, res) => {
+      const current = chunkIndex++;
+      if (current === 0) {
+        res.statusCode = 200;
+        res.setHeader("content-type", "application/json");
+        res.end(
+          JSON.stringify({
+            redacted_text: "x",
+            spans: [
+              { start: 0, end: 5, kind: "PERSON", score: 0.9, source: "t" },
+            ],
+            model_status: "ok",
+          }),
+        );
+      } else {
+        res.statusCode = 503;
+        res.end();
+      }
+    };
+
+    const out = await redactText({ text });
+    expect(out.status).toBe("service_at_capacity");
+    expect(out.redactedMarkdown).toBeNull();
+    expect(out.spans).toEqual([]);
+  });
+
+  it("fans out chunked calls (concurrency > 1)", async () => {
+    // 3 chunks. Hold each handler open until all 3 are in flight to
+    // prove the client doesn't serialize them.
+    const text = "Sentence. ".repeat(7000); // ~70K chars → ≥3 chunks
+    let inFlight = 0;
+    let maxInFlight = 0;
+    const gate: Array<() => void> = [];
+    const allInFlight = new Promise<void>(resolve => {
+      gate.push(resolve);
+    });
+
+    handler = async (_req, res) => {
+      inFlight++;
+      maxInFlight = Math.max(maxInFlight, inFlight);
+      if (inFlight >= 2) gate[0]?.();
+      // Wait until at least 2 requests have arrived (proves parallelism)
+      await Promise.race([
+        allInFlight,
+        new Promise<void>(r => setTimeout(r, 200)),
+      ]);
+      inFlight--;
+      res.statusCode = 200;
+      res.setHeader("content-type", "application/json");
+      res.end(
+        JSON.stringify({
+          redacted_text: "x",
+          spans: [],
+          model_status: "ok",
+        }),
+      );
+    };
+
+    const out = await redactText({ text });
+    expect(out.status).toBe("ok");
+    expect(maxInFlight).toBeGreaterThanOrEqual(2);
+  });
+
   it("re-renders with remove style dropping span characters", async () => {
     handler = withBody({
       redacted_text: "",
