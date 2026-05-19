@@ -25,7 +25,7 @@ function derivePricingTier(
   if (!acuc || !acuc.price_id) return "free";
 
   const credits = acuc.price_credits ?? 0;
-  if (credits <= 500) return "free";
+  if (credits <= 1_000) return "free";
   if (credits <= 8_000) return "hobby";
   if (credits <= 160_000) return "standard";
   if (credits <= 650_000) return "growth";
