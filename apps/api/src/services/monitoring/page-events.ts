@@ -1,14 +1,16 @@
-export interface PageJudgmentForEvents {
+import { WebhookEvent } from "../webhook/types";
+
+interface PageJudgmentForEvents {
   meaningful: boolean;
 }
 
 export function derivePageWebhookEvents(
   status: string,
   judgment: PageJudgmentForEvents | null,
-): string[] {
-  const events: string[] = ["monitor.page"];
+): WebhookEvent[] {
+  const events: WebhookEvent[] = [WebhookEvent.MONITOR_PAGE];
   if (status === "changed" && judgment?.meaningful === true) {
-    events.push("monitor.page.meaningful");
+    events.push(WebhookEvent.MONITOR_PAGE_MEANINGFUL);
   }
   return events;
 }

@@ -79,6 +79,39 @@ describeIfGemini("judgeChange — JSON-mode diffs (live Gemini)", () => {
   );
 
   it(
+    "named-field rule: sub-1% price change is meaningful when goal names 'price'",
+    async () => {
+      const result = await judgeChange({
+        logger: buildLogger(),
+        goal: "Track the Pro tier price. Tell me about ANY price change.",
+        jsonDiff: {
+          pro_price: { previous: "$19.00", current: "$19.01" },
+        },
+      });
+      // Without named-field rule, 0.05% would be classified as noise.
+      // With the rule, "price" is named so any change is meaningful.
+      expect(result.meaningful).toBe(true);
+    },
+    TEST_TIMEOUT,
+  );
+
+  it(
+    "named-field rule does NOT apply to unmentioned fields",
+    async () => {
+      const result = await judgeChange({
+        logger: buildLogger(),
+        goal: "Track the Pro tier price.",
+        // view_count is not named in the goal; should fall under the 1% rule
+        jsonDiff: {
+          view_count: { previous: "12402", current: "12418" },
+        },
+      });
+      expect(result.meaningful).toBe(false);
+    },
+    TEST_TIMEOUT,
+  );
+
+  it(
     "consults the goal — on-goal diff is meaningful with high confidence",
     async () => {
       const diff = {

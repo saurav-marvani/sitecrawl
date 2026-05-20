@@ -72,8 +72,8 @@ async function sendMonitorPageWebhook(params: {
       },
       error: params.error ?? undefined,
     };
-    for (const eventName of eventNames) {
-      await sender?.send(eventName as any, payload);
+    if (sender) {
+      await Promise.all(eventNames.map(name => sender.send(name, payload)));
     }
   } catch (error) {
     logger.warn("Failed to send monitor page webhook", {
