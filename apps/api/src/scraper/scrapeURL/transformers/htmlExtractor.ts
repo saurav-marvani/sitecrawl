@@ -11,7 +11,10 @@ export async function performHtmlExtractor(
     config.FIRECRAWL_USE_HTML_EXTRACTOR === true ||
     meta.internalOptions.useHtmlExtractor === true ||
     meta.options.__experimental_htmlExtractor === true;
-  const shadow = !live && config.FIRECRAWL_HTML_EXTRACTOR_SHADOW === true;
+  const shadow =
+    !live &&
+    config.FIRECRAWL_HTML_EXTRACTOR_SHADOW_PERCENT > 0 &&
+    Math.random() * 100 < config.FIRECRAWL_HTML_EXTRACTOR_SHADOW_PERCENT;
 
   if (!live && !shadow) return document;
   if (document.rawHtml === undefined) return document;
