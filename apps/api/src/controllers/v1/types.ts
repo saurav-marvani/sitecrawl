@@ -1020,12 +1020,6 @@ export type Document = {
       };
     };
     json?: any;
-    judgment?: {
-      meaningful: boolean;
-      confidence: "high" | "medium" | "low";
-      reason: string;
-      fields: string[];
-    };
   };
   metadata: {
     title?: string;

@@ -1,21 +1,11 @@
 import { judgeChange } from "./judgeChange";
-import { logger as winstonLogger } from "../../../lib/logger";
-import { CostTracking } from "../../../lib/cost-tracking";
+import { logger as winstonLogger } from "../../lib/logger";
 
-// Gated: requires GOOGLE_GENERATIVE_AI_API_KEY for the actual Gemini call.
 const HAS_GEMINI = !!process.env.GOOGLE_GENERATIVE_AI_API_KEY;
 const describeIfGemini = HAS_GEMINI ? describe : describe.skip;
 
-function buildMeta() {
-  return {
-    id: "test-scrape",
-    url: "https://example.com",
-    rewrittenUrl: "https://example.com",
-    options: { formats: [] },
-    internalOptions: { teamId: "test-team" },
-    logger: winstonLogger.child({ test: "judgeChange" }),
-    costTracking: new CostTracking(),
-  } as any;
+function buildLogger() {
+  return winstonLogger.child({ test: "judgeChange" });
 }
 
 const TEST_TIMEOUT = 30000;
@@ -23,7 +13,7 @@ const TEST_TIMEOUT = 30000;
 describe("judgeChange — input validation (no LLM call)", () => {
   it("returns low-confidence meaningful when no diff payload is provided", async () => {
     const result = await judgeChange({
-      meta: buildMeta(),
+      logger: buildLogger(),
       goal: "anything",
     });
     expect(result.meaningful).toBe(true);
@@ -38,7 +28,7 @@ describeIfGemini("judgeChange — JSON-mode diffs (live Gemini)", () => {
     "classifies whitespace-only field change as noise",
     async () => {
       const result = await judgeChange({
-        meta: buildMeta(),
+        logger: buildLogger(),
         goal: "Track the page heading verbatim",
         jsonDiff: {
           headline: {
@@ -57,7 +47,7 @@ describeIfGemini("judgeChange — JSON-mode diffs (live Gemini)", () => {
     "classifies real price change as meaningful when goal matches",
     async () => {
       const result = await judgeChange({
-        meta: buildMeta(),
+        logger: buildLogger(),
         goal: "Monitor the Pro tier price",
         jsonDiff: {
           pro_price: { previous: "$19/mo", current: "$24/mo" },
@@ -74,7 +64,7 @@ describeIfGemini("judgeChange — JSON-mode diffs (live Gemini)", () => {
     "classifies timestamp drift as noise",
     async () => {
       const result = await judgeChange({
-        meta: buildMeta(),
+        logger: buildLogger(),
         goal: "track new product additions",
         jsonDiff: {
           updated_at: {
@@ -98,7 +88,7 @@ describeIfGemini("judgeChange — JSON-mode diffs (live Gemini)", () => {
         },
       };
       const onGoal = await judgeChange({
-        meta: buildMeta(),
+        logger: buildLogger(),
         goal: "tell me when a new MacBook is announced",
         jsonDiff: diff,
       });
@@ -117,7 +107,7 @@ describeIfGemini("judgeChange — markdown-mode diffs (live Gemini)", () => {
     "classifies new list item in markdown as meaningful",
     async () => {
       const result = await judgeChange({
-        meta: buildMeta(),
+        logger: buildLogger(),
         goal: "tell me when a new MacBook is announced",
         markdownDiff: {
           previous:
@@ -137,7 +127,7 @@ describeIfGemini("judgeChange — markdown-mode diffs (live Gemini)", () => {
     "classifies timestamp-only markdown change as noise",
     async () => {
       const result = await judgeChange({
-        meta: buildMeta(),
+        logger: buildLogger(),
         goal: "tell me when new SEC filings appear",
         markdownDiff: {
           previous:

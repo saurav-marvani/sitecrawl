@@ -1,6 +1,6 @@
 import { generateText } from "ai";
 import { google } from "@ai-sdk/google";
-import { Meta } from "..";
+import type { Logger } from "winston";
 
 const SYSTEM_PROMPT = `You are validating whether a change to a monitored web page is MEANINGFUL to the user, based on their stated GOAL.
 
@@ -38,19 +38,9 @@ interface JudgmentResult {
 }
 
 interface JudgeChangeArgs {
-  meta: Meta;
-  // Primary intent signal — what the user wants to be alerted about.
+  logger: Logger;
   goal: string;
-  // Optional supporting context — the extraction prompt tells the scraper
-  // what to capture, useful as background for the judge but not the primary
-  // signal.
   extractionPrompt?: string;
-  // Provide either jsonDiff (structured per-field diff from json mode) or
-  // markdownDiff (raw page diff from git-diff mode), or both. Markdown is
-  // preferred when present — it's the source-of-truth view of what actually
-  // changed on the page, whereas jsonDiff is a derived/lossy projection
-  // dependent on the schema capturing the right fields. JsonDiff is treated
-  // as a supplemental hint when markdown is also supplied.
   jsonDiff?: Record<string, { previous: unknown; current: unknown }>;
   markdownDiff?: {
     previous: string;
@@ -69,16 +59,12 @@ function truncate(s: string, cap: number): string {
   return `${head}\n…[${s.length - head.length - tail.length} chars truncated]…\n${tail}`;
 }
 
-// Model choice is intentionally internal — callers don't pick.
 const JUDGE_MODEL_NAME = "gemini-2.5-flash-lite";
 const judgeModel = google(JUDGE_MODEL_NAME);
 
 export async function judgeChange(args: JudgeChangeArgs): Promise<JudgmentResult> {
-  const { meta, goal, extractionPrompt, jsonDiff, markdownDiff } = args;
+  const { logger, goal, extractionPrompt, jsonDiff, markdownDiff } = args;
 
-  // Goal is the primary intent signal. Extraction prompt is added as
-  // supporting context when present (helps the judge understand which
-  // fields the page was set up to track).
   const parts: string[] = [`MONITOR GOAL:\n${goal.trim()}`];
   if (extractionPrompt?.trim()) {
     parts.push(
@@ -126,7 +112,7 @@ export async function judgeChange(args: JudgeChangeArgs): Promise<JudgmentResult
     const text = result.text?.trim() ?? "";
     const match = text.match(/\{[\s\S]*\}/);
     if (!match) {
-      meta.logger.warn("Judge returned unparseable response", {
+      logger.warn("Judge returned unparseable response", {
         textPeek: text.slice(0, 200),
       });
       return {
@@ -155,7 +141,7 @@ export async function judgeChange(args: JudgeChangeArgs): Promise<JudgmentResult
         : [],
     };
   } catch (error) {
-    meta.logger.error("Judge call failed", { error });
+    logger.error("Judge call failed", { error });
     return {
       meaningful: true,
       confidence: "low",

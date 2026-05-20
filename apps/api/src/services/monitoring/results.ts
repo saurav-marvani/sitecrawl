@@ -3,6 +3,7 @@ import { ScrapeJobData } from "../../types";
 import { logger as _logger } from "../../lib/logger";
 import { createWebhookSender, WebhookEvent } from "../webhook";
 import { computeAndPersistPageDiff } from "./diff-orchestrator";
+import { derivePageWebhookEvents } from "./page-events";
 import {
   getMonitorForUpdate,
   getMonitorPage,
@@ -30,16 +31,6 @@ interface PageJudgment {
   fields: string[];
 }
 
-function derivePageWebhookEvents(
-  status: string,
-  judgment: PageJudgment | null,
-): string[] {
-  const events: string[] = ["monitor.page"];
-  if (status === "changed" && judgment?.meaningful === true) {
-    events.push("monitor.page.meaningful");
-  }
-  return events;
-}
 
 async function sendMonitorPageWebhook(params: {
   teamId: string;
@@ -95,28 +86,6 @@ async function sendMonitorPageWebhook(params: {
   }
 }
 
-function extractJudgmentFromDoc(doc: any): PageJudgment | null {
-  const j = doc?.changeTracking?.judgment;
-  if (
-    !j ||
-    typeof j !== "object" ||
-    typeof j.meaningful !== "boolean" ||
-    typeof j.reason !== "string"
-  ) {
-    return null;
-  }
-  return {
-    meaningful: j.meaningful,
-    confidence:
-      j.confidence === "high" || j.confidence === "medium" || j.confidence === "low"
-        ? j.confidence
-        : "low",
-    reason: j.reason,
-    fields: Array.isArray(j.fields)
-      ? j.fields.filter((f: unknown) => typeof f === "string")
-      : [],
-  };
-}
 
 export async function recordMonitorScrapeSuccess(
   job: NuQJob<ScrapeJobData>,
@@ -142,7 +111,10 @@ export async function recordMonitorScrapeSuccess(
     (t: any) => t.id === monitoring.targetId,
   )?.scrapeOptions?.formats;
 
-  const { status, diffGcsKey, diffTextBytes, diffJsonBytes } =
+  const targetCtFormat = Array.isArray(targetFormats)
+    ? (targetFormats as any[]).find((f: any) => f?.type === "changeTracking")
+    : undefined;
+  const { status, diffGcsKey, diffTextBytes, diffJsonBytes, judgment } =
     await computeAndPersistPageDiff({
       teamId: job.data.team_id,
       monitorId: monitoring.monitorId,
@@ -157,6 +129,8 @@ export async function recordMonitorScrapeSuccess(
           }
         : null,
       formats: targetFormats,
+      goal: monitorForRun?.goal ?? null,
+      extractionPrompt: targetCtFormat?.prompt ?? null,
     });
 
   await upsertMonitorPage({
@@ -174,8 +148,6 @@ export async function recordMonitorScrapeSuccess(
       creditsUsed: doc?.metadata?.creditsUsed ?? null,
     },
   });
-
-  const judgment = extractJudgmentFromDoc(doc);
 
   await insertMonitorCheckPages([
     {
@@ -196,7 +168,7 @@ export async function recordMonitorScrapeSuccess(
         title: doc?.metadata?.title ?? null,
         creditsUsed: doc?.metadata?.creditsUsed ?? null,
       },
-      judgment,
+      judgment: judgment ?? null,
     },
   ]);
 
@@ -220,7 +192,7 @@ export async function recordMonitorScrapeSuccess(
     status,
     previousScrapeId: previous?.last_scrape_id ?? null,
     currentScrapeId: job.id,
-    judgment,
+    judgment: judgment ?? null,
   });
 }
 

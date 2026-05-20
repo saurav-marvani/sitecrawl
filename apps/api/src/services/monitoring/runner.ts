@@ -111,21 +111,10 @@ function recoverScrapeTargetRunsFromMonitor(
 
 function withMonitorScrapeDefaults(
   options: Record<string, unknown>,
-  monitorGoal?: string | null,
 ): ScrapeOptions {
-  // Monitor owns history: rewrite changeTracking-json to plain json before
-  // handing the formats array to the scrape engine, so we always get back
-  // current values to diff against the previous run.
-  let formats = Array.isArray(options.formats)
+  const formats = Array.isArray(options.formats)
     ? normalizeMonitorFormats(options.formats)
     : options.formats;
-
-  if (monitorGoal && Array.isArray(formats)) {
-    formats = formats.map((fmt: any) =>
-      fmt?.type === "changeTracking" ? { ...fmt, goal: monitorGoal } : fmt,
-    );
-  }
-
   return {
     maxAge: 0,
     ...withMarkdownFormat({ ...options, formats }),
@@ -163,10 +152,7 @@ async function runSingleScrape(params: {
   const scrapeId = uuidv7();
   const scrapeOptions = scrapeRequestSchema.parse({
     url: params.url,
-    ...withMonitorScrapeDefaults(
-      params.target.scrapeOptions ?? {},
-      params.monitor.goal,
-    ),
+    ...withMonitorScrapeDefaults(params.target.scrapeOptions ?? {}),
     origin: "monitor",
   });
 
@@ -231,7 +217,12 @@ async function diffAndPersistPage(params: {
     url: params.url,
   });
 
-  const { status, diffGcsKey, diffTextBytes, diffJsonBytes } =
+  const ctFormat = Array.isArray(params.target.scrapeOptions?.formats)
+    ? (params.target.scrapeOptions!.formats as any[]).find(
+        (f: any) => f?.type === "changeTracking",
+      )
+    : undefined;
+  const { status, diffGcsKey, diffTextBytes, diffJsonBytes, judgment } =
     await computeAndPersistPageDiff({
       teamId: params.monitor.team_id,
       monitorId: params.monitor.id,
@@ -246,6 +237,8 @@ async function diffAndPersistPage(params: {
           }
         : null,
       formats: params.target.scrapeOptions?.formats,
+      goal: params.monitor.goal,
+      extractionPrompt: ctFormat?.prompt ?? null,
     });
 
   await upsertMonitorPage({
@@ -280,6 +273,7 @@ async function diffAndPersistPage(params: {
     metadata: {
       title: params.doc?.metadata?.title ?? null,
     },
+    judgment,
     emailStatus: status,
   };
 }
