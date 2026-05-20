@@ -33,21 +33,19 @@ function derivePricingTier(
 }
 
 function deriveMrrBand(acuc: AuthCreditUsageChunk | null | undefined): string {
-  const tier = derivePricingTier(acuc);
-  switch (tier) {
-    case "free":
-      return "$0";
-    case "hobby":
-      return "$0-100";
-    case "standard":
-      return "$100-500";
-    case "growth":
-      return "$100-500";
-    case "scale":
-      return "$500+";
-    default:
-      return "unknown";
-  }
+  if (!acuc || !acuc.price_id) return "$0";
+
+  // Bands derived from Smart Upgrade pricing (credit-options.ts):
+  //   hobby 5k/6.5k/8k     → $19-$37     ($0-100)
+  //   standard 100k–160k   → $99-$213    ($100-500)
+  //   growth 500k          → $399        ($100-500)
+  //   growth 650k          → $599        ($500+)
+  //   scale 1M+            → custom      ($500+)
+  const credits = acuc.price_credits ?? 0;
+  if (credits <= 1_000) return "$0";
+  if (credits <= 8_000) return "$0-100";
+  if (credits <= 500_000) return "$100-500";
+  return "$500+";
 }
 
 // ---------------------------------------------------------------------------
