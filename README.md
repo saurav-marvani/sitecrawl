@@ -104,7 +104,7 @@ search_result = app.search("firecrawl", limit=5)
 
 **Node.js**
 ```javascript
-import Firecrawl from 'firecrawl';
+import { Firecrawl } from 'firecrawl';
 
 const app = new Firecrawl({apiKey: "fc-YOUR_API_KEY"});
 
@@ -161,7 +161,7 @@ result = app.scrape('firecrawl.dev')
 
 **Node.js**
 ```javascript
-import Firecrawl from 'firecrawl';
+import { Firecrawl } from 'firecrawl';
 
 const app = new Firecrawl({ apiKey: "fc-YOUR_API_KEY" });
 
@@ -219,7 +219,7 @@ app.interact(scrape_id, prompt="Click the first result")
 
 **Node.js**
 ```javascript
-import Firecrawl from 'firecrawl';
+import { Firecrawl } from 'firecrawl';
 
 const app = new Firecrawl({apiKey: "fc-YOUR_API_KEY"});
 
@@ -547,7 +547,7 @@ Install the SDK:
 npm install firecrawl
 ```
 ```javascript
-import Firecrawl from 'firecrawl';
+import { Firecrawl } from 'firecrawl';
 
 const app = new Firecrawl({ apiKey: 'fc-YOUR_API_KEY' });
 
