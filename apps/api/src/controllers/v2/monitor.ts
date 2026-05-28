@@ -220,9 +220,6 @@ export async function createMonitorController(
     }),
   );
 
-  // Reconcile per-recipient opt-in records. Team members are auto-confirmed
-  // here; external recipients receive a one-time confirmation email and
-  // start in "pending" until they click the link.
   const sync = await syncMonitorEmailRecipients({ monitor }).catch(error => {
     logger.warn("Failed to sync monitor email recipients on create", {
       error,
@@ -358,8 +355,7 @@ export async function updateMonitorController(
     }),
   );
 
-  // Re-sync per-recipient opt-in only if the notification config was touched
-  // — avoids hitting the recipients table on every unrelated update.
+  // Only re-sync when notification config actually changed.
   let subscriptions: Awaited<
     ReturnType<typeof loadEmailRecipientSubscriptions>
   > = [];
@@ -576,27 +572,18 @@ export async function getMonitorCheckController(
   });
 }
 
-// =========================================================================
-// Email opt-in / opt-out endpoints
-// =========================================================================
-//
-// These endpoints back the public confirm/unsubscribe pages served by
-// firecrawl-web. The web page POSTs the token from email links and renders
-// the JSON response with its own branding. The token IS the auth here —
-// recipients aren't necessarily Firecrawl users, so no API key is required.
-// POSTs (not GETs) are used so passive link scanners / preview tools that
-// hit the dashboard URL don't accidentally consume the token.
+// Unauthenticated POST endpoints — the token is the credential. Backs the
+// firecrawl-web confirm/unsubscribe pages; POST-only so passive GET scanners
+// can't consume tokens against the dashboard URL.
 
 const emailActionBodySchema = z.object({
-  // base64url of 32 random bytes = 43 chars. We accept up to 64 to leave
-  // room for future formats without breaking old links.
+  // 32-byte base64url is 43 chars; range leaves room for future formats.
   token: z.string().min(16).max(64),
 });
 
 type EmailActionResponse =
   | {
       success: true;
-      // What actually happened. The page renders different copy per state.
       result: "confirmed" | "already_confirmed" | "unsubscribed" | "already_unsubscribed";
       email: string;
       monitorName: string | null;
@@ -607,7 +594,6 @@ type EmailActionResponse =
     };
 
 function parseTokenFromRequest(req: any): string | null {
-  // Body for POST, query for backwards compat / curl testing.
   const candidate =
     (req.body && typeof req.body === "object" ? (req.body as any).token : null) ??
     (req.query && typeof req.query === "object" ? (req.query as any).token : null);
@@ -640,16 +626,13 @@ export async function confirmMonitorEmailController(
 
     const monitorName = await getMonitorNameById(row.monitor_id);
 
+    // Heuristic: if confirmed_at is older than 5s, this call was a no-op
+    // (already confirmed). Used only to flavor the rendered page.
     let result: "confirmed" | "already_confirmed" | "already_unsubscribed";
     if (row.status === "unsubscribed") {
       result = "already_unsubscribed";
     } else if (
       row.confirmed_at !== null &&
-      // confirmRecipientByToken is a no-op when already confirmed: confirmed_at
-      // stays unchanged. We can't perfectly tell whether this call did the
-      // confirmation, but for the user-visible copy the distinction doesn't
-      // matter — "you're subscribed" is correct either way. We still expose
-      // already_confirmed so the page can show a subtle "no change" note.
       new Date().getTime() - new Date(row.confirmed_at).getTime() > 5_000
     ) {
       result = "already_confirmed";

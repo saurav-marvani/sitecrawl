@@ -31,8 +31,7 @@ export function normalizeRecipientEmail(email: string): string {
   return email.trim().toLowerCase();
 }
 
-// 32 bytes of entropy, base64url-encoded (43 chars, URL safe, no padding).
-// Plenty of bits to make tokens unguessable and unique without UUID overhead.
+// 32 bytes → 43 chars base64url, no padding. 256 bits of entropy.
 export function generateRecipientToken(): string {
   return randomBytes(32).toString("base64url");
 }
@@ -71,11 +70,6 @@ export async function getRecipientByToken(
   return (data ?? null) as MonitorEmailRecipientRow | null;
 }
 
-/**
- * Look up the monitor name for a given monitor id. Used by the email opt-in
- * controllers so the public confirmation/unsubscribe pages can show the
- * recipient which monitor they're acting on.
- */
 export async function getMonitorNameById(
   monitorId: string,
 ): Promise<string | null> {
@@ -95,11 +89,7 @@ export async function getMonitorNameById(
   return (data?.name as string | undefined) ?? null;
 }
 
-/**
- * Look up which of the given emails are members of the monitor's team. Members
- * are auto-confirmed because they already have dashboard access to this
- * monitor; requiring them to click an opt-in link would be pure friction.
- */
+// Team members are auto-confirmed; they already have dashboard access.
 export async function getTeamMemberEmails(
   teamId: string,
   emails: string[],
@@ -142,16 +132,8 @@ export type RecipientUpsertResult = {
   created: boolean;
 };
 
-/**
- * Idempotently create a recipient row. If a row already exists for
- * (monitor_id, email):
- *   - returns the existing row unchanged (so an opt-out is honored even if
- *     the monitor is edited and the email re-added)
- *   - records `created = false`
- *
- * If the row is new, the caller should send a confirmation email when the
- * status is `pending`.
- */
+// Idempotent: existing rows are returned unchanged so prior unsubscribe
+// decisions persist across monitor edits.
 export async function ensureMonitorEmailRecipient(params: {
   monitorId: string;
   teamId: string;
@@ -218,10 +200,7 @@ export async function confirmRecipientByToken(
   if (!row) return null;
   if (row.status === "confirmed") return row;
 
-  // Once a recipient unsubscribes we treat that as permanent — re-confirming
-  // would let a malicious actor effectively re-subscribe someone after they
-  // opted out. They have to be re-added to a monitor manually, which sends a
-  // fresh confirmation email.
+  // Unsubscribe is permanent — never let a confirm link reverse it.
   if (row.status === "unsubscribed") return row;
 
   const now = new Date().toISOString();

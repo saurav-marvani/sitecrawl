@@ -83,10 +83,7 @@ export type MonitoringEmailPayload = {
   };
   pages: MonitoringEmailPage[];
   creditsUsed: number | null;
-  /**
-   * Per-recipient unsubscribe link. When omitted (e.g. legacy callers or
-   * preview tooling), the email footer omits the unsubscribe row.
-   */
+  // When omitted, the footer drops the unsubscribe row.
   unsubscribeUrl?: string;
 };
 
@@ -145,11 +142,9 @@ function buildPublicWebUrl(path: string, token: string): string {
   return url.toString();
 }
 
-// Email opt-in links land on the firecrawl-web public pages, not the API.
-// The page POSTs the token to the API on mount and renders a branded result
-// using the design system — keeps Firecrawl branding consistent and avoids
-// passive link scanners (Outlook Safe Links, etc.) consuming GETs against
-// the API.
+// Email links land on the firecrawl-web pages, which POST the token to the
+// API. Keeps branding consistent and stops passive link scanners (Outlook
+// Safe Links, etc.) from accidentally consuming tokens with bare GETs.
 export function buildRecipientConfirmationUrl(token: string): string {
   return buildPublicWebUrl("/monitoring/email/confirm", token);
 }
@@ -265,11 +260,6 @@ function getResendClient(): Resend | null {
   return new Resend(key);
 }
 
-/**
- * Send the one-time confirmation email to a freshly added external recipient.
- * Safe to call multiple times — we keep `confirmation_sent_at` up to date but
- * the recipient row is idempotent.
- */
 export async function sendMonitoringConfirmationEmail(params: {
   recipient: MonitorEmailRecipientRow;
   monitorName: string;
@@ -356,14 +346,10 @@ async function resolveSendableRecipients(
   if (explicitConfigured.length > 0) {
     let rows = await listMonitorEmailRecipients(monitor.id);
 
-    // No DB backfill path: lazily bootstrap legacy monitors the first time
-    // they attempt to send after this feature rolls out.
-    //
-    // Why only when rows.length === 0?
-    // - Existing monitors created pre-rollout have no recipient rows at all.
-    // - New/updated monitors run through sync on create/update and should
-    //   already have rows. If a monitor has partial rows, we keep strict
-    //   gating for any missing addresses (pending) instead of auto-confirming.
+    // Legacy monitors (configured pre-opt-in) have zero rows; bootstrap them
+    // as confirmed so existing alerts keep flowing without a DB backfill.
+    // Partial-row monitors keep strict gating — missing addresses stay
+    // pending rather than getting auto-confirmed.
     if (rows.length === 0) {
       const legacyRows = await Promise.all(
         explicitConfigured.map(async email => {
@@ -395,9 +381,8 @@ async function resolveSendableRecipients(
     for (const email of explicitConfigured) {
       const row = rowsByEmail.get(email);
       if (!row) {
-        // Row missing entirely — runner sees a recipient the controller
-        // never reconciled (e.g. data inserted directly into JSONB). Treat
-        // as pending so we never send to it without an opt-in record.
+        // Recipient appears in JSONB but has no opt-in row — treat as
+        // pending so we never send without an explicit record.
         pending += 1;
         continue;
       }
@@ -418,9 +403,8 @@ async function resolveSendableRecipients(
     };
   }
 
-  // No explicit recipients configured -> fall back to team members. Team
-  // members are implicitly confirmed (they have dashboard access already).
-  // We still respect their global notification_preferences via getTeamEmails.
+  // Fallback: team members (auto-confirmed; getTeamEmails still applies
+  // their global notification_preferences).
   const teamEmails = await getTeamEmails(monitor.team_id);
   const syntheticRows: MonitorEmailRecipientRow[] = await Promise.all(
     teamEmails.map(async email => {
@@ -487,9 +471,8 @@ export async function sendMonitoringEmailSummary(params: {
     return { attempted: false, success: true, recipients: [] };
   }
 
-  // Caller may pass a paginated subset; only trust the judgment-based
-  // suppression when changedPages covers the full changed_count. A missed
-  // meaningful alert is worse than an extra noisy email.
+  // Trust judgment-based suppression only when the changed page list is
+  // complete (a missed meaningful alert is worse than a noisy one).
   if (params.monitor.judge_enabled && params.monitor.goal) {
     const changedPages = params.pages.filter(p => p.status === "changed");
     const nonChangedActivity = params.pages.some(
@@ -574,9 +557,7 @@ export async function sendMonitoringEmailSummary(params: {
     checkId: params.check.id,
   });
 
-  // Send one email per recipient so each gets a unique unsubscribe link.
-  // This avoids exposing the entire recipient list (BCC privacy) and lets
-  // each recipient opt out independently without touching the others.
+  // One email per recipient: unique unsubscribe links + no recipient leakage.
   const sendResults = await Promise.all(
     resolved.confirmedRecipients.map(async recipient => {
       const payload: MonitoringEmailPayload = {

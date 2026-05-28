@@ -61,7 +61,6 @@ function fakeRecipient(
   status: "pending" | "confirmed" | "unsubscribed",
   source: "team" | "opt_in" | "legacy" = "opt_in",
 ) {
-  // URL-safe token (no need to worry about URL encoding in assertions).
   const sanitized = email.replace(/[^a-z0-9]/gi, "");
   return {
     id: `rec-${sanitized}`,
@@ -97,9 +96,6 @@ describe("monitoring email URLs", () => {
   });
 
   it("builds opt-in and unsubscribe URLs against the dashboard base", () => {
-    // The opt-in pages live in firecrawl-web; the page POSTs to the API on
-    // mount. That keeps Firecrawl branding consistent and stops passive
-    // link scanners from accidentally consuming GETs against the API.
     const confirm = buildRecipientConfirmationUrl("abc123");
     expect(confirm).toContain("/monitoring/email/confirm");
     expect(confirm).not.toContain("/v2/");
@@ -272,8 +268,6 @@ describe("sendMonitoringEmailSummary", () => {
 
   describe("judgment gating", () => {
     beforeEach(() => {
-      // Default: one confirmed recipient so judgment gating tests assert the
-      // judgment logic rather than recipient filtering.
       mockListRecipients.mockResolvedValue([
         fakeRecipient("a@b.com", "confirmed"),
       ]);
@@ -419,9 +413,6 @@ describe("sendMonitoringEmailSummary", () => {
     });
 
     it("bootstraps legacy monitors when recipient rows are entirely missing", async () => {
-      // No DB backfill path: explicit recipients on old monitors have zero
-      // rows. First send lazily creates confirmed 'legacy' rows so delivery
-      // keeps working without manual re-save.
       mockListRecipients.mockResolvedValue([]);
       mockEnsureRecipient.mockResolvedValue({
         created: true,
@@ -449,8 +440,6 @@ describe("sendMonitoringEmailSummary", () => {
     });
 
     it("treats missing recipients as pending when rows are partially present", async () => {
-      // If a monitor already has some rows, we keep strict gating for any
-      // missing addresses rather than auto-confirming.
       mockListRecipients.mockResolvedValue([
         fakeRecipient("known@example.com", "confirmed"),
       ]);

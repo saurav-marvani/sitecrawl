@@ -16,7 +16,6 @@ export type SyncedRecipient = {
   status: MonitorEmailRecipientRow["status"];
   source: MonitorEmailRecipientRow["source"];
   confirmationEmailSent: boolean;
-  /** True if this row was created during this sync (vs. already existed). */
   created: boolean;
 };
 
@@ -24,25 +23,9 @@ export type SyncResult = {
   recipients: SyncedRecipient[];
 };
 
-/**
- * Reconcile the canonical list of `notification.email.recipients` for a
- * monitor against the per-recipient subscription table.
- *
- * Rules:
- * - Team-member emails are auto-confirmed (they already have dashboard access
- *   to this monitor; making them click an opt-in link would be pure friction).
- * - All other newly added emails start in `pending` and receive a one-time
- *   confirmation email. They will not receive monitor alerts until they click
- *   the confirm link.
- * - Existing rows are left alone — once a recipient confirms or unsubscribes
- *   that decision persists even if the monitor is edited and the recipient
- *   is re-added.
- *
- * Recipients that were previously configured but are no longer in the list
- * are not deleted; we keep the row so that a quick "remove then re-add"
- * doesn't accidentally re-send a confirmation email to someone who already
- * confirmed (or worse, undo an unsubscribe).
- */
+// Team members → auto-confirmed. External addresses → pending + confirmation
+// email. Existing rows are preserved (so a quick remove-then-re-add doesn't
+// undo a prior unsubscribe or re-send a confirmation).
 export async function syncMonitorEmailRecipients(params: {
   monitor: MonitorRow;
 }): Promise<SyncResult> {

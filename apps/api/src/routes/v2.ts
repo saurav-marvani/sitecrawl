@@ -486,12 +486,8 @@ v2Router.get(
   wrap(listMonitorsController),
 );
 
-// Public email opt-in/out endpoints. No auth — the token is the auth.
-// These back the public confirm/unsubscribe pages served by firecrawl-web;
-// the page POSTs the token from the email link and renders the response.
-// Registered before /monitor/:monitorId so "email" isn't captured as a
-// monitor UUID. POST-only on purpose: passive link scanners that issue GETs
-// against the dashboard URL never touch this endpoint.
+// Public, unauthenticated — token in body is the credential. Registered
+// before /monitor/:monitorId so "email" isn't parsed as a monitor UUID.
 v2Router.post("/monitor/email/confirm", wrap(confirmMonitorEmailController));
 v2Router.post(
   "/monitor/email/unsubscribe",

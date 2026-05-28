@@ -312,8 +312,6 @@ describeIf(ALLOW_TEST_SUITE_WEBSITE && !TEST_SELF_HOST)("/v2/monitor", () => {
 
   describe("email recipient opt-in", () => {
     function externalRecipient(): string {
-      // Random throwaway address. Real Resend isn't called in the test API,
-      // but the address still needs to look valid for the API to accept it.
       const id = Math.random().toString(36).slice(2, 10);
       return `optin-${id}@external-test.example`;
     }
@@ -396,9 +394,6 @@ describeIf(ALLOW_TEST_SUITE_WEBSITE && !TEST_SELF_HOST)("/v2/monitor", () => {
     });
 
     it("does not require opt-in when recipients are unset (team-default path)", async () => {
-      // Falls back to team members in send path; create-time sync only runs
-      // against explicit recipients, so emailRecipientSubscriptions should
-      // be empty here.
       const create = await monitorCreateRaw(
         {
           name: "team default monitor",
