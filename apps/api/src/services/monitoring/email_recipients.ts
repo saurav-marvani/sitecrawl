@@ -4,6 +4,8 @@ import { supabase_rr_service, supabase_service } from "../supabase";
 
 const logger = _logger.child({ module: "monitor-email-recipients" });
 
+const POSTGRES_UNIQUE_VIOLATION = "23505";
+
 export type MonitorEmailRecipientStatus =
   | "pending"
   | "confirmed"
@@ -132,8 +134,25 @@ export type RecipientUpsertResult = {
   created: boolean;
 };
 
+async function fetchRecipientByMonitorEmail(
+  monitorId: string,
+  email: string,
+): Promise<MonitorEmailRecipientRow | null> {
+  const { data, error } = await supabase_rr_service
+    .from("monitor_email_recipients")
+    .select("*")
+    .eq("monitor_id", monitorId)
+    .eq("email", email)
+    .maybeSingle();
+  throwIfError(error, "Failed to look up monitor email recipient");
+  return (data ?? null) as MonitorEmailRecipientRow | null;
+}
+
 // Idempotent: existing rows are returned unchanged so prior unsubscribe
-// decisions persist across monitor edits.
+// decisions persist across monitor edits. The unique (monitor_id, email)
+// constraint is the source of truth — a TOCTOU between the SELECT and the
+// INSERT below is caught via the unique-violation handler so concurrent
+// syncs of the same monitor return the same row instead of 500ing.
 export async function ensureMonitorEmailRecipient(params: {
   monitorId: string;
   teamId: string;
@@ -141,29 +160,18 @@ export async function ensureMonitorEmailRecipient(params: {
 }): Promise<RecipientUpsertResult> {
   const email = normalizeRecipientEmail(params.input.email);
 
-  const existing = await supabase_rr_service
-    .from("monitor_email_recipients")
-    .select("*")
-    .eq("monitor_id", params.monitorId)
-    .eq("email", email)
-    .maybeSingle();
-
-  throwIfError(existing.error, "Failed to look up monitor email recipient");
-  if (existing.data) {
-    return {
-      row: existing.data as MonitorEmailRecipientRow,
-      created: false,
-    };
+  const existing = await fetchRecipientByMonitorEmail(params.monitorId, email);
+  if (existing) {
+    return { row: existing, created: false };
   }
 
   const now = new Date().toISOString();
-  const token = generateRecipientToken();
   const insert = {
     monitor_id: params.monitorId,
     team_id: params.teamId,
     email,
     status: params.input.status,
-    token,
+    token: generateRecipientToken(),
     source: params.input.source,
     confirmation_sent_at: params.input.status === "pending" ? now : null,
     confirmed_at: params.input.status === "confirmed" ? now : null,
@@ -175,9 +183,21 @@ export async function ensureMonitorEmailRecipient(params: {
     .from("monitor_email_recipients")
     .insert(insert)
     .select("*")
-    .single();
+    .maybeSingle();
 
-  throwIfError(error, "Failed to insert monitor email recipient");
+  if (error) {
+    if ((error as { code?: string }).code === POSTGRES_UNIQUE_VIOLATION) {
+      const winner = await fetchRecipientByMonitorEmail(
+        params.monitorId,
+        email,
+      );
+      if (winner) {
+        return { row: winner, created: false };
+      }
+    }
+    throwIfError(error, "Failed to insert monitor email recipient");
+  }
+
   return { row: data as MonitorEmailRecipientRow, created: true };
 }
 
