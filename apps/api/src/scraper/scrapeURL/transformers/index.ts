@@ -11,7 +11,6 @@ import {
   performCleanContent,
 } from "./llmExtract";
 import { performQuery } from "./query";
-import { uploadScreenshot } from "./uploadScreenshot";
 import { removeBase64Images } from "./removeBase64Images";
 import { performAgent } from "./agent";
 import { performAttributes } from "./performAttributes";
@@ -498,15 +497,15 @@ function coerceFieldsToFormats(meta: Meta, document: Document): Document {
     );
   }
 
-  // pii is a diagnostic/report format. Redaction itself is controlled by
-  // redactPII; include `pii` only when callers want spans/counts in the response.
+  // Redaction itself is controlled by redactPII. Keep internal redaction
+  // details only when explicitly requested.
   const hasPii = hasFormatOfType(meta.options.formats, "pii");
   const wantPii = !!(hasPii && meta.options.redactPII);
   if (!wantPii && document.pii !== undefined) {
     delete document.pii;
   } else if (wantPii && document.pii === undefined) {
     meta.logger.warn(
-      "Request had format: pii with redactPII: true, but there was no pii field in the result.",
+      "Redaction details were requested, but there was no pii field in the result.",
     );
   }
 
@@ -574,7 +573,6 @@ const transformerStack: Transformer[] = [
   deriveImagesFromHTML,
   deriveBrandingFromActions,
   deriveMetadataFromRawHTML,
-  uploadScreenshot,
   ...(useIndex ? [sendDocumentToIndex] : []),
   ...(useSearchIndex ? [sendDocumentToSearchIndex] : []), // Add to search index for real-time search
   performLLMExtract,

@@ -1,8 +1,6 @@
-import {
-  isPostgrestNoRowsError,
-  supabase_rr_service,
-  supabase_service,
-} from "../../../services/supabase";
+import { and, eq } from "drizzle-orm";
+import { db, dbRr } from "../../../db/connection";
+import * as schema from "../../../db/schema";
 import { EndpointFeedbackEndpoint } from "../types";
 import {
   FeedbackJobRow,
@@ -17,27 +15,12 @@ type ExistingFeedback = {
   credits_refunded: number | null;
 };
 
-function tableForEndpoint(endpoint: EndpointFeedbackEndpoint): string {
-  switch (endpoint) {
-    case "search":
-      return "searches";
-    case "scrape":
-      return "scrapes";
-    case "parse":
-      return "parses";
-    case "map":
-      return "maps";
-  }
-}
-
-function selectForEndpoint(endpoint: EndpointFeedbackEndpoint): string {
-  switch (endpoint) {
-    case "map":
-      return "id, request_id, team_id, credits_cost, created_at, options";
-    default:
-      return "id, request_id, team_id, credits_cost, created_at, is_successful, options";
-  }
-}
+const JOB_TABLES = {
+  search: schema.searches,
+  scrape: schema.scrapes,
+  parse: schema.parses,
+  map: schema.maps,
+} as const;
 
 function feedbackMetadata(
   options: FeedbackRecordOptions,
@@ -56,21 +39,23 @@ export async function lookupFeedbackJob(
   jobId: string,
   dbTeamId: string,
 ): Promise<FeedbackJobRow | null> {
-  const { data, error } = await supabase_rr_service
-    .from(tableForEndpoint(endpoint))
-    .select(selectForEndpoint(endpoint))
-    .eq("id", jobId)
-    .eq("team_id", dbTeamId)
-    .single();
+  const table = JOB_TABLES[endpoint] as any;
+  const [row] = await dbRr
+    .select({
+      id: table.id,
+      request_id: table.request_id,
+      team_id: table.team_id,
+      credits_cost: table.credits_cost,
+      created_at: table.created_at,
+      options: table.options,
+      ...(endpoint === "map" ? {} : { is_successful: table.is_successful }),
+    })
+    .from(table)
+    .where(and(eq(table.id, jobId), eq(table.team_id, dbTeamId)))
+    .limit(1);
 
-  if (error) {
-    if (isPostgrestNoRowsError(error)) return null;
-    throw error;
-  }
+  if (!row) return null;
 
-  if (!data) return null;
-
-  const row = data as any;
   return {
     endpoint,
     id: row.id,
@@ -91,34 +76,37 @@ export async function insertFeedback(params: {
   apiKeyId?: number | null;
 }): Promise<DbError | null> {
   const { feedbackId, options, job, dbTeamId, apiKeyId } = params;
-  const { error } = await supabase_service.from("search_feedback").insert({
-    id: feedbackId,
-    search_id: options.endpoint === "search" ? options.jobId : null,
-    endpoint: options.endpoint,
-    job_id: options.jobId,
-    request_id: job.request_id,
-    api_version: "v2",
-    team_id: dbTeamId,
-    api_key_id: apiKeyId ?? null,
-    overall_rating: options.feedback.rating,
-    issue_types: options.feedback.issues ?? [],
-    tags: options.feedback.tags ?? [],
-    comment: options.feedback.note ?? null,
-    valuable_sources: options.feedback.valuableSources ?? [],
-    missing_content: options.feedback.missingContent ?? [],
-    query_suggestions: options.feedback.querySuggestions ?? null,
-    expected: options.feedback.expected ?? null,
-    actual: options.feedback.actual ?? null,
-    metadata: feedbackMetadata(options),
-    job_status: job.is_successful === false ? "failed" : "completed",
-    credits_billed: job.credits_cost ?? 0,
-    credits_refunded: 0,
-    refund_policy: null,
-    integration: options.feedback.integration ?? null,
-    origin: options.feedback.origin ?? null,
-  });
-
-  return error as DbError | null;
+  try {
+    await db.insert(schema.search_feedback).values({
+      id: feedbackId,
+      search_id: options.endpoint === "search" ? options.jobId : null,
+      endpoint: options.endpoint,
+      job_id: options.jobId,
+      request_id: job.request_id,
+      api_version: "v2",
+      team_id: dbTeamId,
+      api_key_id: apiKeyId ?? null,
+      overall_rating: options.feedback.rating,
+      issue_types: options.feedback.issues ?? [],
+      tags: options.feedback.tags ?? [],
+      comment: options.feedback.note ?? null,
+      valuable_sources: options.feedback.valuableSources ?? [],
+      missing_content: options.feedback.missingContent ?? [],
+      query_suggestions: options.feedback.querySuggestions ?? null,
+      expected: options.feedback.expected ?? null,
+      actual: options.feedback.actual ?? null,
+      metadata: feedbackMetadata(options),
+      job_status: job.is_successful === false ? "failed" : "completed",
+      credits_billed: job.credits_cost ?? 0,
+      credits_refunded: 0,
+      refund_policy: null,
+      integration: options.feedback.integration ?? null,
+      origin: options.feedback.origin ?? null,
+    });
+    return null;
+  } catch (error) {
+    return error as DbError;
+  }
 }
 
 async function findFeedbackByJob(
@@ -126,39 +114,43 @@ async function findFeedbackByJob(
   endpoint: EndpointFeedbackEndpoint,
   jobId: string,
 ): Promise<ExistingFeedback | null> {
-  const { data, error } = await supabase_rr_service
-    .from("search_feedback")
-    .select("id, credits_refunded")
-    .eq("team_id", dbTeamId)
-    .eq("endpoint", endpoint)
-    .eq("job_id", jobId)
-    .single();
+  const [row] = await dbRr
+    .select({
+      id: schema.search_feedback.id,
+      credits_refunded: schema.search_feedback.credits_refunded,
+    })
+    .from(schema.search_feedback)
+    .where(
+      and(
+        eq(schema.search_feedback.team_id, dbTeamId),
+        eq(schema.search_feedback.endpoint, endpoint),
+        eq(schema.search_feedback.job_id, jobId),
+      ),
+    )
+    .limit(1);
 
-  if (error) {
-    if (isPostgrestNoRowsError(error)) return null;
-    throw error;
-  }
-
-  return data as ExistingFeedback | null;
+  return row ?? null;
 }
 
 async function findSearchFeedbackByLegacyId(
   dbTeamId: string,
   searchId: string,
 ): Promise<ExistingFeedback | null> {
-  const { data, error } = await supabase_rr_service
-    .from("search_feedback")
-    .select("id, credits_refunded")
-    .eq("team_id", dbTeamId)
-    .eq("search_id", searchId)
-    .single();
+  const [row] = await dbRr
+    .select({
+      id: schema.search_feedback.id,
+      credits_refunded: schema.search_feedback.credits_refunded,
+    })
+    .from(schema.search_feedback)
+    .where(
+      and(
+        eq(schema.search_feedback.team_id, dbTeamId),
+        eq(schema.search_feedback.search_id, searchId),
+      ),
+    )
+    .limit(1);
 
-  if (error) {
-    if (isPostgrestNoRowsError(error)) return null;
-    throw error;
-  }
-
-  return data as ExistingFeedback | null;
+  return row ?? null;
 }
 
 export async function findExistingFeedback(
@@ -179,14 +171,17 @@ export async function updateFeedbackRefundDetails(
   creditsRefunded: number,
   policy: RefundPolicySnapshot,
 ): Promise<DbError | null> {
-  const { error } = await supabase_service
-    .from("search_feedback")
-    .update({
-      credits_refunded: creditsRefunded,
-      refund_policy: policy,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", feedbackId);
-
-  return error as DbError | null;
+  try {
+    await db
+      .update(schema.search_feedback)
+      .set({
+        credits_refunded: creditsRefunded,
+        refund_policy: policy,
+        updated_at: new Date().toISOString(),
+      })
+      .where(eq(schema.search_feedback.id, feedbackId));
+    return null;
+  } catch (error) {
+    return error as DbError;
+  }
 }
