@@ -51,6 +51,7 @@ Selectors:
 
 askLlm:
 - Use it for what selectors cannot do - summarize, classify, translate, disambiguate by meaning. It transforms the text you pass it (no outside lookups like currency conversion; returns null when the text lacks the answer), so pass the DOM text it needs - for a summary, the article body, not a bare title or label. If a field has a fixed value set, include it in the prompt.
+- When you call askLlm once per item over a list, issue the calls concurrently with Promise.all rather than awaiting one at a time.
 
 Return only the function source, beginning with \`async function extract\`.`;
 
