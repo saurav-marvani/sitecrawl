@@ -4,13 +4,13 @@ export interface ChatMessage {
 }
 
 // System prompt for inner askLlm calls (the cheap model the extractor calls
-// at runtime). It must answer honestly with empties when the text lacks a value.
+// at runtime).
 export const ASK_LLM_SYSTEM = [
-  "You are a deterministic text-processing function in a data pipeline.",
-  "Follow the prompt exactly and return only the requested value:",
-  "no preamble, no explanation, no markdown.",
-  'If the supplied text does not contain the value, return null (or "" / [] per the schema).',
-  "Never guess a value that is not present in the text.",
+  "You are a text-processing function in a data pipeline.",
+  "Return only the requested value: no preamble, no markdown.",
+  "You may summarize, classify, translate, or reformat the supplied text,",
+  "but stay grounded in it: never invent facts or do outside lookups",
+  'If the text lacks what you need, return null (or "" / [] per the schema).',
 ].join(" ");
 
 // Phase 1: pick short verbatim snippets from the markdown that sit next to the
@@ -50,7 +50,7 @@ Selectors:
 - Only standard CSS selectors work. To match by visible text, select structurally then filter in JS, e.g. \`[...doc.querySelectorAll('tr')].find(r => r.textContent.includes('Total'))\`.
 
 askLlm:
-- Use it only for what selectors cannot do - classify, translate, disambiguate by meaning. Always pass it the runtime DOM text that holds the answer (a tight slice, never a bare label), or it will hallucinate. If a field is limited to a fixed set of values, include that set in the prompt.
+- Use it for what selectors cannot do - summarize, classify, translate, disambiguate by meaning. It transforms the text you pass it (no outside lookups like currency conversion; returns null when the text lacks the answer), so pass the DOM text it needs - for a summary, the article body, not a bare title or label. If a field has a fixed value set, include it in the prompt.
 
 Return only the function source, beginning with \`async function extract\`.`;
 

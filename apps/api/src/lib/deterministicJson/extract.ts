@@ -12,7 +12,7 @@ import {
 import { tooStrictFeedback, tooStrictSelectors } from "./html/selector-repair";
 import { errorMessage, log, sha } from "./core/util";
 
-export interface ExtractArgs {
+interface ExtractArgs {
   url: string;
   prompt: string;
   jsonSchema: Record<string, unknown>;
@@ -27,7 +27,15 @@ export interface ExtractArgs {
 export async function extractDeterministicJson(
   args: ExtractArgs,
 ): Promise<unknown> {
-  const { url, prompt, forceRegenerate, cache, sandbox, jsonSchema, costTracking } = args;
+  const {
+    url,
+    prompt,
+    forceRegenerate,
+    cache,
+    sandbox,
+    jsonSchema,
+    costTracking,
+  } = args;
 
   const schemaJson = JSON.stringify(jsonSchema);
   const key = sha(

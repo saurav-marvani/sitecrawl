@@ -15,7 +15,3 @@ export function sha(input: string, chars = 32): string {
 export function errorMessage(err: unknown): string {
   return err instanceof Error ? err.message : String(err);
 }
-
-export function formatMs(ms: number): string {
-  return `${Math.round(ms)}ms`;
-}

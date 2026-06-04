@@ -6,10 +6,9 @@ import { eq } from "drizzle-orm";
 import { db, dbRr } from "../../../db/connection";
 import * as schema from "../../../db/schema";
 import { extractDeterministicJson } from "../../../lib/deterministicJson/extract";
+import { CODE_SANDBOX_URL } from "../../../lib/deterministicJson/config";
 import type { CacheBackend } from "../../../lib/deterministicJson/core/cache";
 import type { SandboxRunner } from "../../../lib/deterministicJson/sandbox/runExtractor";
-
-const SANDBOX_URL = process.env.CODE_SANDBOX_URL ?? "ws://code-sandbox:3001";
 
 const cache: CacheBackend = {
   async getExtractor(key) {
@@ -118,7 +117,6 @@ function sandboxRunner(endpoint: string): SandboxRunner {
         } catch {
           return;
         }
-        console.log("Sandbox frame", frame);
         if (frame.type === "host") {
           let value: unknown;
           let error: string | undefined;
@@ -179,7 +177,7 @@ export async function performDeterministicJson(
       jsonSchema: (format.schema ?? {}) as Record<string, unknown>,
       page: { html, markdown: document.markdown ?? "" },
       cache,
-      sandbox: sandboxRunner(SANDBOX_URL),
+      sandbox: sandboxRunner(CODE_SANDBOX_URL),
       costTracking: meta.costTracking,
     });
   } catch (error) {

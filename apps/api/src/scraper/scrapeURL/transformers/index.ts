@@ -92,7 +92,11 @@ async function deriveMarkdownFromHTML(
     meta.options.formats,
     "changeTracking",
   );
-  const hasJson = hasFormatOfType(meta.options.formats, "json");
+  // deterministicJson populates document.json just like json, so treat it the
+  // same here (derive markdown for it; keep the field it produced).
+  const hasJson =
+    hasFormatOfType(meta.options.formats, "json") ||
+    hasFormatOfType(meta.options.formats, "deterministicJson");
   const hasSummary = hasFormatOfType(meta.options.formats, "summary");
   const hasQuestion = hasFormatOfType(meta.options.formats, "question");
   const hasHighlights = hasFormatOfType(meta.options.formats, "highlights");
@@ -322,7 +326,11 @@ function coerceFieldsToFormats(meta: Meta, document: Document): Document {
     meta.options.formats,
     "changeTracking",
   );
-  const hasJson = hasFormatOfType(meta.options.formats, "json");
+  // deterministicJson populates document.json just like json, so treat it the
+  // same here (derive markdown for it; keep the field it produced).
+  const hasJson =
+    hasFormatOfType(meta.options.formats, "json") ||
+    hasFormatOfType(meta.options.formats, "deterministicJson");
   const hasScreenshot = hasFormatOfType(meta.options.formats, "screenshot");
   const hasSummary = hasFormatOfType(meta.options.formats, "summary");
   const hasBranding = hasFormatOfType(meta.options.formats, "branding");

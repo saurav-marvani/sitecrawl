@@ -4,7 +4,7 @@
 // are considered.
 import { parseDocument } from "./dom";
 
-export interface TooStrictSelector {
+interface TooStrictSelector {
   selector: string;
   loosened: string;
   count: number;
@@ -14,7 +14,7 @@ export interface TooStrictSelector {
 // template literals containing ${...} interpolation (not statically knowable).
 const SELECTOR_CALL = /querySelector(?:All)?\(\s*(['"`])((?:\\.|(?!\1).)*)\1/g;
 
-export function extractSelectorLiterals(code: string): string[] {
+function extractSelectorLiterals(code: string): string[] {
   const out = new Set<string>();
   for (const match of code.matchAll(SELECTOR_CALL)) {
     const selector = match[2];

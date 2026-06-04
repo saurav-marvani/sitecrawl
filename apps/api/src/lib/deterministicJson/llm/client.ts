@@ -26,10 +26,16 @@ function record(
   const input = usage?.inputTokens ?? 0;
   const output = usage?.outputTokens ?? 0;
   const key = `${provider}/${model}`;
-  const price = (modelPrices as Record<string, { input_cost_per_token?: number; output_cost_per_token?: number }>)[key];
+  const price = (
+    modelPrices as Record<
+      string,
+      { input_cost_per_token?: number; output_cost_per_token?: number }
+    >
+  )[key];
   if (!price) log(`no pricing for ${key}`);
   const cost =
-    input * (price?.input_cost_per_token ?? 0) + output * (price?.output_cost_per_token ?? 0);
+    input * (price?.input_cost_per_token ?? 0) +
+    output * (price?.output_cost_per_token ?? 0);
   costTracking.addCall({
     type: "other",
     model: key,
@@ -39,7 +45,7 @@ function record(
   });
 }
 
-export interface Generation {
+interface Generation {
   content: string;
   truncated: boolean;
 }
@@ -93,8 +99,12 @@ function parseSnippets(raw: string): string[] {
   } catch {
     return [];
   }
-  const list = Array.isArray(value) ? value : ((value as { snippets?: unknown })?.snippets ?? []);
-  return Array.isArray(list) ? list.filter((s): s is string => typeof s === "string") : [];
+  const list = Array.isArray(value)
+    ? value
+    : ((value as { snippets?: unknown })?.snippets ?? []);
+  return Array.isArray(list)
+    ? list.filter((s): s is string => typeof s === "string")
+    : [];
 }
 
 export type AskLlm = (prompt: string, schema?: unknown) => Promise<unknown>;
@@ -125,7 +135,8 @@ export function makeAskLlm(
   const inFlight = new Map<string, Promise<unknown>>();
 
   const ask = (prompt: string, schema?: unknown): Promise<unknown> => {
-    const key = schema == null ? prompt : `${prompt}\0${JSON.stringify(schema)}`;
+    const key =
+      schema == null ? prompt : `${prompt}\0${JSON.stringify(schema)}`;
     const existing = inFlight.get(key);
     if (existing) return existing;
     const pending = askOnce(prompt, schema).catch(err => {
@@ -142,7 +153,8 @@ export function makeAskLlm(
       throw new Error("askLlm schema must be a JSON Schema object");
     }
 
-    const objectSchema = structured && (schema as { type?: unknown }).type === "object";
+    const objectSchema =
+      structured && (schema as { type?: unknown }).type === "object";
     const wrap = structured && !objectSchema;
 
     const userContent = !structured
@@ -154,20 +166,31 @@ export function makeAskLlm(
     const finalize = (raw: string): unknown => {
       const parsed = parseJsonLoose(raw);
       let value: unknown = parsed;
-      if (wrap && parsed && typeof parsed === "object" && !Array.isArray(parsed) && "value" in parsed) {
+      if (
+        wrap &&
+        parsed &&
+        typeof parsed === "object" &&
+        !Array.isArray(parsed) &&
+        "value" in parsed
+      ) {
         value = (parsed as Record<string, unknown>).value;
       }
       return typeof value === "string" ? normalizePlainText(value) : value;
     };
 
-    const cacheKey = sha(`${LIGHT_MODEL}\0${ASK_LLM_SYSTEM}\0${userContent}\0${structured ? "json" : "text"}`);
+    const cacheKey = sha(
+      `${LIGHT_MODEL}\0${ASK_LLM_SYSTEM}\0${userContent}\0${structured ? "json" : "text"}`,
+    );
     const cached = await cache.getLlm(cacheKey);
     if (cached) {
       await cache.touch?.(cacheKey);
-      return structured ? finalize(cached.response) : normalizePlainText(cached.response);
+      return structured
+        ? finalize(cached.response)
+        : normalizePlainText(cached.response);
     }
 
-    if (apiCalls >= maxCalls) throw new Error(`askLlm call budget exhausted (${maxCalls})`);
+    if (apiCalls >= maxCalls)
+      throw new Error(`askLlm call budget exhausted (${maxCalls})`);
     apiCalls++;
 
     let lastError = "";
@@ -206,7 +229,9 @@ export function makeAskLlm(
       return value;
     }
 
-    throw new Error(`askLlm failed after ${ASK_LLM_RETRIES} attempts: ${lastError}`);
+    throw new Error(
+      `askLlm failed after ${ASK_LLM_RETRIES} attempts: ${lastError}`,
+    );
   }
 
   return ask;

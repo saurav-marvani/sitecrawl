@@ -365,7 +365,7 @@ const deterministicJsonFormatWithOptions = z.strictObject({
   prompt: z.string().max(10000).optional(),
 });
 
-export type DeterministicJsonFormatWithOptions = z.output<
+type DeterministicJsonFormatWithOptions = z.output<
   typeof deterministicJsonFormatWithOptions
 >;
 

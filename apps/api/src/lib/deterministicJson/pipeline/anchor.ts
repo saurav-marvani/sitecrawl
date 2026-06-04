@@ -220,7 +220,7 @@ function unwrapBody(html: string): string {
   return end < start ? html.slice(start) : html.slice(start, end);
 }
 
-export function buildAnchorHtml(rawHtml: string, snippets: string[]): string {
+function buildAnchorHtml(rawHtml: string, snippets: string[]): string {
   const doc = parseDocument(rawHtml);
   const root = (doc.body ?? doc.documentElement) as Element;
 

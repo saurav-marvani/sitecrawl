@@ -3,7 +3,7 @@
 // budget.
 import { COMMENT_NODE, ELEMENT_NODE, parseDocument, TEXT_NODE } from "./dom";
 
-export interface SimplifyOptions {
+interface SimplifyOptions {
   maxTextLen?: number;
   maxAttrLen?: number;
   maxClassNames?: number;

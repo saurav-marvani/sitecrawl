@@ -1,14 +1,14 @@
-export interface ExtractorEntry {
+interface ExtractorEntry {
   code: string;
   createdAt: number;
 }
 
-export interface Entry {
+interface Entry {
   response: string;
   createdAt: number;
 }
 
-export interface ExtractorMeta {
+interface ExtractorMeta {
   url: string;
   model: string;
   cacheVersion: number;

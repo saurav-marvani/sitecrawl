@@ -1,9 +1,9 @@
-export const CODEGEN_MODEL =
-  process.env.EXTRACT_CODEGEN_MODEL ?? "gemini-3.1-flash-lite";
-export const ANCHOR_MODEL =
-  process.env.EXTRACT_ANCHOR_MODEL ?? "openai/gpt-oss-120b";
-export const LIGHT_MODEL =
-  process.env.EXTRACT_LIGHT_MODEL ?? "openai/gpt-oss-20b";
+import { config } from "../../config";
+
+export const CODEGEN_MODEL = config.EXTRACT_CODEGEN_MODEL;
+export const ANCHOR_MODEL = config.EXTRACT_ANCHOR_MODEL;
+export const LIGHT_MODEL = config.EXTRACT_LIGHT_MODEL;
+export const CODE_SANDBOX_URL = config.CODE_SANDBOX_URL;
 
 // Bump to invalidate every cached extractor at once.
 export const CACHE_VERSION = 1;
