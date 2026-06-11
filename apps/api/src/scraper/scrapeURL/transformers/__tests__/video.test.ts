@@ -17,7 +17,7 @@ describe("fetchVideo", () => {
       if (url.endsWith("/supported-urls")) {
         return {
           ok: true,
-          json: async () => ({ regex: "https://example\\.com/video" }),
+          json: async () => ({ regex: "https://www\\.youtube\\.com/watch" }),
         };
       }
 
@@ -88,7 +88,7 @@ describe("fetchVideo", () => {
     global.fetch = fetchSpy as any;
 
     const meta: any = {
-      url: "https://example.com/video",
+      url: "https://www.youtube.com/watch?v=abc123",
       options: {
         lockdown: true,
         formats: [{ type: "video" }],
@@ -109,7 +109,7 @@ describe("fetchVideo", () => {
     global.fetch = fetchSpy as any;
 
     const meta: any = {
-      url: "https://example.com/video",
+      url: "https://www.youtube.com/watch?v=abc123",
       options: {
         lockdown: false,
         formats: [{ type: "markdown" }],
@@ -161,7 +161,7 @@ describe("fetchVideo", () => {
     ];
 
     const meta: any = {
-      url: "https://example.com/video",
+      url: "https://www.youtube.com/watch?v=abc123",
       audioCookies: cookies,
       options: {
         lockdown: false,
@@ -180,27 +180,16 @@ describe("fetchVideo", () => {
     const body = downloadCall![1]?.body;
     expect(typeof body).toBe("string");
     expect(JSON.parse(body as string)).toEqual({
-      url: "https://example.com/video",
+      url: "https://www.youtube.com/watch?v=abc123",
       cookies,
     });
     expect(document.video).toBe("https://storage.example/video.mp4");
   });
 
-  it("keeps generic provider entries and still populates legacy video for supported provider URLs", async () => {
-    const providerVideo = {
-      url: "https://www.youtube.com/watch?v=abc123",
-      sourceURL: "https://www.youtube.com/watch?v=abc123",
-      source: "provider",
-      kind: "page",
-      provider: "youtube",
-      title: "Video page",
-    };
+  it("skips generic discovery for YouTube URLs and preserves legacy video output", async () => {
     const fetchSpy = jest.fn(async (url: string, _init?: RequestInit) => {
       if (url.endsWith("/videos")) {
-        return {
-          ok: true,
-          json: async () => ({ videos: [providerVideo] }),
-        };
+        throw new Error("Generic discovery should not run for YouTube URLs");
       }
       if (url.endsWith("/supported-urls")) {
         return {
@@ -229,7 +218,12 @@ describe("fetchVideo", () => {
 
     await fetchVideo(meta, document);
 
-    expect(document.videos).toEqual([providerVideo]);
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+    expect(fetchSpy).not.toHaveBeenCalledWith(
+      "https://avgrab.example/videos",
+      expect.anything(),
+    );
+    expect(document.videos).toBeUndefined();
     expect(document.video).toBe("https://storage.example/video.mp4");
   });
 
@@ -241,7 +235,7 @@ describe("fetchVideo", () => {
       if (url.endsWith("/supported-urls")) {
         return {
           ok: true,
-          json: async () => ({ regex: "https://www\\.youtube\\.com/watch" }),
+          json: async () => ({ regex: "https://example\\.com/video" }),
         };
       }
 
@@ -254,7 +248,7 @@ describe("fetchVideo", () => {
     config.AVGRAB_SERVICE_URL = "https://avgrab.example";
 
     const meta: any = {
-      url: "https://www.youtube.com/watch?v=abc123",
+      url: "https://example.com/video",
       options: {
         lockdown: false,
         formats: [{ type: "video" }],
@@ -277,7 +271,7 @@ describe("fetchVideo", () => {
     const fetchSpy = mockSuccessfulAvgrab();
 
     const meta: any = {
-      url: "https://example.com/video",
+      url: "https://www.youtube.com/watch?v=abc123",
       options: {
         lockdown: false,
         formats: [{ type: "video" }],
@@ -295,7 +289,7 @@ describe("fetchVideo", () => {
     const body = downloadCall![1]?.body;
     expect(typeof body).toBe("string");
     expect(JSON.parse(body as string)).toEqual({
-      url: "https://example.com/video",
+      url: "https://www.youtube.com/watch?v=abc123",
     });
   });
 

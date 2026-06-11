@@ -139,50 +139,24 @@ function shouldTryLegacyDownload(videos: VideoItem[]): boolean {
   );
 }
 
-export async function fetchVideo(
-  meta: Meta,
-  document: Document,
-): Promise<Document> {
-  if (!hasFormatOfType(meta.options.formats, "video")) {
-    return document;
-  }
-
-  // Lockdown forbids outbound requests that touch the target URL. avgrab
-  // fetches the source on our behalf, so skip it here.
-  if (meta.options.lockdown) {
-    return document;
-  }
-
-  if (!config.AVGRAB_SERVICE_URL) {
-    meta.logger.warn("AVGRAB_SERVICE_URL is not configured");
-    document.warning =
-      "Video format is not available (service not configured)." +
-      (document.warning ? " " + document.warning : "");
-    return document;
-  }
-
-  const videos = await fetchGenericVideos(meta, document);
-  if (videos.length > 0) {
-    document.videos = videos;
-  }
-
-  if (!shouldTryLegacyDownload(videos)) {
-    return document;
-  }
-
-  let urlRegex: RegExp | null = null;
+function isYouTubeURL(url: string): boolean {
   try {
-    urlRegex = await getSupportedUrlRegex();
-  } catch (error) {
-    if (videos.length > 0) {
-      meta.logger.warn("Skipping legacy video download", { error });
-      return document;
-    }
-    throw error;
+    const hostname = new URL(url).hostname;
+    return (
+      hostname === "youtube.com" ||
+      hostname.endsWith(".youtube.com") ||
+      hostname === "youtu.be"
+    );
+  } catch {
+    return false;
   }
+}
+
+async function fetchLegacyVideoIfSupported(meta: Meta, document: Document) {
+  const urlRegex = await getSupportedUrlRegex();
 
   if (!urlRegex.test(meta.url)) {
-    return document;
+    return;
   }
 
   const requestBody = {
@@ -214,5 +188,53 @@ export async function fetchVideo(
   }
 
   document.video = data.public_url;
+}
+
+export async function fetchVideo(
+  meta: Meta,
+  document: Document,
+): Promise<Document> {
+  if (!hasFormatOfType(meta.options.formats, "video")) {
+    return document;
+  }
+
+  // Lockdown forbids outbound requests that touch the target URL. avgrab
+  // fetches the source on our behalf, so skip it here.
+  if (meta.options.lockdown) {
+    return document;
+  }
+
+  if (!config.AVGRAB_SERVICE_URL) {
+    meta.logger.warn("AVGRAB_SERVICE_URL is not configured");
+    document.warning =
+      "Video format is not available (service not configured)." +
+      (document.warning ? " " + document.warning : "");
+    return document;
+  }
+
+  if (isYouTubeURL(meta.url)) {
+    await fetchLegacyVideoIfSupported(meta, document);
+    return document;
+  }
+
+  const videos = await fetchGenericVideos(meta, document);
+  if (videos.length > 0) {
+    document.videos = videos;
+  }
+
+  if (!shouldTryLegacyDownload(videos)) {
+    return document;
+  }
+
+  try {
+    await fetchLegacyVideoIfSupported(meta, document);
+  } catch (error) {
+    if (videos.length > 0) {
+      meta.logger.warn("Skipping legacy video download", { error });
+      return document;
+    }
+    throw error;
+  }
+
   return document;
 }
