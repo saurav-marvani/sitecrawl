@@ -879,18 +879,21 @@ async function startServices(command?: string[]): Promise<Services> {
     ),
   );
 
-  const nuqPrefetchWorker = execForward(
-    "nuq-prefetch-worker",
-    process.argv[2] === "--start-docker"
-      ? "node dist/src/services/worker/nuq-prefetch-worker.js"
-      : "pnpm nuq-prefetch-worker:production",
-    {
-      NUQ_PREFETCH_WORKER_PORT: String(NUQ_PREFETCH_WORKER_PORT),
-      NUQ_REDUCE_NOISE: "true",
-      NUQ_POD_NAME: "nuq-prefetch-worker-0",
-      NUQ_PREFETCH_REPLICAS: String(1),
-    },
-  );
+  const nuqPrefetchWorker =
+    config.NUQ_BACKEND === "fdb"
+      ? undefined
+      : execForward(
+          "nuq-prefetch-worker",
+          process.argv[2] === "--start-docker"
+            ? "node dist/src/services/worker/nuq-prefetch-worker.js"
+            : "pnpm nuq-prefetch-worker:production",
+          {
+            NUQ_PREFETCH_WORKER_PORT: String(NUQ_PREFETCH_WORKER_PORT),
+            NUQ_REDUCE_NOISE: "true",
+            NUQ_POD_NAME: "nuq-prefetch-worker-0",
+            NUQ_PREFETCH_REPLICAS: String(1),
+          },
+        );
 
   const nuqReconcilerWorker = execForward(
     "nuq-reconciler",
