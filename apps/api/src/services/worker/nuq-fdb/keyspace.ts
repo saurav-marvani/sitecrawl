@@ -102,6 +102,17 @@ export function fnv1a(str: string): number {
   return hash >>> 0;
 }
 
+function prefixEnd(prefix: Buffer): Buffer {
+  const end = Buffer.from(prefix);
+  for (let i = end.length - 1; i >= 0; i--) {
+    if (end[i] !== 0xff) {
+      end[i]++;
+      return end.subarray(0, i + 1);
+    }
+  }
+  throw new Error("Unable to construct FDB prefix range end");
+}
+
 export function timeBucket(jobId: string): number {
   return fnv1a(jobId) % TIME_BUCKETS;
 }
@@ -119,8 +130,8 @@ export class NuqFdbKeyspace {
   }
 
   private packRange(parts: any[]): { begin: Buffer; end: Buffer } {
-    const r = getFdb().tuple.range(["nuq", this.queueName, ...parts]);
-    return { begin: r.begin as Buffer, end: r.end as Buffer };
+    const begin = this.pack(parts);
+    return { begin, end: prefixEnd(begin) };
   }
 
   // === Job records
