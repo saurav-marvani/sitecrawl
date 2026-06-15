@@ -72,11 +72,7 @@ const configSchema = z.object({
     .nonnegative()
     .default(100),
   FEEDBACK_MAX_AGE_SEC: z.coerce.number().int().positive().default(120),
-  FEEDBACK_DAILY_CAP_CREDITS: z.coerce
-    .number()
-    .int()
-    .nonnegative()
-    .default(100),
+  FEEDBACK_DAILY_CAP_CREDITS: z.coerce.number().int().nonnegative().default(50),
   FEEDBACK_REFUND_ENABLED: z.stringbool().default(true),
 
   // OAuth token introspection
