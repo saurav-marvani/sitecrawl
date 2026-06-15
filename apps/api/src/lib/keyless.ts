@@ -1,6 +1,8 @@
 import { isIPv4, isIPv6 } from "node:net";
 import { v5 as uuidv5 } from "uuid";
 import { config } from "../config";
+import { db } from "../db/connection";
+import * as schema from "../db/schema";
 import { redisRateLimitClient } from "../services/rate-limiter";
 
 // Keyless free tier: scrape, search, and interact can be used without an API key
@@ -163,5 +165,20 @@ export async function chargeKeylessCredits(
   } catch {
     // Counter is best-effort; a missed charge just means the IP gets a few
     // extra free credits today.
+  }
+
+  // Log the usage to keyless_credit_usage (per-IP keyless team UUID + raw IP)
+  // for abuse monitoring. Best-effort — never block the request.
+  const teamUuid = keylessTeamUuid(teamId);
+  if (config.USE_DB_AUTHENTICATION === true && teamUuid) {
+    try {
+      await db.insert(schema.keyless_credit_usage).values({
+        team_id: teamUuid,
+        ip,
+        credits_used: inc,
+      });
+    } catch {
+      // Logging is best-effort.
+    }
   }
 }
