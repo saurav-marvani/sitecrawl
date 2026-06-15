@@ -693,6 +693,7 @@ export interface EndpointFeedbackRequest extends SearchFeedbackRequest {
   note?: string;
   url?: string;
   pageNumbers?: number[];
+  /** Small endpoint-specific metadata object. Must be 8KB or smaller. */
   metadata?: Record<string, unknown>;
 }
 

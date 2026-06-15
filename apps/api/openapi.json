@@ -3278,7 +3278,8 @@
               },
               "metadata": {
                 "type": "object",
-                "additionalProperties": true
+                "additionalProperties": true,
+                "description": "Small endpoint-specific metadata object. Must be 8KB or smaller; do not include full endpoint results."
               }
             },
             "required": ["endpoint", "jobId"]

@@ -2191,6 +2191,16 @@ const feedbackIssueSchema = z
     "Issue codes must use lowercase letters, numbers, underscores, or hyphens",
   );
 
+const MAX_FEEDBACK_METADATA_BYTES = 8 * 1024;
+const feedbackMetadataSchema = z
+  .record(z.string(), z.unknown())
+  .refine(
+    value =>
+      new TextEncoder().encode(JSON.stringify(value)).length <=
+      MAX_FEEDBACK_METADATA_BYTES,
+    "metadata must be 8KB or smaller",
+  );
+
 export const endpointFeedbackSchema = z
   .strictObject({
     endpoint: endpointFeedbackEndpointSchema,
@@ -2212,7 +2222,7 @@ export const endpointFeedbackSchema = z
     querySuggestions: z.string().trim().max(2000).optional(),
     url: searchFeedbackUrlSchema.optional(),
     pageNumbers: z.array(z.number().int().positive()).max(100).optional(),
-    metadata: z.record(z.string(), z.unknown()).optional(),
+    metadata: feedbackMetadataSchema.optional(),
     origin: z.string().optional().prefault("api"),
     integration: integrationSchema.optional().transform(val => val || null),
   })
