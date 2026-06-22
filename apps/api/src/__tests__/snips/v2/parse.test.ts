@@ -5,7 +5,14 @@ import {
   TEST_PRODUCTION,
   TEST_SUITE_WEBSITE,
 } from "../lib";
-import { idmux, Identity, parse, parseWithFailure, scrapeTimeout } from "./lib";
+import request, {
+  idmux,
+  Identity,
+  parse,
+  parseWithFailure,
+  scrapeTimeout,
+  TEST_API_URL,
+} from "./lib";
 import { and, desc, eq } from "drizzle-orm";
 import { db } from "../../../db/connection";
 import * as schema from "../../../db/schema";
@@ -26,6 +33,8 @@ const htmlFixture = `
 
 let identity: Identity;
 let pdfFixture: Buffer | null = null;
+const originalParseUploadStorageDriver = config.PARSE_UPLOAD_STORAGE_DRIVER;
+const originalEnv = config.ENV;
 
 async function waitForSingleRow<T>(
   fetcher: () => Promise<T | null>,
@@ -40,6 +49,12 @@ async function waitForSingleRow<T>(
   }
   return null;
 }
+
+afterEach(() => {
+  (config as any).PARSE_UPLOAD_STORAGE_DRIVER =
+    originalParseUploadStorageDriver;
+  (config as any).ENV = originalEnv;
+});
 
 beforeAll(async () => {
   identity = await idmux({
@@ -75,6 +90,115 @@ describe("/v2/parse", () => {
       expect(result.markdown).toContain("Parse HTML Upload Test");
       expect(result.metadata.creditsUsed).toBe(1);
       expect(result.metadata.sourceURL).toBe("upload.html");
+    },
+    scrapeTimeout,
+  );
+
+  it(
+    "parses an upload-ref HTML file into markdown",
+    async () => {
+      (config as any).ENV = "test";
+      (config as any).PARSE_UPLOAD_STORAGE_DRIVER = "local";
+
+      const init = await request(TEST_API_URL)
+        .post("/v2/parse/upload-url")
+        .set("Authorization", `Bearer ${identity.apiKey}`)
+        .set("Content-Type", "application/json")
+        .send({
+          filename: "upload-ref.html",
+          contentType: "text/html",
+        });
+
+      expect(init.statusCode).toBe(200);
+      expect(init.body.success).toBe(true);
+      expect(init.body.data.uploadRef).toEqual(expect.any(String));
+      expect(init.body.data.maxSizeBytes).toBe(50 * 1024 * 1024);
+
+      const upload = await fetch(init.body.data.uploadUrl, {
+        method: "PUT",
+        headers: init.body.data.headers,
+        body: htmlFixture,
+      });
+      expect(upload.status).toBe(200);
+
+      const result = await request(TEST_API_URL)
+        .post("/v2/parse")
+        .set("Authorization", `Bearer ${identity.apiKey}`)
+        .set("Content-Type", "application/json")
+        .send({
+          uploadRef: init.body.data.uploadRef,
+          formats: ["markdown"],
+          zeroDataRetention: true,
+        });
+
+      expect(result.statusCode).toBe(200);
+      expect(result.body.success).toBe(true);
+      expect(result.body.data.markdown).toContain("Parse HTML Upload Test");
+      expect(result.body.data.metadata.sourceURL).toBe("upload-ref.html");
+    },
+    scrapeTimeout,
+  );
+
+  it(
+    "rejects oversized declared upload-ref sizes before signing",
+    async () => {
+      (config as any).ENV = "test";
+      (config as any).PARSE_UPLOAD_STORAGE_DRIVER = "local";
+
+      const failure = await request(TEST_API_URL)
+        .post("/v2/parse/upload-url")
+        .set("Authorization", `Bearer ${identity.apiKey}`)
+        .set("Content-Type", "application/json")
+        .send({
+          filename: "too-large.pdf",
+          contentType: "application/pdf",
+          declaredSizeBytes: 50 * 1024 * 1024 + 1,
+        });
+
+      expect(failure.statusCode).toBe(400);
+      expect(failure.body.success).toBe(false);
+    },
+    scrapeTimeout,
+  );
+
+  it(
+    "rejects upload-ref signing without authentication",
+    async () => {
+      (config as any).ENV = "test";
+      (config as any).PARSE_UPLOAD_STORAGE_DRIVER = "local";
+
+      const failure = await request(TEST_API_URL)
+        .post("/v2/parse/upload-url")
+        .set("Content-Type", "application/json")
+        .send({
+          filename: "upload-ref.html",
+          contentType: "text/html",
+        });
+
+      expect(failure.statusCode).not.toBe(200);
+      expect(failure.body.success).toBe(false);
+    },
+    scrapeTimeout,
+  );
+
+  it(
+    "mints upload refs for xhtml files accepted by parse",
+    async () => {
+      (config as any).ENV = "test";
+      (config as any).PARSE_UPLOAD_STORAGE_DRIVER = "local";
+
+      const init = await request(TEST_API_URL)
+        .post("/v2/parse/upload-url")
+        .set("Authorization", `Bearer ${identity.apiKey}`)
+        .set("Content-Type", "application/json")
+        .send({
+          filename: "upload-ref.xhtml",
+          contentType: "application/xhtml+xml",
+        });
+
+      expect(init.statusCode).toBe(200);
+      expect(init.body.success).toBe(true);
+      expect(init.body.data.uploadRef).toEqual(expect.any(String));
     },
     scrapeTimeout,
   );
