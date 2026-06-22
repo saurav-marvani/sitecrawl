@@ -210,11 +210,7 @@ export async function processBillingBatch() {
           `✅ Successfully billed team ${group.team_id} for ${group.total_credits} credits`,
         );
 
-        // Usage is tracked to Autumn once, at request time (billTeam /
-        // billScrapeJob). The batch is responsible only for committing the
-        // ledger via bill_team_6 — it must NOT re-track usage to Autumn here,
-        // or every charge would be counted twice. On a billing failure the
-        // request-time track is reversed by refundRequestTrackedCredits.
+        // Ledger commit only — usage is tracked to Autumn at request time, not here.
       } catch (error) {
         await refundRequestTrackedCredits(group);
         logger.error(`❌ Failed to bill team ${group.team_id}`, {
