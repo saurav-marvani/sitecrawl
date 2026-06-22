@@ -40,6 +40,13 @@ const originalEnv = config.ENV;
 const parseUploadRefTestRequired =
   process.env.PARSE_UPLOAD_REF_TEST_REQUIRED === "true";
 const parseUploadUnparsedWindowMs = 24 * 60 * 60 * 1000;
+const keylessRequestsPerDay = Number(process.env.KEYLESS_REQUESTS_PER_DAY);
+const keylessCreditsPerDay = Number(process.env.KEYLESS_CREDITS_PER_DAY);
+const keylessEnabled =
+  Number.isFinite(keylessRequestsPerDay) &&
+  keylessRequestsPerDay > 0 &&
+  Number.isFinite(keylessCreditsPerDay) &&
+  keylessCreditsPerDay > 0;
 
 function getUnparsedUploadRefsKey(teamId: string) {
   return `parse-upload-refs:${teamId}`;
@@ -382,27 +389,54 @@ describe("/v2/parse", () => {
   );
 
   it(
-    "rejects upload-ref signing without authentication",
+    "handles upload-ref signing without authentication according to keyless config",
     async () => {
       if (!config.USE_DB_AUTHENTICATION) {
         console.warn(
-          "Skipping uploadRef unauthenticated signing test because authentication is bypassed when USE_DB_AUTHENTICATION is disabled",
+          "Skipping unauthenticated uploadRef signing test because authentication is bypassed when USE_DB_AUTHENTICATION is disabled",
         );
         return;
       }
 
       enableLocalUploadRefAdapter();
 
-      const failure = await request(TEST_API_URL)
+      const response = await request(TEST_API_URL)
         .post("/v2/parse/upload-url")
         .set("Content-Type", "application/json")
         .send({
-          filename: "upload-ref.html",
+          filename: "upload-ref-keyless.html",
           contentType: "text/html",
         });
 
-      expect(failure.statusCode).not.toBe(200);
-      expect(failure.body.success).toBe(false);
+      if (!keylessEnabled) {
+        expect(response.statusCode).not.toBe(200);
+        expect(response.body.success).toBe(false);
+        return;
+      }
+
+      expect(response.statusCode, JSON.stringify(response.body)).toBe(200);
+      expect(response.body.success).toBe(true);
+      expect(response.body.data.uploadRef).toEqual(expect.any(String));
+      expect(response.body.data.uploadUrl).toEqual(expect.any(String));
+
+      const upload = await uploadToMintedTarget(
+        response.body.data,
+        htmlFixture,
+        "upload-ref-keyless.html",
+      );
+      expect([200, 201, 204]).toContain(upload.status);
+
+      const parsed = await request(TEST_API_URL)
+        .post("/v2/parse")
+        .set("Content-Type", "application/json")
+        .send({
+          uploadRef: response.body.data.uploadRef,
+          formats: ["markdown"],
+        });
+
+      expect(parsed.statusCode, JSON.stringify(parsed.body)).toBe(200);
+      expect(parsed.body.success).toBe(true);
+      expect(parsed.body.data.markdown).toContain("Parse HTML Upload Test");
     },
     scrapeTimeout,
   );

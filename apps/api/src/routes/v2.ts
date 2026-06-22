@@ -290,7 +290,7 @@ v2Router.post(
 
 v2Router.post(
   "/parse/upload-url",
-  authMiddleware(RateLimiterMode.Scrape),
+  authMiddleware(RateLimiterMode.Scrape, { allowKeyless: true }),
   countryCheck,
   wrap(parseUploadUrlController),
 );
