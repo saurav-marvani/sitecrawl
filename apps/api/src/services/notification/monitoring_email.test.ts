@@ -12,7 +12,7 @@ const {
   mockResendSend: vi.fn(),
 }));
 
-vi.mock("../monitoring/email_recipients", async (importOriginal) => {
+vi.mock("../monitoring/email_recipients", async importOriginal => {
   const actual =
     await importOriginal<typeof import("../monitoring/email_recipients")>();
   return {
@@ -135,6 +135,7 @@ describe("monitoring email URLs", () => {
       summary: {
         changed: 1,
         new: 0,
+        same: 0,
         removed: 0,
         error: 0,
         totalPages: 1,
@@ -166,11 +167,71 @@ describe("monitoring email URLs", () => {
       monitorName: "M",
       checkId: "c1",
       dashboardUrl: "https://www.firecrawl.dev/app/monitoring/m1?checkId=c1",
-      summary: { changed: 0, new: 1, removed: 0, error: 0, totalPages: 1 },
+      summary: {
+        changed: 0,
+        new: 1,
+        same: 0,
+        removed: 0,
+        error: 0,
+        totalPages: 1,
+      },
       pages: [{ url: "https://example.com", status: "new" }],
       creditsUsed: 1,
     });
     expect(html).not.toContain("Unsubscribe from this monitor");
+  });
+
+  it("renders search monitors as matches/already-seen/checked, not the change breakdown", () => {
+    const html = buildHtml({
+      monitorId: "m1",
+      monitorName: "AI news",
+      checkId: "c1",
+      dashboardUrl: "https://www.firecrawl.dev/app/monitoring/m1?checkId=c1",
+      summary: {
+        changed: 0,
+        new: 2,
+        same: 6,
+        removed: 0,
+        error: 0,
+        totalPages: 8,
+      },
+      pages: [{ url: "https://example.com", status: "new" }],
+      creditsUsed: 1,
+      isSearch: true,
+    });
+    // search-appropriate language
+    expect(html).toContain("found 2 new matches");
+    expect(html).toContain("Matches: 2");
+    expect(html).toContain("Already seen: 6");
+    expect(html).toContain("Checked: 8");
+    // the scrape/crawl-only rows are gone
+    expect(html).not.toContain("Removed:");
+    expect(html).not.toContain("Changed:");
+    expect(html).not.toContain("Total pages checked:");
+    // no errors → no error row
+    expect(html).not.toContain("Errors:");
+  });
+
+  it("uses singular match phrasing and shows errors only when present (search)", () => {
+    const html = buildHtml({
+      monitorId: "m1",
+      monitorName: "AI news",
+      checkId: "c1",
+      dashboardUrl: "https://www.firecrawl.dev/app/monitoring/m1?checkId=c1",
+      summary: {
+        changed: 0,
+        new: 1,
+        same: 3,
+        removed: 0,
+        error: 1,
+        totalPages: 8,
+      },
+      pages: [{ url: "https://example.com", status: "new" }],
+      creditsUsed: 1,
+      isSearch: true,
+    });
+    expect(html).toContain("found a new match");
+    expect(html).toContain("Errors: 1");
   });
 });
 
