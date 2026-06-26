@@ -5,9 +5,9 @@
  */
 
 describe("Audio format engine routing (buildFallbackList)", () => {
-  let buildFallbackList: typeof import("../../../scraper/scrapeURL/engines").buildFallbackList;
-  let clearDataLayerCapabilitiesForTest: typeof import("../../../lib/data-layer").clearDataLayerCapabilitiesForTest;
-  let setDataLayerCapabilitiesForTest: typeof import("../../../lib/data-layer").setDataLayerCapabilitiesForTest;
+  let buildFallbackList: typeof import("../../../scraper/scrapeURL/engines/index.js").buildFallbackList;
+  let clearDataLayerCapabilitiesForTest: typeof import("../../../lib/data-layer.js").clearDataLayerCapabilitiesForTest;
+  let setDataLayerCapabilitiesForTest: typeof import("../../../lib/data-layer.js").setDataLayerCapabilitiesForTest;
 
   const originalFireEngineUrl = process.env.FIRE_ENGINE_BETA_URL;
   const originalIndexUrl = process.env.INDEX_DATABASE_URL;
@@ -25,7 +25,7 @@ describe("Audio format engine routing (buildFallbackList)", () => {
     ({
       clearDataLayerCapabilitiesForTest,
       setDataLayerCapabilitiesForTest,
-    } = await import("../../../lib/data-layer"));
+    } = await import("../../../lib/data-layer.js"));
   });
 
   afterEach(() => {
