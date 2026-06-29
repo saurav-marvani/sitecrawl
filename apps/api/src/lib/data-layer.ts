@@ -31,7 +31,8 @@ export type DataLayerScrapeMetadata = {
 
 const SUPPORTED_FORMATS = new Set(["markdown", "json", "deterministicJson"]);
 const DATA_LAYER_SUCCESS_CREDITS = 15;
-export const THIRD_PARTY_DATA_TERMS_SOURCE_ID = "third_party_data";
+export const PROFESSIONAL_PROFILE_COMPANY_DATA_TERMS_SOURCE_ID =
+  "professional_profile_company_data";
 export const THIRD_PARTY_DATA_TERMS_VERSION = "2026-06-26";
 export const THIRD_PARTY_DATA_TERMS_REQUIRED_CODE =
   "THIRD_PARTY_DATA_TERMS_REQUIRED";
@@ -293,7 +294,7 @@ async function hasAcceptedThirdPartyDataTerms(
         from teams t
         join organization_data_source_terms dst on dst.org_id = t.org_id
         where t.id = ${teamId}
-          and dst.source_id = ${THIRD_PARTY_DATA_TERMS_SOURCE_ID}
+          and dst.source_id = ${PROFESSIONAL_PROFILE_COMPANY_DATA_TERMS_SOURCE_ID}
           and dst.version = ${THIRD_PARTY_DATA_TERMS_VERSION}
         limit 1
       `,
@@ -406,7 +407,7 @@ export function getThirdPartyDataTermsRequiredResponse() {
     error: THIRD_PARTY_DATA_TERMS_REQUIRED_MESSAGE,
     requiresAction: {
       type: "accept_terms",
-      terms: THIRD_PARTY_DATA_TERMS_SOURCE_ID,
+      terms: PROFESSIONAL_PROFILE_COMPANY_DATA_TERMS_SOURCE_ID,
       version: THIRD_PARTY_DATA_TERMS_VERSION,
       url: getThirdPartyDataTermsSettingsUrl(),
     },

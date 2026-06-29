@@ -171,7 +171,7 @@ describe("data layer routing", () => {
       code: "THIRD_PARTY_DATA_TERMS_REQUIRED",
       requiresAction: {
         type: "accept_terms",
-        terms: "third_party_data",
+        terms: "professional_profile_company_data",
         version: "2026-06-26",
       },
     });
