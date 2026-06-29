@@ -265,23 +265,6 @@ export function isSupportedDataLayerFormatRequest(
   });
 }
 
-function isCurrentThirdPartyDataTermsAccepted(input: unknown): boolean {
-  if (!input || typeof input !== "object" || Array.isArray(input)) {
-    return false;
-  }
-
-  const record = input as Record<string, unknown>;
-  const entry = record[THIRD_PARTY_DATA_TERMS_SOURCE_ID];
-  if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
-    return false;
-  }
-
-  return (
-    (entry as Record<string, unknown>).version ===
-    THIRD_PARTY_DATA_TERMS_VERSION
-  );
-}
-
 async function hasAcceptedThirdPartyDataTerms(
   teamId?: string | null,
 ): Promise<boolean> {
@@ -306,19 +289,16 @@ async function hasAcceptedThirdPartyDataTerms(
   try {
     const result = await dbRr.execute(
       sql`
-        select o.data_source_terms
+        select 1
         from teams t
-        join organizations o on o.id = t.org_id
+        join organization_data_source_terms dst on dst.org_id = t.org_id
         where t.id = ${teamId}
+          and dst.source_id = ${THIRD_PARTY_DATA_TERMS_SOURCE_ID}
+          and dst.version = ${THIRD_PARTY_DATA_TERMS_VERSION}
         limit 1
       `,
     );
-    const organization = result.rows?.[0] as
-      | { data_source_terms?: unknown }
-      | undefined;
-    const accepted = isCurrentThirdPartyDataTermsAccepted(
-      organization?.data_source_terms,
-    );
+    const accepted = (result.rows?.length ?? 0) > 0;
 
     cachedTermsAcceptance.set(teamId, {
       accepted,
