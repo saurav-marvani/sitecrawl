@@ -33,7 +33,7 @@ const SUPPORTED_FORMATS = new Set(["markdown", "json", "deterministicJson"]);
 const DATA_LAYER_SUCCESS_CREDITS = 15;
 export const PROFESSIONAL_PROFILE_COMPANY_DATA_TERMS_SOURCE_ID =
   "professional_profile_company_data";
-export const THIRD_PARTY_DATA_TERMS_VERSION = "2026-06-26";
+export const THIRD_PARTY_DATA_TERMS_VERSION = "2026-07-03";
 export const THIRD_PARTY_DATA_TERMS_REQUIRED_CODE =
   "THIRD_PARTY_DATA_TERMS_REQUIRED";
 export const THIRD_PARTY_DATA_TERMS_REQUIRED_MESSAGE =

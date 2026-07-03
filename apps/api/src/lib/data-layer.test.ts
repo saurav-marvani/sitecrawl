@@ -172,7 +172,7 @@ describe("data layer routing", () => {
       requiresAction: {
         type: "accept_terms",
         terms: "professional_profile_company_data",
-        version: "2026-06-26",
+        version: "2026-07-03",
       },
     });
 
