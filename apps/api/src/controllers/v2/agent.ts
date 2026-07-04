@@ -16,6 +16,8 @@ import {
   resolveThreatProtection,
 } from "../../lib/threat-protection/request";
 import { UnsafeDomainBlockedError } from "../../lib/threat-protection/error";
+import { calculateThreatScanCredits } from "../../lib/scrape-billing";
+import { billTeam } from "../../services/billing/credit_billing";
 
 export async function agentController(
   req: RequestWithAuth<{}, AgentResponse, AgentRequest>,
@@ -75,6 +77,30 @@ export async function agentController(
       { teamId: req.auth.team_id },
     );
     if (blocked.length > 0) {
+      // Blocked domains whose decision consulted the classifier (fresh or
+      // cached verdict) bill the scan fee (+2 normal / +3 enhanced) even
+      // though the request is rejected — the scan already happened. Allowed
+      // start URLs are not billed here: the agent's API-driven scrapes
+      // re-check the policy in the scrape pipeline and bill there.
+      const blockedDecisionsByDomain = new Map(
+        blocked.map(x => [x.domain, x.decision]),
+      );
+      const threatScanCredits = calculateThreatScanCredits(
+        blockedDecisionsByDomain.values(),
+      );
+      if (threatScanCredits > 0) {
+        billTeam(
+          req.auth.team_id,
+          req.acuc?.sub_id ?? undefined,
+          threatScanCredits,
+          req.acuc?.api_key_id ?? null,
+          { endpoint: "agent", jobId: agentId },
+        ).catch(error => {
+          logger.error(
+            `Failed to bill team ${req.auth.team_id} for ${threatScanCredits} threat scan credit(s): ${error}`,
+          );
+        });
+      }
       const first = blocked[0];
       const error = new UnsafeDomainBlockedError(first.domain, first.decision);
       return res.status(403).json({

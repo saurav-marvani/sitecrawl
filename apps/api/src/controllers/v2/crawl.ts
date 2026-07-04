@@ -30,6 +30,8 @@ import { resolveThreatProtection } from "../../lib/threat-protection/request";
 import { checkDomain } from "../../lib/threat-protection";
 import { UnsafeDomainBlockedError } from "../../lib/threat-protection/error";
 import { normalizeDomain } from "../../lib/threat-protection/verdict";
+import { calculateThreatScanCredits } from "../../lib/scrape-billing";
+import { billTeam } from "../../services/billing/credit_billing";
 
 export async function crawlController(
   req: RequestWithAuth<{}, CrawlResponse, CrawlRequest>,
@@ -72,6 +74,23 @@ export async function crawlController(
       teamId: req.auth.team_id,
     });
     if (!decision.allowed) {
+      // A blocked seed still bills the scan fee when the classifier was
+      // consulted — the scan already happened. (An allowed seed is not billed
+      // here: its scrape job re-checks the cached verdict and bills there.)
+      const threatScanCredits = calculateThreatScanCredits([decision]);
+      if (threatScanCredits > 0) {
+        billTeam(
+          req.auth.team_id,
+          req.acuc?.sub_id ?? undefined,
+          threatScanCredits,
+          req.acuc?.api_key_id ?? null,
+          { endpoint: "crawl" },
+        ).catch(error => {
+          _logger.error(
+            `Failed to bill team ${req.auth.team_id} for ${threatScanCredits} threat scan credit(s): ${error}`,
+          );
+        });
+      }
       const error = new UnsafeDomainBlockedError(seedDomain, decision);
       return res.status(403).json({
         success: false,

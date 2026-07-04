@@ -19,6 +19,7 @@ import type { BillingMetadata } from "../services/billing/types";
 import type { ThreatProtectionPolicy } from "../lib/threat-protection/types";
 import { checkUrlsAgainstThreatPolicy } from "../lib/threat-protection/request";
 import { normalizeDomain } from "../lib/threat-protection/verdict";
+import { calculateThreatScanCredits } from "../lib/scrape-billing";
 
 interface SearchOptions {
   query: string;
@@ -111,7 +112,10 @@ export async function executeSearch(
 
   // Threat protection: remove results on blocked domains entirely — before
   // slicing/counting, before scraping, and before returning. Domain checks
-  // are deduped and Redis-cached.
+  // are deduped and Redis-cached. Every consulted decision (fresh or cached
+  // provider verdict) is a billable scan (+2 normal / +3 enhanced), charged
+  // as part of the search credits below.
+  let threatScanCredits = 0;
   const threatPolicy = context.threatProtectionPolicy;
   if (threatPolicy && threatPolicy.mode !== "off") {
     const urlsToCheck = [
@@ -125,6 +129,9 @@ export async function executeSearch(
         urlsToCheck,
         threatPolicy,
         { teamId },
+      );
+      threatScanCredits = calculateThreatScanCredits(
+        decisionsByDomain.values(),
       );
       const isAllowed = (url: string | undefined | null): boolean => {
         if (!url) return true;
@@ -186,8 +193,13 @@ export async function executeSearch(
 
   const isZDR = options.enterprise?.includes("zdr");
   const creditsPerTenResults = isZDR ? 10 : 2;
+  // Threat protection scan fees ride on the search credits: they are part of
+  // serving the search itself (every result domain is scanned before
+  // filtering), so they bill against the same feature and show up in the
+  // request's creditsUsed.
   const searchCredits =
-    Math.ceil(totalResultsCount / 10) * creditsPerTenResults;
+    Math.ceil(totalResultsCount / 10) * creditsPerTenResults +
+    threatScanCredits;
   let scrapeCredits = 0;
 
   const shouldScrape =

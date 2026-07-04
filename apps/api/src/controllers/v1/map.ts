@@ -36,6 +36,7 @@ import {
   resolveThreatProtection,
 } from "../../lib/threat-protection/request";
 import { normalizeDomain } from "../../lib/threat-protection/verdict";
+import { calculateThreatScanCredits } from "../../lib/scrape-billing";
 
 configDotenv();
 const redis = new Redis(config.REDIS_URL!);
@@ -485,13 +486,16 @@ export async function mapController(
   }
 
   // Threat protection: remove links on blocked domains from the returned
-  // URL list entirely.
+  // URL list entirely. Every consulted decision (fresh or cached provider
+  // verdict) is a billable scan (+2 normal / +3 enhanced).
+  let threatScanCredits = 0;
   if (threatProtection.policy && result.links.length > 0) {
     const { decisionsByDomain } = await checkUrlsAgainstThreatPolicy(
       result.links,
       threatProtection.policy,
       { teamId: req.auth.team_id },
     );
+    threatScanCredits = calculateThreatScanCredits(decisionsByDomain.values());
     result.links = result.links.filter(x => {
       const decision = decisionsByDomain.get(normalizeDomain(x));
       return decision === undefined || decision.allowed;
@@ -499,15 +503,16 @@ export async function mapController(
   }
 
   // Bill the team
+  const creditsToBill = 1 + threatScanCredits;
   billTeam(
     req.auth.team_id,
     req.acuc?.sub_id,
-    1,
+    creditsToBill,
     req.acuc?.api_key_id ?? null,
     { endpoint: "map", jobId: mapId },
   ).catch(error => {
     logger.error(
-      `Failed to bill team ${req.auth.team_id} for 1 credit: ${error}`,
+      `Failed to bill team ${req.auth.team_id} for ${creditsToBill} credit(s): ${error}`,
     );
   });
 
@@ -528,7 +533,7 @@ export async function mapController(
       location: req.body.location,
     },
     results: result.links,
-    credits_cost: 1,
+    credits_cost: creditsToBill,
     zeroDataRetention: false, // not supported
   });
 

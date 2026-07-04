@@ -36,6 +36,7 @@ import { redisEvictConnection } from "../redis";
 import {
   resolveBillingMetadata,
   toAutumnBillingProperties,
+  type BillingMetadata,
 } from "../billing/types";
 import {
   autumnService,
@@ -61,7 +62,11 @@ import { isUrlBlocked } from "../../scraper/WebScraper/utils/blocklist";
 import { UNSUPPORTED_SITE_MESSAGE } from "../../lib/strings";
 import { generateURLSplits, queryIndexAtSplitLevel } from "../index";
 import { WebCrawler } from "../../scraper/WebScraper/crawler";
-import { calculateCreditsToBeBilled } from "../../lib/scrape-billing";
+import {
+  calculateCreditsToBeBilled,
+  calculateThreatScanCredits,
+} from "../../lib/scrape-billing";
+import { billTeam } from "../billing/credit_billing";
 import { getBillingQueue } from "../queue-service";
 import type { Logger } from "winston";
 import {
@@ -218,6 +223,47 @@ async function billScrapeJob(
   }
 
   return creditsToBeBilled;
+}
+
+/**
+ * Bills threat protection scan fees for crawl-discovered URLs that were
+ * blocked by the policy and therefore never become scrape jobs. Only blocked
+ * decisions bill here: allowed discoveries are billed by their own scrape
+ * job, which re-checks the (cached) verdict. Deduplicates by domain, and only
+ * decisions that consulted the classifier (fresh or cached provider verdict)
+ * carry a fee (+2 normal / +3 enhanced) — local-only blocks (e.g. blacklist)
+ * are free.
+ */
+function billThreatBlockedDiscoveries(
+  args: {
+    teamId: string;
+    apiKeyId: number | null;
+    billing: BillingMetadata;
+    bypassBilling: boolean;
+  },
+  blocked: { domain: string; decision: ThreatDecision }[],
+  logger: Logger,
+) {
+  if (args.bypassBilling) return;
+  const blockedDecisionsByDomain = new Map(
+    blocked.map(x => [x.domain, x.decision]),
+  );
+  const threatScanCredits = calculateThreatScanCredits(
+    blockedDecisionsByDomain.values(),
+  );
+  if (threatScanCredits <= 0) return;
+  billTeam(
+    args.teamId,
+    undefined,
+    threatScanCredits,
+    args.apiKeyId,
+    args.billing,
+  ).catch(error => {
+    logger.error(
+      `Failed to bill team ${args.teamId} for ${threatScanCredits} threat scan credit(s)`,
+      { error },
+    );
+  });
 }
 
 async function processJob(job: NuQJob<ScrapeJobSingleUrls>) {
@@ -493,6 +539,21 @@ async function processJob(job: NuQJob<ScrapeJobSingleUrls>) {
                 );
               }
               if (blocked.length > 0) {
+                billThreatBlockedDiscoveries(
+                  {
+                    teamId: job.data.team_id,
+                    apiKeyId: job.data.apiKeyId ?? null,
+                    billing: resolveBillingMetadata({
+                      billing: job.data.billing,
+                      crawlId: job.data.crawl_id,
+                      crawlerOptions: job.data.crawlerOptions,
+                    }),
+                    bypassBilling:
+                      job.data.internalOptions?.bypassBilling ?? false,
+                  },
+                  blocked,
+                  logger,
+                );
                 logger.info(
                   "Skipped " +
                     blocked.length +
@@ -1161,6 +1222,22 @@ async function processKickoffJob(job: NuQJob<ScrapeJobKickoff>) {
           blockedUrl.decision,
         );
       }
+      if (blocked.length > 0) {
+        billThreatBlockedDiscoveries(
+          {
+            teamId: job.data.team_id,
+            apiKeyId: job.data.apiKeyId ?? null,
+            billing: resolveBillingMetadata({
+              billing: job.data.billing,
+              crawlId: job.data.crawl_id,
+              crawlerOptions: sc.crawlerOptions,
+            }),
+            bypassBilling: sc.internalOptions?.bypassBilling ?? false,
+          },
+          blocked,
+          logger,
+        );
+      }
     }
 
     if (indexLinks.length > 0) {
@@ -1302,6 +1379,22 @@ async function processKickoffSitemapJob(job: NuQJob<ScrapeJobKickoffSitemap>) {
           job.data.crawl_id,
           blockedUrl.url,
           blockedUrl.decision,
+        );
+      }
+      if (blocked.length > 0) {
+        billThreatBlockedDiscoveries(
+          {
+            teamId: job.data.team_id,
+            apiKeyId: job.data.apiKeyId ?? null,
+            billing: resolveBillingMetadata({
+              billing: job.data.billing,
+              crawlId: job.data.crawl_id,
+              crawlerOptions: sc.crawlerOptions,
+            }),
+            bypassBilling: sc.internalOptions?.bypassBilling ?? false,
+          },
+          blocked,
+          logger,
         );
       }
     }

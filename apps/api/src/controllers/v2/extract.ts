@@ -19,6 +19,8 @@ import {
   resolveThreatProtection,
 } from "../../lib/threat-protection/request";
 import { UnsafeDomainBlockedError } from "../../lib/threat-protection/error";
+import { calculateThreatScanCredits } from "../../lib/scrape-billing";
+import { billTeam } from "../../services/billing/credit_billing";
 
 /**
  * Extracts data from the provided URLs based on the request parameters.
@@ -96,11 +98,30 @@ export async function extractController(
     });
   }
   if (threatProtection.policy && (req.body.urls?.length ?? 0) > 0) {
-    const { blocked } = await checkUrlsAgainstThreatPolicy(
+    const { blocked, decisionsByDomain } = await checkUrlsAgainstThreatPolicy(
       req.body.urls ?? [],
       threatProtection.policy,
       { teamId: req.auth.team_id },
     );
+    // Every consulted decision (fresh or cached provider verdict) is a
+    // billable scan (+2 normal / +3 enhanced) — including when the request is
+    // rejected below: the scans already happened.
+    const threatScanCredits = calculateThreatScanCredits(
+      decisionsByDomain.values(),
+    );
+    if (threatScanCredits > 0) {
+      billTeam(
+        req.auth.team_id,
+        req.acuc?.sub_id ?? undefined,
+        threatScanCredits,
+        req.acuc?.api_key_id ?? null,
+        { endpoint: "extract", jobId: extractId },
+      ).catch(error => {
+        _logger.error(
+          `Failed to bill team ${req.auth.team_id} for ${threatScanCredits} threat scan credit(s): ${error}`,
+        );
+      });
+    }
     if (blocked.length > 0) {
       if (req.body.ignoreInvalidURLs) {
         invalidURLs.push(...blocked.map(x => x.url));
