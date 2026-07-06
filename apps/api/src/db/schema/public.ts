@@ -246,7 +246,7 @@ export const idempotency_keys = pgTable("idempotency_keys", {
 // Enforced only when allowed_ips is non-empty; entries are IPv4/IPv6/CIDR.
 export const ip_restriction_config = pgTable("ip_restriction_config", {
   id: uuid("id").notNull().defaultRandom(),
-  team_id: uuid("team_id").notNull(),
+  team_id: uuid("team_id").notNull().unique(),
   allowed_ips: jsonb("allowed_ips")
     .notNull()
     .default(sql`'[]'::jsonb`),

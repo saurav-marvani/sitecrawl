@@ -64,7 +64,15 @@ async function getTeamAllowedIps(teamId: string): Promise<string[]> {
   try {
     const cached = await getValue(cacheKey);
     if (cached !== null) {
-      return JSON.parse(cached);
+      const parsed = JSON.parse(cached);
+      // A corrupted-but-parseable cache entry must not reach the matcher;
+      // treat anything that isn't a string array as a cache miss.
+      if (Array.isArray(parsed)) {
+        return parsed.filter((x): x is string => typeof x === "string");
+      }
+      logger.warn("Ignoring malformed IP restriction allowlist cache entry", {
+        teamId,
+      });
     }
   } catch (error) {
     logger.warn("Failed to read IP restriction allowlist cache", {
