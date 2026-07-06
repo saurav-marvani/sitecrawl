@@ -21,6 +21,7 @@ import {
   SearchRequestInput,
   toV2CrawlerOptions,
 } from "../../../controllers/v2/types";
+import { searchRequestSchema as searchRequestSchemaV1 } from "../../../controllers/v1/types";
 import {
   createMonitorSchema,
   updateMonitorSchema,
@@ -1119,6 +1120,11 @@ describe("V2 Types Validation", () => {
       };
 
       const result = searchRequestSchema.parse(input);
+      expect(result.highlights).toBe(true);
+    });
+
+    it("should default highlights to true on v1", () => {
+      const result = searchRequestSchemaV1.parse({ query: "test" });
       expect(result.highlights).toBe(true);
     });
 

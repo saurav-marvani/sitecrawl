@@ -1549,7 +1549,6 @@ export type TeamFlags = {
   debugBranding?: boolean;
   maxBrowserSessions?: number;
   researchBeta?: boolean;
-  highlightsBeta?: boolean;
   menuBeta?: boolean;
   enrichBeta?: boolean;
 } | null;
