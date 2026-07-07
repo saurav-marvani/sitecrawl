@@ -24,8 +24,15 @@ export async function getApiKeyConcurrencyLimit(
   try {
     const cached = await getValue(cacheKey);
     if (cached !== null) {
+      // only the explicit negative-cache sentinel means "no limit"; anything
+      // else malformed is a cache miss so a corrupted entry cannot silently
+      // disable the key's gate
+      if (cached === "none") return null;
       const parsed = Number(cached);
-      return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+      if (Number.isInteger(parsed) && parsed > 0) return parsed;
+      logger.warn("Ignoring malformed API key concurrency cache entry", {
+        apiKeyId,
+      });
     }
   } catch (error) {
     logger.warn("Failed to read API key concurrency cache", {
