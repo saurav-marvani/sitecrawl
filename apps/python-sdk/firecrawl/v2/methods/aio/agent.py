@@ -2,6 +2,7 @@ from typing import Any, Dict, List, Literal, Optional, Union
 import asyncio
 
 from ...types import AgentResponse, AgentWebhookConfig, ThreatProtectionOptions
+from ...utils.error_handler import handle_response_error
 from ...utils.http_client_async import AsyncHttpClient
 from ...utils.validation import _normalize_schema
 
@@ -85,12 +86,16 @@ async def start_agent(
         threat_protection=threat_protection,
     )
     resp = await client.post("/v2/agent", body)
+    if not resp.ok:
+        handle_response_error(resp, "agent")
     payload = _normalize_agent_response_payload(resp.json())
     return AgentResponse(**payload)
 
 
 async def get_agent_status(client: AsyncHttpClient, job_id: str) -> AgentResponse:
     resp = await client.get(f"/v2/agent/{job_id}")
+    if not resp.ok:
+        handle_response_error(resp, "agent-status")
     payload = _normalize_agent_response_payload(resp.json())
     return AgentResponse(**payload)
 
@@ -160,4 +165,6 @@ async def cancel_agent(client: AsyncHttpClient, job_id: str) -> bool:
         Exception: If the cancellation fails
     """
     resp = await client.delete(f"/v2/agent/{job_id}")
+    if not resp.ok:
+        handle_response_error(resp, "cancel agent")
     return resp.json().get("success", False)

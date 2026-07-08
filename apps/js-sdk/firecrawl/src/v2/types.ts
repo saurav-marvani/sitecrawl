@@ -289,6 +289,7 @@ export type ParseOptions = Omit<
   | "storeInCache"
   | "lockdown"
   | "proxy"
+  | "threatProtection"
 > & {
   formats?: ParseFormatOption[];
   proxy?: "basic" | "auto";
