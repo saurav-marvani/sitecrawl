@@ -55,7 +55,7 @@ class TopologySmokeTest(unittest.TestCase):
         self.assertTrue(
             any(
                 mount["name"] == "fdb-cluster-file"
-                and mount["mountPath"] == "/etc/foundationdb/fdb.cluster"
+                and mount["mountPath"] == "/etc/foundationdb"
                 for mount in mounts
             )
         )
@@ -92,7 +92,13 @@ class TopologySmokeTest(unittest.TestCase):
         self.assertEqual(config["FDB_CLUSTER_FILE"], "")
 
     def test_mixed(self) -> None:
-        documents = render("mixed", "--set", "cclogWorker.enabled=true")
+        documents = render(
+            "mixed",
+            "--set",
+            "cclogWorker.enabled=true",
+            "--set",
+            "nuqPostgres.persistence.enabled=true",
+        )
         rendered = deployments(documents)
         self.assertIn(PREFIX + "nuq-worker", rendered)
         self.assertIn(PREFIX + "nuq-fdb-scrape-worker", rendered)
@@ -115,6 +121,14 @@ class TopologySmokeTest(unittest.TestCase):
             "nuq-fdb-crawl-finished-worker",
         ):
             self.assert_fdb_mount(rendered[PREFIX + workload])
+        pvc = next(
+            document
+            for document in documents
+            if document.get("kind") == "PersistentVolumeClaim"
+        )
+        self.assertEqual(
+            pvc["metadata"]["annotations"]["helm.sh/resource-policy"], "keep"
+        )
         config = config_map(documents)["data"]
         self.assertEqual(config["NUQ_BACKEND"], "")
         self.assertEqual(

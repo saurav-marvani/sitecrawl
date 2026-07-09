@@ -25,7 +25,9 @@ export function resolveNuqServiceTopology(options: {
   }
 
   const forcedFdb = options.backend === "fdb";
-  const fdbConfigured = forcedFdb || Boolean(options.fdbClusterFile);
+  const forcedPg = options.backend === "pg";
+  const fdbConfigured =
+    !forcedPg && (forcedFdb || Boolean(options.fdbClusterFile));
 
   return {
     forcedFdb,

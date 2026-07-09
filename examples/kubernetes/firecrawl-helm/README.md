@@ -66,7 +66,9 @@ A safe migration is:
 2. Enable FDB routing gradually for selected teams while both consumer sets
    remain available. Existing crawls stay pinned to their original backend.
 3. Stop new PG routing and wait for PG active, delayed, and crawl-finished work
-   to drain before switching to `fdb`.
+   to drain before switching to `fdb`. Persistent PG queue volumes are retained
+   across this switch as a rollback safeguard and must be deleted manually only
+   after they are no longer needed.
 4. Keep `nuqFdb.maintenanceWorker.replicaCount` and
    `nuqFdb.crawlFinishedWorker.replicaCount` at one or more. The chart rejects
    zero for these control loops. `nuqFdb.scrapeWorker.replicaCount=0` is safe

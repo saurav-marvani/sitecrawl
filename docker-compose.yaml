@@ -55,11 +55,12 @@ x-common-env: &common-env
   SEARXNG_ENDPOINT: ${SEARXNG_ENDPOINT}
   SEARXNG_ENGINES: ${SEARXNG_ENGINES}
   SEARXNG_CATEGORIES: ${SEARXNG_CATEGORIES}
-  # Set FDB_CLUSTER_FILE=/var/fdb/fdb.cluster for every FDB-capable topology.
-  # Leave NUQ_BACKEND unset for mixed routing, or set it to fdb to force FDB.
-  # NUQ_BACKEND=pg with no cluster file remains explicitly PG-only.
-  NUQ_BACKEND: ${NUQ_BACKEND}
-  FDB_CLUSTER_FILE: ${FDB_CLUSTER_FILE:-}
+  # Compose defaults to explicit PG mode while wiring the shared FDB cluster
+  # file for opt-in modes. Set NUQ_BACKEND= (empty) for mixed/team-flag
+  # routing, or NUQ_BACKEND=fdb to force FDB. NUQ_BACKEND=pg always remains
+  # PG-only even though the cluster file is available.
+  NUQ_BACKEND: ${NUQ_BACKEND-pg}
+  FDB_CLUSTER_FILE: ${FDB_CLUSTER_FILE-/var/fdb/fdb.cluster}
 
 services:
   playwright-service:
@@ -173,10 +174,9 @@ services:
         max-file: "3"
         compress: "true"
 
-  # FoundationDB queue backend (experimental). Set
-  # FDB_CLUSTER_FILE=/var/fdb/fdb.cluster to enable mixed/team-flag routing;
-  # also set NUQ_BACKEND=fdb to force all queue traffic onto FDB. The API
-  # container reads the shared cluster file from the fdb-cluster-file volume.
+  # FoundationDB queue backend (experimental). Compose wires its shared
+  # cluster file automatically. Set NUQ_BACKEND= (empty) for mixed/team-flag
+  # routing or NUQ_BACKEND=fdb to force all queue traffic onto FDB.
   foundationdb:
     image: foundationdb/foundationdb:7.3.63
     environment:

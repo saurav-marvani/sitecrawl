@@ -58,7 +58,7 @@ nuqFdb:
   clusterFile:
     existingSecret: ""
     key: fdb.cluster
-    mountPath: /etc/foundationdb/fdb.cluster
+    mountPath: /etc/foundationdb
   scrapeWorker:
     replicaCount: 5
     port: 3014

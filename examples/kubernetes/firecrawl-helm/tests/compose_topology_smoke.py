@@ -43,15 +43,15 @@ class ComposeTopologySmokeTest(unittest.TestCase):
     def test_pg_only(self) -> None:
         environment = api_environment(backend="pg", cluster_file=None)
         self.assertEqual(environment["NUQ_BACKEND"], "pg")
-        self.assertEqual(environment["FDB_CLUSTER_FILE"], "")
+        self.assertEqual(environment["FDB_CLUSTER_FILE"], CLUSTER_FILE)
 
     def test_mixed(self) -> None:
-        environment = api_environment(backend=None, cluster_file=CLUSTER_FILE)
+        environment = api_environment(backend="", cluster_file=None)
         self.assertEqual(environment["NUQ_BACKEND"], "")
         self.assertEqual(environment["FDB_CLUSTER_FILE"], CLUSTER_FILE)
 
     def test_forced_fdb(self) -> None:
-        environment = api_environment(backend="fdb", cluster_file=CLUSTER_FILE)
+        environment = api_environment(backend="fdb", cluster_file=None)
         self.assertEqual(environment["NUQ_BACKEND"], "fdb")
         self.assertEqual(environment["FDB_CLUSTER_FILE"], CLUSTER_FILE)
 

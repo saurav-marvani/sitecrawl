@@ -712,6 +712,8 @@ async function waitForFdb(
 }
 
 async function setupFdb(): Promise<Services["fdb"]> {
+  if (config.NUQ_BACKEND === "pg") return undefined;
+
   // A cluster file without forced-FDB mode is the mixed/team-flag topology.
   // It needs FDB consumers even though unflagged traffic continues to use PG.
   if (

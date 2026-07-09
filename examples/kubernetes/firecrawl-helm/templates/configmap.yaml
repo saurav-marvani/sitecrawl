@@ -32,7 +32,7 @@ data:
   CCLOG_WORKER_PORT: {{ default (printf "%v" .Values.cclogWorker.port) .Values.config.CCLOG_WORKER_PORT | quote }}
   NUQ_WORKER_COUNT: {{ default (printf "%v" .Values.nuqWorker.replicaCount) .Values.config.NUQ_WORKER_COUNT | quote }}
   NUQ_BACKEND: {{ if eq $nuqMode "fdb" }}"fdb"{{ else if eq $nuqMode "pg" }}"pg"{{ else }}""{{ end }}
-  FDB_CLUSTER_FILE: {{ if $fdbEnabled }}{{ .Values.nuqFdb.clusterFile.mountPath | quote }}{{ else }}""{{ end }}
+  FDB_CLUSTER_FILE: {{ if $fdbEnabled }}{{ include "firecrawl.fdbClusterFilePath" . | quote }}{{ else }}""{{ end }}
   REDIS_URL: {{ default $redisDefault .Values.config.REDIS_URL | quote }}
   REDIS_RATE_LIMIT_URL: {{ default $redisDefault .Values.config.REDIS_RATE_LIMIT_URL | quote }}
   PLAYWRIGHT_MICROSERVICE_URL: {{ default $playwrightDefault .Values.config.PLAYWRIGHT_MICROSERVICE_URL | quote }}

@@ -47,6 +47,12 @@ unflagged and draining teams while also running FDB consumers.
   {{- if not .Values.nuqFdb.clusterFile.existingSecret -}}
     {{- fail "nuqFdb.clusterFile.existingSecret is required for mixed and fdb modes" -}}
   {{- end -}}
+  {{- if not .Values.nuqFdb.clusterFile.key -}}
+    {{- fail "nuqFdb.clusterFile.key is required for mixed and fdb modes" -}}
+  {{- end -}}
+  {{- if not .Values.nuqFdb.clusterFile.mountPath -}}
+    {{- fail "nuqFdb.clusterFile.mountPath is required for mixed and fdb modes" -}}
+  {{- end -}}
   {{- if lt (int .Values.nuqFdb.maintenanceWorker.replicaCount) 1 -}}
     {{- fail "nuqFdb.maintenanceWorker.replicaCount must be at least 1" -}}
   {{- end -}}
@@ -54,4 +60,29 @@ unflagged and draining teams while also running FDB consumers.
     {{- fail "nuqFdb.crawlFinishedWorker.replicaCount must be at least 1" -}}
   {{- end -}}
 {{- end -}}
+{{- end -}}
+
+{{- define "firecrawl.fdbClusterFilePath" -}}
+{{- printf "%s/fdb.cluster" (trimSuffix "/" .Values.nuqFdb.clusterFile.mountPath) -}}
+{{- end -}}
+
+{{- define "firecrawl.fdbVolumeMounts" -}}
+{{- if include "firecrawl.fdbEnabled" . }}
+volumeMounts:
+  - name: fdb-cluster-file
+    mountPath: {{ .Values.nuqFdb.clusterFile.mountPath | quote }}
+    readOnly: true
+{{- end }}
+{{- end -}}
+
+{{- define "firecrawl.fdbVolumes" -}}
+{{- if include "firecrawl.fdbEnabled" . }}
+volumes:
+  - name: fdb-cluster-file
+    secret:
+      secretName: {{ .Values.nuqFdb.clusterFile.existingSecret | quote }}
+      items:
+        - key: {{ .Values.nuqFdb.clusterFile.key | quote }}
+          path: fdb.cluster
+{{- end }}
 {{- end -}}
