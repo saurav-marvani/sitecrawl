@@ -3,7 +3,7 @@ import { z } from "zod";
 import { and, eq } from "drizzle-orm";
 import { logger as _logger } from "../../lib/logger";
 import { ErrorResponse, RequestWithAuth } from "./types";
-import { db, dbRr } from "../../db/connection";
+import { db } from "../../db/connection";
 import * as schema from "../../db/schema";
 import { apiKeyToFcApiKey } from "../../lib/parseApi";
 import { autumnService } from "../../services/autumn/autumn.service";
@@ -52,7 +52,11 @@ export async function createApiKeyController(
   let ownerId: string | null = null;
   const callerKeyId = req.acuc?.api_key_id;
   if (callerKeyId) {
-    const [callerKey] = await dbRr
+    // Read from the primary, not the replica: the authenticating key is
+    // guaranteed to exist, but replica lag (e.g. a just-created key, or a
+    // recent owner change) could miss it and wrongly leave the new key
+    // unowned.
+    const [callerKey] = await db
       .select({ owner_id: schema.api_keys.owner_id })
       .from(schema.api_keys)
       .where(
