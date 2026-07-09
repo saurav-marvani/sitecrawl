@@ -1,7 +1,7 @@
 import { randomUUID } from "crypto";
 import { logger } from "../../lib/logger";
 import { and, eq, isNotNull } from "drizzle-orm";
-import { dbRr } from "../../db/connection";
+import { db, dbRr } from "../../db/connection";
 import * as schema from "../../db/schema";
 import { getRedisConnection } from "../queue-service";
 import { autumnClient } from "./client";
@@ -620,7 +620,10 @@ export class AutumnService {
         customerId,
         async () => {
           // All keys across the org (the Autumn customer) with a limit set.
-          const rows = await dbRr
+          // Read from the primary: this runs right after inserting a new key,
+          // so the replica may not have the just-created row yet — missing it
+          // would push to Autumn without the new key's cap.
+          const rows = await db
             .select({
               id: schema.api_keys.id,
               credits: schema.api_keys.credit_limit,
