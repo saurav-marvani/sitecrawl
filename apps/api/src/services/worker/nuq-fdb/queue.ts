@@ -82,6 +82,8 @@ export type NuQJobStatusCompat =
   | "backlog";
 
 export type NuQFdbJob<Data = any, ReturnValue = any> = {
+  /** Intrinsic queue identity; direct FDB consumers must never run PG cleanup. */
+  backend: "fdb";
   id: string;
   status: NuQJobStatusCompat;
   createdAt: Date;
@@ -554,6 +556,7 @@ export class NuQFdbQueue<JobData = any, JobReturnValue = any> {
         }
 
         out.push({
+          backend: "fdb",
           id: j.id,
           status: placedStatus === "pending" ? "backlog" : "queued",
           createdAt: new Date(now),
@@ -763,6 +766,7 @@ export class NuQFdbQueue<JobData = any, JobReturnValue = any> {
       }
 
       return {
+        backend: "fdb" as const,
         id: e.i,
         status: "active" as const,
         createdAt: new Date(meta.c),
@@ -794,9 +798,10 @@ export class NuQFdbQueue<JobData = any, JobReturnValue = any> {
         tn.set(ks.lease(timeBucket(id), newExp, id), encodeJson({ l: lock }));
         // the lease index moved, keep the status record's expiry in sync for
         // observability; only the worker holding the lock writes this
-        const st = decodeJson<JobStatusRecord>(
-          await tn.snapshot().get(ks.jobStatus(id)),
-        );
+        // This must be a conflictful read. If the sweeper requeues between the
+        // read and commit, FDB retries us and the lock check fences this worker
+        // instead of recreating an active lease beside a ready queue entry.
+        const st = decodeJson<JobStatusRecord>(await tn.get(ks.jobStatus(id)));
         if (!st || st.s !== "active" || st.l !== lock) {
           throw new LockLostError();
         }
@@ -982,6 +987,7 @@ export class NuQFdbQueue<JobData = any, JobReturnValue = any> {
     }
 
     return {
+      backend: "fdb",
       id,
       status,
       createdAt: new Date(meta.c),
