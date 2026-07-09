@@ -13,7 +13,7 @@ const logger = _logger.child({ module: "team-api-keys" });
 const spendLimitSchema = z.object({
   // Spend limit is expressed in Firecrawl credits (our billing unit), capped
   // over a rolling day/week/month window regardless of remaining balance.
-  credits: z.number().int().positive().max(100_000_000),
+  credits: z.number().int().positive(),
   interval: z.enum(["day", "week", "month"]),
 });
 
