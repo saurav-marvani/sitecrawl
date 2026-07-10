@@ -6,10 +6,14 @@ import { scrapeQueue, type NuQJob } from "../services/worker/nuq";
 import {
   getCombinedTeamActiveCount,
   syncFdbLimitToPgOccupancy,
-  withTeamMigrationAdmission,
 } from "../services/worker/nuq-router";
+import {
+  completeNuQPgPublication,
+  type NuQPgPublication,
+} from "../services/worker/nuq-pg-publication";
 import { RateLimiterMode, type ScrapeJobData } from "../types";
 import {
+  acknowledgeConcurrentJob,
   getConcurrencyLimitActiveJobs,
   getNextConcurrentJob,
   MAX_BACKLOG_TIMEOUT_MS,
@@ -18,6 +22,7 @@ import {
   pushCrawlConcurrencyLimitActiveJob,
   removeConcurrencyLimitActiveJob,
   removeCrawlConcurrencyLimitActiveJob,
+  restoreConcurrentJob,
 } from "./concurrency-limit";
 import { getCrawl } from "./crawl-redis";
 import { logger as _logger } from "./logger";
@@ -36,6 +41,18 @@ interface ReconcileResult {
 
 function isExtractJob(data: ScrapeJobData): boolean {
   return "is_extract" in data && !!data.is_extract;
+}
+
+function publicationForBacklogJob(
+  ownerId: string,
+  job: NuQJob<ScrapeJobData>,
+): NuQPgPublication {
+  return {
+    id: job.id,
+    ownerId,
+    groupId: job.data.crawl_id,
+    placement: "backlog",
+  };
 }
 
 function getBacklogJobTimeout(jobData: ScrapeJobData): number {
@@ -76,14 +93,6 @@ async function reservePgActiveSlot(
   }
 }
 
-async function releasePgActiveSlot(
-  ownerId: string,
-  jobId: string,
-): Promise<void> {
-  await removeConcurrencyLimitActiveJob(ownerId, jobId);
-  await syncFdbLimitToPgOccupancy(ownerId);
-}
-
 async function rollbackPgReservations(
   ownerId: string,
   jobId: string,
@@ -95,8 +104,20 @@ async function rollbackPgReservations(
   if (crawlId) {
     removals.push(removeCrawlConcurrencyLimitActiveJob(crawlId, jobId));
   }
-  await Promise.allSettled(removals);
-  await syncFdbLimitToPgOccupancy(ownerId);
+  const results = await Promise.allSettled(removals);
+  const failures = results
+    .filter(
+      (result): result is PromiseRejectedResult => result.status === "rejected",
+    )
+    .map(result => result.reason);
+  try {
+    await syncFdbLimitToPgOccupancy(ownerId);
+  } catch (error) {
+    failures.push(error);
+  }
+  if (failures.length > 0) {
+    throw new AggregateError(failures, "Failed to roll back PG reservations");
+  }
 }
 
 async function getQueuedJobIDs(teamId: string): Promise<Set<string>> {
@@ -118,7 +139,49 @@ async function getQueuedJobIDs(teamId: string): Promise<Set<string>> {
     }
   } while (cursor !== "0");
 
+  // A ZSET member without cq-job payload cannot be promoted and is not a
+  // published backlog entry. Treat it as drift so the PG row repairs Redis.
+  const ids = [...queuedJobIDs];
+  for (let offset = 0; offset < ids.length; offset += 1000) {
+    const batch = ids.slice(offset, offset + 1000);
+    const payloads = await getRedisConnection().mget(
+      ...batch.map(id => `cq-job:${id}`),
+    );
+    payloads.forEach((payload, index) => {
+      const id = batch[index];
+      if (payload === null) {
+        queuedJobIDs.delete(id);
+        return;
+      }
+      try {
+        if (JSON.parse(payload)?.id !== id) queuedJobIDs.delete(id);
+      } catch {
+        queuedJobIDs.delete(id);
+      }
+    });
+  }
   return queuedJobIDs;
+}
+
+async function includeClaimedJobIDs(
+  ownerId: string,
+  ids: string[],
+  published: Set<string>,
+): Promise<void> {
+  for (let offset = 0; offset < ids.length; offset += 1000) {
+    const batch = ids.slice(offset, offset + 1000);
+    const claims = await getRedisConnection().mget(
+      ...batch.map(id => `cq-claim:${id}`),
+    );
+    claims.forEach((raw, index) => {
+      if (!raw) return;
+      try {
+        if (JSON.parse(raw)?.teamId === ownerId) published.add(batch[index]);
+      } catch {
+        // Corrupt/expired claims are repaired through the ordinary DB path.
+      }
+    });
+  }
 }
 
 async function reconcileTeam(
@@ -133,11 +196,22 @@ async function reconcileTeam(
   }
 
   const queuedJobIDs = await getQueuedJobIDs(ownerId);
-  const missingJobIDs = [...backloggedJobIDs].filter(x => !queuedJobIDs.has(x));
+  await includeClaimedJobIDs(ownerId, [...backloggedJobIDs], queuedJobIDs);
+  const healthyJobIDs = [...backloggedJobIDs].filter(id =>
+    queuedJobIDs.has(id),
+  );
+  await completeNuQPgPublication(
+    healthyJobIDs.map(id => ({
+      id,
+      ownerId,
+      placement: "backlog" as const,
+    })),
+  );
+  const missingJobIDs = [...backloggedJobIDs].filter(
+    id => !queuedJobIDs.has(id),
+  );
 
-  if (missingJobIDs.length === 0) {
-    return null;
-  }
+  if (missingJobIDs.length === 0) return null;
 
   const jobsToRecover = await scrapeQueue.getJobsFromBacklog(
     missingJobIDs,
@@ -198,15 +272,27 @@ async function reconcileTeam(
 
   for (const job of jobsToQueue) {
     await requeueJob(ownerId, job);
+    await completeNuQPgPublication([publicationForBacklogJob(ownerId, job)]);
     jobsRequeued++;
   }
 
   for (const job of jobsToStart) {
-    // Reserve the shared ledger before making the PG row runnable. If the
-    // promotion loses a race, roll the reservation back.
     await reservePgActiveSlot(ownerId, job.id);
+    let crawlReserved = false;
     let promoted: NuQJob<ScrapeJobData> | null;
     try {
+      if (job.data.crawl_id) {
+        const sc = await getCrawl(job.data.crawl_id);
+        if (sc?.crawlerOptions?.delay || sc?.maxConcurrency) {
+          // Crawl reservation must precede worker-visible PG promotion.
+          await pushCrawlConcurrencyLimitActiveJob(
+            job.data.crawl_id,
+            job.id,
+            60 * 1000,
+          );
+          crawlReserved = true;
+        }
+      }
       promoted = await scrapeQueue.promoteJobFromBacklogOrAdd(
         job.id,
         job.data,
@@ -218,29 +304,36 @@ async function reconcileTeam(
         },
       );
     } catch (error) {
-      await releasePgActiveSlot(ownerId, job.id);
+      let materialized: NuQJob<ScrapeJobData> | null;
+      try {
+        materialized = await scrapeQueue.getJob(job.id, teamLogger);
+      } catch {
+        throw error;
+      }
+      if (!materialized) {
+        await rollbackPgReservations(
+          ownerId,
+          job.id,
+          crawlReserved ? job.data.crawl_id : undefined,
+        );
+      }
       throw error;
     }
 
     if (promoted !== null) {
-      if (job.data.crawl_id) {
-        const sc = await getCrawl(job.data.crawl_id);
-        if (sc?.crawlerOptions?.delay || sc?.maxConcurrency) {
-          await pushCrawlConcurrencyLimitActiveJob(
-            job.data.crawl_id,
-            job.id,
-            60 * 1000,
-          );
-        }
-      }
-
+      await completeNuQPgPublication([publicationForBacklogJob(ownerId, job)]);
       jobsStarted++;
     } else {
-      await releasePgActiveSlot(ownerId, job.id);
+      await rollbackPgReservations(
+        ownerId,
+        job.id,
+        crawlReserved ? job.data.crawl_id : undefined,
+      );
       teamLogger.warn("Job promotion failed, re-queuing job", {
         jobId: job.id,
       });
       await requeueJob(ownerId, job);
+      await completeNuQPgPublication([publicationForBacklogJob(ownerId, job)]);
       jobsRequeued++;
     }
   }
@@ -300,16 +393,7 @@ async function drainQueue(
     const typeCount = isExtract ? extractCount : crawlCount;
 
     if (typeCount >= typeLimit) {
-      await pushConcurrencyLimitedJob(
-        ownerId,
-        {
-          id: nextJob.job.id,
-          data: nextJob.job.data,
-          priority: nextJob.job.priority,
-          listenable: nextJob.job.listenable,
-        },
-        nextJob.timeout === Infinity ? MAX_BACKLOG_TIMEOUT_MS : nextJob.timeout,
-      );
+      await restoreConcurrentJob(ownerId, nextJob);
       typeBlocked++;
       continue;
     }
@@ -337,20 +421,39 @@ async function drainQueue(
         },
       );
     } catch (error) {
-      await rollbackPgReservations(
-        ownerId,
-        nextJob.job.id,
-        crawlReserved ? nextJob.job.data.crawl_id : undefined,
-      ).catch(cleanupError =>
-        teamLogger.error("Failed to roll back PG promotion reservations", {
-          jobId: nextJob.job.id,
-          cleanupError,
-        }),
+      let materialized: NuQJob<ScrapeJobData> | null;
+      try {
+        materialized = await scrapeQueue.getJob(nextJob.job.id, teamLogger);
+      } catch {
+        throw error;
+      }
+      if (materialized) {
+        await acknowledgeConcurrentJob(nextJob);
+        throw error;
+      }
+      const cleanup = await Promise.allSettled([
+        rollbackPgReservations(
+          ownerId,
+          nextJob.job.id,
+          crawlReserved ? nextJob.job.data.crawl_id : undefined,
+        ),
+        restoreConcurrentJob(ownerId, nextJob),
+      ]);
+      const failures = cleanup.filter(
+        (result): result is PromiseRejectedResult =>
+          result.status === "rejected",
       );
+      if (failures.length > 0) {
+        throw new AggregateError(
+          [error, ...failures.map(result => result.reason)],
+          "PG queue drain and claim restoration both failed",
+        );
+      }
       throw error;
     }
 
     if (promoted !== null) {
+      await acknowledgeConcurrentJob(nextJob);
       if (isExtract) extractCount++;
       else crawlCount++;
       jobsPromoted++;
@@ -358,8 +461,9 @@ async function drainQueue(
       await rollbackPgReservations(
         ownerId,
         nextJob.job.id,
-        nextJob.job.data.crawl_id,
+        crawlReserved ? nextJob.job.data.crawl_id : undefined,
       );
+      await acknowledgeConcurrentJob(nextJob);
       staleSkipped++;
     }
   }
@@ -409,23 +513,21 @@ export async function reconcileConcurrencyQueue(
     const teamLogger = logger.child({ teamId: ownerId });
 
     try {
-      await withTeamMigrationAdmission(ownerId, async () => {
-        const teamResult = await reconcileTeam(ownerId, teamLogger);
-        if (teamResult !== null) {
-          result.teamsWithDrift++;
-          result.jobsStarted += teamResult.jobsStarted;
-          result.jobsRequeued += teamResult.jobsRequeued;
-        }
+      const teamResult = await reconcileTeam(ownerId, teamLogger);
+      if (teamResult !== null) {
+        result.teamsWithDrift++;
+        result.jobsStarted += teamResult.jobsStarted;
+        result.jobsRequeued += teamResult.jobsRequeued;
+      }
 
-        const drainResult = await drainQueue(ownerId, teamLogger);
-        if (drainResult.jobsPromoted > 0 || drainResult.staleSkipped > 0) {
-          result.jobsStarted += drainResult.jobsPromoted;
-          teamLogger.info("Queue drain promoted jobs", {
-            jobsPromoted: drainResult.jobsPromoted,
-            staleSkipped: drainResult.staleSkipped,
-          });
-        }
-      });
+      const drainResult = await drainQueue(ownerId, teamLogger);
+      if (drainResult.jobsPromoted > 0 || drainResult.staleSkipped > 0) {
+        result.jobsStarted += drainResult.jobsPromoted;
+        teamLogger.info("Queue drain promoted jobs", {
+          jobsPromoted: drainResult.jobsPromoted,
+          staleSkipped: drainResult.staleSkipped,
+        });
+      }
     } catch (error) {
       teamLogger.error("Failed to reconcile team, skipping", { error });
     }

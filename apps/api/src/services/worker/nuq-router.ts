@@ -6,13 +6,13 @@ import { getACUCTeam } from "../../controllers/auth";
 import { redisEvictConnection } from "../../services/redis";
 import { isSelfHosted } from "../../lib/deployment";
 import { getApiKeyConcurrencyLimit } from "../../lib/api-key-concurrency";
-import { redlock } from "../redlock";
 import { getRedisConnection } from "../queue-service";
 import {
   getTeamQueueLimit,
   getConcurrencyLimitActiveJobsCount,
   pushConcurrencyLimitActiveJob,
   removeConcurrencyLimitActiveJob,
+  constructConcurrencyLimitKey,
 } from "../../lib/concurrency-redis";
 import {
   NuQJob,
@@ -22,6 +22,9 @@ import {
   scrapeQueue as scrapeQueuePg,
   crawlFinishedQueue as crawlFinishedQueuePg,
   crawlGroup as crawlGroupPg,
+  getNuQPgOwnerLiveResidue,
+  type NuQPgOwnerLiveResidue,
+  type NuQRemovedJobResidue,
 } from "./nuq";
 import {
   scrapeQueueFdb,
@@ -321,27 +324,20 @@ export function backlogTimeoutMsForGate(timeoutMs: number): Date {
   return new Date(Date.now() + timeoutMs);
 }
 
-// PG and FDB cannot share a transaction, so serialize cross-ledger admission
-// while taking the combined occupancy snapshot and reserving the chosen
-// backend. Redlock's using() extends this lease while a large enqueue runs.
+// Compatibility boundary for callers while durable generation admission is
+// integrated. A Redis lease cannot make PG/FDB admission atomic and must not
+// be treated as a correctness primitive.
 export async function withTeamMigrationAdmission<T>(
-  teamId: string,
+  _teamId: string,
   operation: () => Promise<T>,
 ): Promise<T> {
-  if (!fdbQueueEnabled() || (fdbForced() && isSelfHosted())) {
-    return await operation();
-  }
-  return await redlock.using(
-    [`nuq:migration-admission:${teamId}`],
-    30_000,
-    {},
-    async signal => {
-      if (signal.aborted) throw signal.error;
-      const result = await operation();
-      if (signal.aborted) throw signal.error;
-      return result;
-    },
-  );
+  return await operation();
+}
+
+export async function getAuthoritativePgOwnerLiveResidue(
+  ownerId: string,
+): Promise<NuQPgOwnerLiveResidue> {
+  return await getNuQPgOwnerLiveResidue(ownerId);
 }
 
 export async function fdbEnqueueScrapeJobs(
@@ -440,6 +436,49 @@ export async function fdbEnqueueScrapeJobs(
 }
 
 // === Routed scrape queue
+
+const pgRemoveResidueKey = (id: string) => `nuq:pg_remove_residue:${id}`;
+
+async function cleanPgRedisJobResidue(
+  id: string,
+  removed: NuQRemovedJobResidue | null,
+  queuedPayload: string | null,
+): Promise<void> {
+  let payload: any = null;
+  if (queuedPayload) {
+    try {
+      payload = JSON.parse(queuedPayload);
+    } catch {
+      // The payload key is deleted below even when corrupt.
+    }
+  }
+  const data = (removed?.data as any) ?? payload?.data;
+  const ownerId = removed?.ownerId ?? data?.team_id;
+  const groupId = removed?.groupId ?? data?.crawl_id;
+  const redis = getRedisConnection();
+  const queueKeys = await redis.smembers("concurrency-limit-queues");
+  const pipeline = redis.pipeline();
+  pipeline.del(`cq-job:${id}`);
+  pipeline.del(`cq-claim:${id}`);
+  pipeline.del(pgRemoveResidueKey(id));
+  for (const queueKey of queueKeys) pipeline.zrem(queueKey, id);
+  if (ownerId) {
+    pipeline.zrem(constructConcurrencyLimitKey(ownerId), id);
+    pipeline.zrem(`concurrency-limit-queue:${ownerId}`, id);
+  }
+  if (groupId) pipeline.zrem(`crawl-concurrency-limiter:${groupId}`, id);
+  const results = await pipeline.exec();
+  const failures =
+    results?.filter(
+      (result): result is [Error, unknown] => result[0] instanceof Error,
+    ) ?? [];
+  if (failures.length > 0) {
+    throw new AggregateError(
+      failures.map(([error]) => error),
+      `Failed to remove Redis queue residue for ${id}`,
+    );
+  }
+}
 
 class RoutedScrapeQueue {
   // in-flight jobs taken by THIS process, so renew/finish/fail can route
@@ -643,7 +682,49 @@ class RoutedScrapeQueue {
       await fdbMutation(() => scrapeQueueFdb.removeJob(id, logger));
       return;
     }
-    await scrapeQueuePg.removeJob(id, logger);
+    const redis = getRedisConnection();
+    const [queuedPayload, priorDescriptor, active, backlog] = await Promise.all(
+      [
+        redis.get(`cq-job:${id}`),
+        redis.get(pgRemoveResidueKey(id)),
+        scrapeQueuePg.getJob(id, logger),
+        scrapeQueuePg.getJobsFromBacklog([id], logger),
+      ],
+    );
+    const existing = active ?? backlog[0] ?? null;
+    if (existing) {
+      // Persist the routing metadata before deleting PG. A retry after process
+      // death or a Redis pipeline failure can still remove team/crawl residue.
+      await redis.set(
+        pgRemoveResidueKey(id),
+        JSON.stringify({
+          id,
+          ownerId: existing.ownerId,
+          groupId: existing.groupId,
+          data: {},
+        }),
+        "EX",
+        24 * 60 * 60,
+      );
+    }
+    const removed = await scrapeQueuePg.removeJobResidue(id, logger);
+    let descriptor = removed;
+    if (!descriptor && priorDescriptor) {
+      try {
+        descriptor = JSON.parse(priorDescriptor) as NuQRemovedJobResidue;
+      } catch {
+        // Corrupt descriptor is deleted by the cleanup pipeline.
+      }
+    }
+    if (!descriptor && existing) {
+      descriptor = {
+        id,
+        ownerId: existing.ownerId,
+        groupId: existing.groupId,
+        data: {},
+      };
+    }
+    await cleanPgRedisJobResidue(id, descriptor, queuedPayload);
   }
 
   public async removeJobs(

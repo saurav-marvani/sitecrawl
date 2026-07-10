@@ -9,6 +9,9 @@ import {
   pushConcurrencyLimitedJob,
   pushConcurrencyLimitedJobs,
   pushCrawlConcurrencyLimitActiveJob,
+  removeConcurrencyLimitActiveJob,
+  removeConcurrencyLimitedJobs,
+  removeCrawlConcurrencyLimitActiveJob,
   QueueFullError,
 } from "../lib/concurrency-limit";
 import { logger as _logger } from "../lib/logger";
@@ -22,7 +25,7 @@ import { Logger } from "winston";
 import { ScrapeJobTimeoutError, TransportableError } from "../lib/error";
 import { deserializeTransportableError } from "../lib/error-serde";
 import { abTestJob } from "./ab-test";
-import { NuQJob, scrapeQueue } from "./worker/nuq";
+import { NuQJob, NuQPublicationConflictError, scrapeQueue } from "./worker/nuq";
 import {
   fdbEnqueueScrapeJobs,
   getCombinedTeamActiveCount,
@@ -40,6 +43,11 @@ import {
 import { serializeTraceContext } from "../lib/otel-tracer";
 import { isSelfHosted } from "../lib/deployment";
 import { MONITOR_CHECK_STALE_TIMEOUT_MS } from "./monitoring/stale";
+import {
+  completePreparedNuQPgPublication,
+  prepareNuQPgPublication,
+  type NuQPgPublication,
+} from "./worker/nuq-pg-publication";
 
 // Queue-wait deadline for a backlogged job (how long its owner still cares about the result)
 function backlogTimeoutMs(data: ScrapeJobData): number {
@@ -64,92 +72,223 @@ function isCrawlOrBatchScrape(options: {
   return !!options.crawlerOptions || !!options.crawl_id;
 }
 
+function pgPublication(
+  jobId: string,
+  data: ScrapeJobData,
+  placement: "active" | "backlog",
+): NuQPgPublication {
+  return {
+    id: jobId,
+    ownerId: data.team_id,
+    groupId: data.crawl_id,
+    placement,
+  };
+}
+
+async function compensateAmbiguousBacklogRedisPublication(
+  publications: readonly NuQPgPublication[],
+): Promise<void> {
+  const byOwner = new Map<string, string[]>();
+  for (const publication of publications) {
+    const ids = byOwner.get(publication.ownerId) ?? [];
+    ids.push(publication.id);
+    byOwner.set(publication.ownerId, ids);
+  }
+  // PG is authoritative once inserted. Normalize an ambiguous Redis outcome
+  // to DB-only and leave the prepared generation intent unresolved; the
+  // reconciler republishes cq-job + ZSET and then completes the intent.
+  for (const [ownerId, ids] of byOwner) {
+    await removeConcurrencyLimitedJobs(ownerId, ids);
+  }
+}
+
+async function rollbackActiveReservations(
+  jobs: readonly { jobId: string; data: ScrapeJobData }[],
+): Promise<void> {
+  const cleanup: Promise<unknown>[] = [];
+  for (const job of jobs) {
+    cleanup.push(removeConcurrencyLimitActiveJob(job.data.team_id, job.jobId));
+    if (job.data.crawl_id) {
+      cleanup.push(
+        removeCrawlConcurrencyLimitActiveJob(job.data.crawl_id, job.jobId),
+      );
+    }
+  }
+  const results = await Promise.allSettled(cleanup);
+  const failures = results.filter(
+    (result): result is PromiseRejectedResult => result.status === "rejected",
+  );
+  if (failures.length > 0) {
+    throw new AggregateError(
+      failures.map(failure => failure.reason),
+      "Failed to roll back PG queue reservations",
+    );
+  }
+}
+
 async function _addScrapeJobToConcurrencyQueue(
-  webScraperOptions: any,
+  webScraperOptions: ScrapeJobData,
   jobId: string,
   priority: number = 0,
   listenable: boolean = false,
 ) {
-  await scrapeQueue.addJob(
-    jobId,
-    {
-      ...webScraperOptions,
-      concurrencyLimited: true,
-    },
-    {
-      priority,
-      listenable,
-      ownerId: webScraperOptions.team_id ?? undefined,
-      groupId: webScraperOptions.crawl_id ?? undefined,
-      backlogged: true,
-      backloggedTimesOutAt: new Date(
-        Date.now() + backlogTimeoutMs(webScraperOptions),
-      ),
-    },
-  );
+  const publication = pgPublication(jobId, webScraperOptions, "backlog");
+  const prepared = await prepareNuQPgPublication([publication]);
+  let inserted = false;
+  try {
+    const result = await scrapeQueue.addJobWithPublicationState(
+      jobId,
+      {
+        ...webScraperOptions,
+        concurrencyLimited: true,
+      },
+      {
+        priority,
+        listenable,
+        ownerId: webScraperOptions.team_id ?? undefined,
+        groupId: webScraperOptions.crawl_id ?? undefined,
+        backlogged: true,
+        backloggedTimesOutAt: new Date(
+          Date.now() + backlogTimeoutMs(webScraperOptions),
+        ),
+      },
+    );
+    inserted = result.inserted;
+    if (result.job.status !== "backlog") {
+      await completePreparedNuQPgPublication(prepared);
+      return;
+    }
+    const authoritativeTimeout = result.job.backloggedTimesOutAt
+      ? Math.max(1, result.job.backloggedTimesOutAt.valueOf() - Date.now())
+      : backlogTimeoutMs(webScraperOptions);
 
-  await pushConcurrencyLimitedJob(
-    webScraperOptions.team_id,
-    {
-      id: jobId,
-      data: webScraperOptions,
-      priority,
-      listenable,
-    },
-    backlogTimeoutMs(webScraperOptions),
-  );
+    await pushConcurrencyLimitedJob(
+      webScraperOptions.team_id,
+      {
+        id: jobId,
+        data: webScraperOptions,
+        priority,
+        listenable,
+      },
+      authoritativeTimeout,
+    );
+  } catch (error) {
+    if (error instanceof NuQPublicationConflictError) {
+      await completePreparedNuQPgPublication(prepared, "compensated");
+      throw error;
+    }
+    try {
+      if (inserted) {
+        await compensateAmbiguousBacklogRedisPublication([publication]);
+      }
+    } catch (cleanupError) {
+      throw new AggregateError(
+        [error, cleanupError],
+        "PG backlog publication and compensation both failed",
+      );
+    }
+    throw error;
+  }
+  await completePreparedNuQPgPublication(prepared);
 }
 
 async function _addScrapeJobsToConcurrencyQueue(
   jobs: {
-    data: any;
+    data: ScrapeJobData;
     jobId: string;
     priority: number;
     listenable?: boolean;
   }[],
 ) {
-  await scrapeQueue.addJobs(
-    jobs.map(job => ({
-      id: job.jobId,
-      data: job.data,
-      options: {
-        priority: job.priority,
-        listenable: job.listenable ?? false,
-        ownerId: job.data.team_id ?? undefined,
-        groupId: job.data.crawl_id ?? undefined,
-        backlogged: true,
-        backloggedTimesOutAt: new Date(Date.now() + backlogTimeoutMs(job.data)),
-      },
-    })),
+  const publications = jobs.map(job =>
+    pgPublication(job.jobId, job.data, "backlog"),
   );
-
-  const jobsByTeam = new Map<
-    string,
-    {
-      job: { id: string; data: any; priority: number; listenable: boolean };
-      timeout: number;
-    }[]
-  >();
-
-  for (const job of jobs) {
-    const teamId = job.data.team_id as string;
-    if (!jobsByTeam.has(teamId)) {
-      jobsByTeam.set(teamId, []);
-    }
-    jobsByTeam.get(teamId)!.push({
-      job: {
+  const prepared = await prepareNuQPgPublication(publications);
+  let insertedIds = new Set<string>();
+  try {
+    const publicationResult = await scrapeQueue.addJobsWithPublicationState(
+      jobs.map(job => ({
         id: job.jobId,
         data: job.data,
-        priority: job.priority,
-        listenable: job.listenable ?? false,
-      },
-      timeout: backlogTimeoutMs(job.data),
-    });
-  }
+        options: {
+          priority: job.priority,
+          listenable: job.listenable ?? false,
+          ownerId: job.data.team_id ?? undefined,
+          groupId: job.data.crawl_id ?? undefined,
+          backlogged: true,
+          backloggedTimesOutAt: new Date(
+            Date.now() + backlogTimeoutMs(job.data),
+          ),
+        },
+      })),
+    );
+    insertedIds = publicationResult.insertedIds;
+    const publishedById = new Map(
+      publicationResult.jobs.map(job => [job.id, job]),
+    );
 
-  for (const [teamId, teamJobs] of jobsByTeam) {
-    await pushConcurrencyLimitedJobs(teamId, teamJobs);
+    const jobsByTeam = new Map<
+      string,
+      {
+        job: {
+          id: string;
+          data: ScrapeJobData;
+          priority: number;
+          listenable: boolean;
+        };
+        timeout: number;
+      }[]
+    >();
+
+    for (const job of jobs) {
+      if (publishedById.get(job.jobId.toLowerCase())?.status !== "backlog") {
+        continue;
+      }
+      const teamJobs = jobsByTeam.get(job.data.team_id) ?? [];
+      teamJobs.push({
+        job: {
+          id: job.jobId,
+          data: job.data,
+          priority: job.priority,
+          listenable: job.listenable ?? false,
+        },
+        timeout: publishedById.get(job.jobId.toLowerCase())
+          ?.backloggedTimesOutAt
+          ? Math.max(
+              1,
+              publishedById
+                .get(job.jobId.toLowerCase())!
+                .backloggedTimesOutAt!.valueOf() - Date.now(),
+            )
+          : backlogTimeoutMs(job.data),
+      });
+      jobsByTeam.set(job.data.team_id, teamJobs);
+    }
+
+    for (const [teamId, teamJobs] of jobsByTeam) {
+      await pushConcurrencyLimitedJobs(teamId, teamJobs);
+    }
+  } catch (error) {
+    if (error instanceof NuQPublicationConflictError) {
+      await completePreparedNuQPgPublication(prepared, "compensated");
+      throw error;
+    }
+    try {
+      const insertedPublications = publications.filter(publication =>
+        insertedIds.has(publication.id.toLowerCase()),
+      );
+      if (insertedPublications.length > 0) {
+        await compensateAmbiguousBacklogRedisPublication(insertedPublications);
+      }
+    } catch (cleanupError) {
+      throw new AggregateError(
+        [error, cleanupError],
+        "Bulk PG backlog publication and compensation both failed",
+      );
+    }
+    throw error;
   }
+  await completePreparedNuQPgPublication(prepared);
 }
 
 export async function _addScrapeJobToBullMQ(
@@ -203,12 +342,15 @@ async function _addScrapeJobToBullMQPg(
     abTestJob(webScraperOptions);
   }
 
-  if (webScraperOptions && webScraperOptions.team_id) {
+  const publication = pgPublication(jobId, webScraperOptions, "active");
+  const prepared = await prepareNuQPgPublication([publication]);
+  const reserved = [{ jobId, data: webScraperOptions }];
+  try {
     await pushConcurrencyLimitActiveJob(
       webScraperOptions.team_id,
       jobId,
       60 * 1000,
-    ); // 60s default timeout
+    );
 
     if (webScraperOptions.crawl_id) {
       const sc = await getCrawl(webScraperOptions.crawl_id);
@@ -220,35 +362,73 @@ async function _addScrapeJobToBullMQPg(
         );
       }
     }
-  }
 
-  return await scrapeQueue.addJob(jobId, webScraperOptions, {
-    priority,
-    listenable,
-    ownerId: webScraperOptions.team_id ?? undefined,
-    groupId: webScraperOptions.crawl_id ?? undefined,
-  });
+    const job = await scrapeQueue.addJob(jobId, webScraperOptions, {
+      priority,
+      listenable,
+      ownerId: webScraperOptions.team_id ?? undefined,
+      groupId: webScraperOptions.crawl_id ?? undefined,
+    });
+    if (job.status === "completed" || job.status === "failed") {
+      await rollbackActiveReservations(reserved);
+    }
+    await completePreparedNuQPgPublication(prepared);
+    return job;
+  } catch (error) {
+    if (error instanceof NuQPublicationConflictError) {
+      await rollbackActiveReservations(reserved);
+      await completePreparedNuQPgPublication(prepared, "compensated");
+      throw error;
+    }
+    // Once PG has succeeded, a generation-complete failure must remain
+    // unresolved and published for reconciliation; do not tear it down.
+    let existing: NuQJob<ScrapeJobData> | null;
+    try {
+      existing = await scrapeQueue.getJob(jobId);
+    } catch {
+      // Probe unavailable: preserve reservations for a possibly committed row.
+      throw error;
+    }
+    if (!existing) {
+      try {
+        await rollbackActiveReservations(reserved);
+        await completePreparedNuQPgPublication(prepared, "compensated");
+      } catch (cleanupError) {
+        throw new AggregateError(
+          [error, cleanupError],
+          "PG active publication and reservation rollback both failed",
+        );
+      }
+    }
+    throw error;
+  }
 }
 
 async function _addScrapeJobsToBullMQ(
   jobs: {
-    data: any;
+    data: ScrapeJobData;
     jobId: string;
     priority: number;
     listenable?: boolean;
   }[],
 ): Promise<NuQJob<ScrapeJobData>[]> {
   for (const job of jobs) {
-    if (job.data.mode === "single_urls") {
-      abTestJob(job.data);
-    }
+    if (job.data.mode === "single_urls") abTestJob(job.data);
+  }
 
-    if (job.data && job.data.team_id) {
+  const publications = jobs.map(job =>
+    pgPublication(job.jobId, job.data, "active"),
+  );
+  const prepared = await prepareNuQPgPublication(publications);
+  const reserved: { jobId: string; data: ScrapeJobData }[] = [];
+  try {
+    for (const job of jobs) {
       await pushConcurrencyLimitActiveJob(
         job.data.team_id,
         job.jobId,
         60 * 1000,
-      ); // 60s default timeout
+      );
+      reserved.push({ jobId: job.jobId, data: job.data });
 
       if (job.data.crawl_id) {
         const sc = await getCrawl(job.data.crawl_id);
@@ -261,20 +441,59 @@ async function _addScrapeJobsToBullMQ(
         }
       }
     }
-  }
 
-  return await scrapeQueue.addJobs(
-    jobs.map(job => ({
-      id: job.jobId,
-      data: job.data,
-      options: {
-        priority: job.priority,
-        listenable: job.listenable ?? false,
-        ownerId: job.data.team_id ?? undefined,
-        groupId: job.data.crawl_id ?? undefined,
-      },
-    })),
-  );
+    const result = await scrapeQueue.addJobs(
+      jobs.map(job => ({
+        id: job.jobId,
+        data: job.data,
+        options: {
+          priority: job.priority,
+          listenable: job.listenable ?? false,
+          ownerId: job.data.team_id ?? undefined,
+          groupId: job.data.crawl_id ?? undefined,
+        },
+      })),
+    );
+    const terminalIds = new Set(
+      result
+        .filter(job => job.status === "completed" || job.status === "failed")
+        .map(job => job.id),
+    );
+    await rollbackActiveReservations(
+      reserved.filter(job => terminalIds.has(job.jobId.toLowerCase())),
+    );
+    await completePreparedNuQPgPublication(prepared);
+    return result;
+  } catch (error) {
+    if (error instanceof NuQPublicationConflictError) {
+      await rollbackActiveReservations(reserved);
+      await completePreparedNuQPgPublication(prepared, "compensated");
+      throw error;
+    }
+    let existingJobs: NuQJob<ScrapeJobData>[];
+    try {
+      existingJobs = await scrapeQueue.getJobs(jobs.map(job => job.jobId));
+    } catch {
+      // Probe unavailable: preserve reservations for possibly committed rows.
+      throw error;
+    }
+    const materialized = new Set(existingJobs.map(job => job.id));
+    const safeToRelease = reserved.filter(
+      job => !materialized.has(job.jobId.toLowerCase()),
+    );
+    try {
+      await rollbackActiveReservations(safeToRelease);
+      if (materialized.size === 0) {
+        await completePreparedNuQPgPublication(prepared, "compensated");
+      }
+    } catch (cleanupError) {
+      throw new AggregateError(
+        [error, cleanupError],
+        "Bulk PG active publication and reservation rollback both failed",
+      );
+    }
+    throw error;
+  }
 }
 
 async function addScrapeJobFdb(

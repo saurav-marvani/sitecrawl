@@ -1,6 +1,6 @@
 import { Logger } from "winston";
 import { logger } from "../../lib/logger";
-import { Client, Pool } from "pg";
+import { Client, Pool, type PoolClient } from "pg";
 import { type ScrapeJobData } from "../../types";
 import { withSpan, setSpanAttributes } from "../../lib/otel-tracer";
 import amqp from "amqplib";
@@ -38,6 +38,7 @@ export type NuQJob<Data = any, ReturnValue = any> = {
   lock?: string;
   ownerId?: string;
   groupId?: string;
+  backloggedTimesOutAt?: Date;
 };
 
 type NuQJobOptions = {
@@ -48,6 +49,62 @@ type NuQJobOptions = {
   backlogged?: boolean;
   backloggedTimesOutAt?: Date;
 };
+
+export class NuQPublicationConflictError extends Error {
+  constructor(
+    public readonly jobId: string,
+    reason: string,
+  ) {
+    super(`NuQ publication conflict for ${jobId}: ${reason}`);
+    this.name = "NuQPublicationConflictError";
+  }
+}
+
+export type NuQRemovedJobResidue = {
+  id: string;
+  ownerId?: string;
+  groupId?: string;
+  data: unknown;
+};
+
+export type NuQPgOwnerLiveResidue = {
+  scrape: number;
+  backlog: number;
+  groups: number;
+  crawlFinished: number;
+  total: number;
+};
+
+function publicationComparableData(value: unknown): unknown {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return value;
+  const result = { ...(value as Record<string, unknown>) };
+  delete result.traceContext;
+  delete result.concurrencyLimited;
+  return result;
+}
+
+function stableJson(value: unknown): string {
+  if (Array.isArray(value)) {
+    return `[${value.map(stableJson).join(",")}]`;
+  }
+  if (value && typeof value === "object") {
+    return `{${Object.entries(value as Record<string, unknown>)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([key, child]) => `${JSON.stringify(key)}:${stableJson(child)}`)
+      .join(",")}}`;
+  }
+  return JSON.stringify(value) ?? "null";
+}
+
+function canonicalJson(value: unknown): string {
+  // Match node-postgres JSONB parameter semantics first (toJSON, omitted
+  // undefined object fields, null array holes), then canonicalize key order.
+  return stableJson(JSON.parse(JSON.stringify(value) ?? "null"));
+}
+
+function canonicalUuid(value: string): string {
+  return value.toLowerCase();
+}
 
 type NuQOptions = {
   backlog?: boolean;
@@ -448,6 +505,7 @@ class NuQ<JobData = any, JobReturnValue = any> {
     "listen_channel_id",
     "owner_id",
     "group_id",
+    "times_out_at",
   ];
 
   private rowToJob(
@@ -468,6 +526,9 @@ class NuQ<JobData = any, JobReturnValue = any> {
       lock: row.lock ?? undefined,
       ownerId: row.owner_id ?? undefined,
       groupId: row.group_id ?? undefined,
+      backloggedTimesOutAt: row.times_out_at
+        ? new Date(row.times_out_at)
+        : undefined,
     };
   }
 
@@ -481,6 +542,206 @@ class NuQ<JobData = any, JobReturnValue = any> {
       createdAt: new Date(row.createdAt),
       finishedAt: row.finishedAt ? new Date(row.finishedAt) : undefined,
     };
+  }
+
+  private assertPublicationCompatible(
+    row: any,
+    job: { id: string; data: JobData; options: NuQJobOptions },
+  ): void {
+    const expectedOwner =
+      normalizeOwnerId(job.options.ownerId)?.toLowerCase() ?? null;
+    const expectedGroup = job.options.groupId?.toLowerCase() ?? null;
+    if (
+      canonicalJson(publicationComparableData(row.data)) !==
+      canonicalJson(publicationComparableData(job.data))
+    ) {
+      throw new NuQPublicationConflictError(job.id, "data differs");
+    }
+    if (row.priority !== (job.options.priority ?? 0)) {
+      throw new NuQPublicationConflictError(job.id, "priority differs");
+    }
+    if ((row.owner_id ?? null) !== expectedOwner) {
+      throw new NuQPublicationConflictError(job.id, "owner differs");
+    }
+    if ((row.group_id ?? null) !== expectedGroup) {
+      throw new NuQPublicationConflictError(job.id, "group differs");
+    }
+    if (!!row.listen_channel_id !== !!job.options.listenable) {
+      throw new NuQPublicationConflictError(job.id, "listen mode differs");
+    }
+    if (!job.options.backlogged && row.backlogged) {
+      throw new NuQPublicationConflictError(
+        job.id,
+        "active publication already exists in backlog",
+      );
+    }
+  }
+
+  private async insertPublicationBatch(
+    client: PoolClient,
+    jobs: { id: string; data: JobData; options: NuQJobOptions }[],
+    backlogged: boolean,
+  ): Promise<Set<string>> {
+    const inserted = new Set<string>();
+    const columns = [
+      "id",
+      "data",
+      "priority",
+      "listen_channel_id",
+      "owner_id",
+      "group_id",
+      ...(backlogged ? ["times_out_at"] : []),
+    ];
+
+    for (let offset = 0; offset < jobs.length; offset += 1000) {
+      const batch = jobs.slice(offset, offset + 1000);
+      const params: unknown[] = [];
+      const values = batch.map((job, index) => {
+        const base = index * columns.length + 1;
+        params.push(
+          job.id,
+          job.data,
+          job.options.priority ?? 0,
+          job.options.listenable ? this.listenChannelId : null,
+          normalizeOwnerId(job.options.ownerId),
+          job.options.groupId ?? null,
+          ...(backlogged
+            ? [job.options.backloggedTimesOutAt?.toISOString() ?? null]
+            : []),
+        );
+        return `(${columns.map((_, column) => `$${base + column}`).join(", ")})`;
+      });
+      const result = await client.query(
+        `INSERT INTO ${this.queueName}${backlogged ? "_backlog" : ""} (${columns.join(", ")}) VALUES ${values.join(", ")} ON CONFLICT (id) DO NOTHING RETURNING id;`,
+        params,
+      );
+      for (const row of result.rows) inserted.add(row.id);
+    }
+    return inserted;
+  }
+
+  private async publishJobsIdempotently(
+    jobs: { id: string; data: JobData; options: NuQJobOptions }[],
+  ): Promise<{
+    jobs: NuQJob<JobData, JobReturnValue>[];
+    insertedIds: Set<string>;
+  }> {
+    if (jobs.length === 0) return { jobs: [], insertedIds: new Set() };
+    jobs = jobs.map(job => ({
+      ...job,
+      id: canonicalUuid(job.id),
+      options: {
+        ...job.options,
+        groupId: job.options.groupId
+          ? canonicalUuid(job.options.groupId)
+          : undefined,
+      },
+    }));
+    const expectedById = new Map<string, (typeof jobs)[number]>();
+    for (const job of jobs) {
+      if (expectedById.has(job.id)) {
+        throw new NuQPublicationConflictError(job.id, "duplicate input id");
+      }
+      if (job.options.backlogged && !this.options.backlog) {
+        throw new NuQPublicationConflictError(
+          job.id,
+          "queue does not support backlog publication",
+        );
+      }
+      expectedById.set(job.id, job);
+    }
+
+    const ids = [...expectedById.keys()].sort();
+    const client = await nuqPool.connect();
+    try {
+      await client.query("BEGIN");
+      // Serialize stable-ID publishers across the active/backlog tables. This
+      // closes the gap left by their independent primary keys.
+      await client.query(
+        `SELECT pg_advisory_xact_lock(hashtextextended(id, 0)) FROM unnest($1::text[]) AS ids(id) ORDER BY id;`,
+        [ids],
+      );
+
+      const readRows = async () => {
+        const active = (
+          await client.query(
+            `SELECT ${this.jobReturning.join(", ")}, false AS backlogged FROM ${this.queueName} WHERE id = ANY($1::uuid[]) FOR UPDATE;`,
+            [ids],
+          )
+        ).rows;
+        const backlog = this.options.backlog
+          ? (
+              await client.query(
+                `SELECT ${this.jobBacklogReturning.join(", ")}, true AS backlogged FROM ${this.queueName}_backlog WHERE id = ANY($1::uuid[]) FOR UPDATE;`,
+                [ids],
+              )
+            ).rows
+          : [];
+        return [...active, ...backlog];
+      };
+
+      let rows = await readRows();
+      const rowsById = new Map<string, any>();
+      for (const row of rows) {
+        if (rowsById.has(row.id)) {
+          throw new NuQPublicationConflictError(
+            row.id,
+            "id exists in active and backlog tables",
+          );
+        }
+        rowsById.set(row.id, row);
+        this.assertPublicationCompatible(row, expectedById.get(row.id)!);
+      }
+
+      const missing = jobs.filter(job => !rowsById.has(job.id));
+      const insertedIds = new Set<string>();
+      for (const backlogged of [false, true]) {
+        const partition = missing.filter(
+          job => !!job.options.backlogged === backlogged,
+        );
+        if (partition.length === 0) continue;
+        const inserted = await this.insertPublicationBatch(
+          client,
+          partition,
+          backlogged,
+        );
+        for (const id of inserted) insertedIds.add(id);
+      }
+
+      rows = await readRows();
+      rowsById.clear();
+      for (const row of rows) {
+        if (rowsById.has(row.id)) {
+          throw new NuQPublicationConflictError(
+            row.id,
+            "id exists in active and backlog tables",
+          );
+        }
+        rowsById.set(row.id, row);
+        this.assertPublicationCompatible(row, expectedById.get(row.id)!);
+      }
+      for (const id of ids) {
+        if (!rowsById.has(id)) {
+          throw new Error(
+            `NuQ publication did not materialize stable id ${id}`,
+          );
+        }
+      }
+
+      await client.query("COMMIT");
+      return {
+        jobs: jobs.map(job => {
+          const row = rowsById.get(job.id)!;
+          return this.rowToJob(row, row.backlogged)!;
+        }),
+        insertedIds,
+      };
+    } catch (error) {
+      await client.query("ROLLBACK").catch(() => {});
+      throw error;
+    } finally {
+      client.release();
+    }
   }
 
   public async getJob(
@@ -755,46 +1016,73 @@ class NuQ<JobData = any, JobReturnValue = any> {
     }
   }
 
+  public async removeJobResidue(
+    id: string,
+    _logger: Logger = logger,
+  ): Promise<NuQRemovedJobResidue | null> {
+    return (await this.removeJobsResidue([id], _logger))[0] ?? null;
+  }
+
   public async removeJob(
     id: string,
     _logger: Logger = logger,
   ): Promise<boolean> {
-    const start = Date.now();
-    try {
-      return (
-        (
-          await nuqPool.query(`DELETE FROM ${this.queueName} WHERE id = $1;`, [
-            id,
-          ])
-        ).rowCount !== 0
-      );
-    } finally {
-      _logger.info("nuqRemoveJob metrics", {
-        module: "nuq/metrics",
-        method: "nuqRemoveJob",
-        duration: Date.now() - start,
-        scrapeId: id,
-      });
-    }
+    return (await this.removeJobResidue(id, _logger)) !== null;
   }
 
-  public async removeJobs(
+  public async removeJobsResidue(
     ids: string[],
     _logger: Logger = logger,
-  ): Promise<number> {
-    if (ids.length === 0) return 0;
+  ): Promise<NuQRemovedJobResidue[]> {
+    if (ids.length === 0) return [];
+    ids = [...new Set(ids.map(canonicalUuid))];
 
     const start = Date.now();
+    const client = await nuqPool.connect();
     try {
-      return (
-        (
-          await nuqPool.query(
-            `DELETE FROM ${this.queueName} WHERE id = ANY($1::uuid[]);`,
-            [ids],
-          )
-        ).rowCount ?? 0
+      await client.query("BEGIN");
+      await client.query(
+        `SELECT pg_advisory_xact_lock(hashtextextended(id, 0)) FROM unnest($1::text[]) AS ids(id) ORDER BY id;`,
+        [[...ids].sort()],
       );
+      const active = (
+        await client.query(
+          `DELETE FROM ${this.queueName} WHERE id = ANY($1::uuid[]) RETURNING id, owner_id, group_id, data;`,
+          [ids],
+        )
+      ).rows;
+      const backlog = this.options.backlog
+        ? (
+            await client.query(
+              `DELETE FROM ${this.queueName}_backlog WHERE id = ANY($1::uuid[]) RETURNING id, owner_id, group_id, data;`,
+              [ids],
+            )
+          ).rows
+        : [];
+      await client.query("COMMIT");
+
+      const removed = new Map<string, NuQRemovedJobResidue>();
+      for (const row of [...active, ...backlog]) {
+        // A corrupt duplicate can exist because the two tables have separate
+        // primary keys. Removal is deliberately healing: both rows are gone,
+        // and either copy carries enough metadata for Redis cleanup.
+        if (!removed.has(row.id)) {
+          removed.set(row.id, {
+            id: row.id,
+            ownerId: row.owner_id ?? undefined,
+            groupId: row.group_id ?? undefined,
+            data: row.data,
+          });
+        }
+      }
+      return ids
+        .map(id => removed.get(id))
+        .filter((row): row is NuQRemovedJobResidue => row !== undefined);
+    } catch (error) {
+      await client.query("ROLLBACK").catch(() => {});
+      throw error;
     } finally {
+      client.release();
       _logger.info("nuqRemoveJobs metrics", {
         module: "nuq/metrics",
         method: "nuqRemoveJobs",
@@ -804,7 +1092,44 @@ class NuQ<JobData = any, JobReturnValue = any> {
     }
   }
 
+  public async removeJobs(
+    ids: string[],
+    _logger: Logger = logger,
+  ): Promise<number> {
+    return (await this.removeJobsResidue(ids, _logger)).length;
+  }
+
   // === Producer
+  public async addJobWithPublicationState(
+    id: string,
+    data: JobData,
+    options: NuQJobOptions,
+  ): Promise<{
+    job: NuQJob<JobData, JobReturnValue>;
+    inserted: boolean;
+  }> {
+    const publication = await this.publishJobsIdempotently([
+      { id, data, options },
+    ]);
+    return {
+      job: publication.jobs[0]!,
+      inserted: publication.insertedIds.has(canonicalUuid(id)),
+    };
+  }
+
+  public async addJobsWithPublicationState(
+    jobs: Array<{
+      id: string;
+      data: JobData;
+      options: NuQJobOptions;
+    }>,
+  ): Promise<{
+    jobs: NuQJob<JobData, JobReturnValue>[];
+    insertedIds: Set<string>;
+  }> {
+    return await this.publishJobsIdempotently(jobs);
+  }
+
   public async addJob(
     id: string,
     data: JobData,
@@ -821,29 +1146,9 @@ class NuQ<JobData = any, JobReturnValue = any> {
 
       const start = Date.now();
       try {
-        const result = this.rowToJob(
-          (
-            await nuqPool.query(
-              `INSERT INTO ${this.queueName}${options.backlogged ? "_backlog" : ""} (id, data, priority, listen_channel_id, owner_id, group_id${options.backlogged ? ", times_out_at" : ""}) VALUES ($1, $2, $3, $4, $5, $6${options.backlogged ? ", $7" : ""}) RETURNING ${(options.backlogged ? this.jobBacklogReturning : this.jobReturning).join(", ")};`,
-              [
-                id,
-                data,
-                options.priority ?? 0,
-                options.listenable ? this.listenChannelId : null,
-                normalizeOwnerId(options.ownerId),
-                options.groupId ?? null,
-                ...(options.backlogged
-                  ? [
-                      options.backloggedTimesOutAt
-                        ? options.backloggedTimesOutAt.toISOString()
-                        : null,
-                    ]
-                  : []),
-              ],
-            )
-          ).rows[0],
-          options.backlogged,
-        )!;
+        const result = (
+          await this.publishJobsIdempotently([{ id, data, options }])
+        ).jobs[0]!;
 
         setSpanAttributes(span, {
           "nuq.job_created": true,
@@ -882,29 +1187,12 @@ class NuQ<JobData = any, JobReturnValue = any> {
 
       const start = Date.now();
       try {
-        const result = this.rowToJob(
-          (
-            await nuqPool.query(
-              `INSERT INTO ${this.queueName}${options.backlogged ? "_backlog" : ""} (id, data, priority, listen_channel_id, owner_id, group_id${options.backlogged ? ", times_out_at" : ""}) VALUES ($1, $2, $3, $4, $5, $6${options.backlogged ? ", $7" : ""}) ON CONFLICT (id) DO NOTHING RETURNING ${(options.backlogged ? this.jobBacklogReturning : this.jobReturning).join(", ")};`,
-              [
-                id,
-                data,
-                options.priority ?? 0,
-                options.listenable ? this.listenChannelId : null,
-                normalizeOwnerId(options.ownerId),
-                options.groupId ?? null,
-                ...(options.backlogged
-                  ? [
-                      options.backloggedTimesOutAt
-                        ? options.backloggedTimesOutAt.toISOString()
-                        : null,
-                    ]
-                  : []),
-              ],
-            )
-          ).rows[0],
-          options.backlogged,
-        );
+        const publication = await this.publishJobsIdempotently([
+          { id, data, options },
+        ]);
+        const result = publication.insertedIds.has(canonicalUuid(id))
+          ? publication.jobs[0]
+          : null;
 
         setSpanAttributes(span, {
           "nuq.job_created": result !== null,
@@ -946,109 +1234,9 @@ class NuQ<JobData = any, JobReturnValue = any> {
 
       const start = Date.now();
       try {
-        // Separate jobs into backlogged and non-backlogged groups
-        const regularJobs: typeof jobs = [];
-        const backloggedJobs: typeof jobs = [];
-
-        for (const job of jobs) {
-          if (job.options.backlogged) {
-            backloggedJobs.push(job);
-          } else {
-            regularJobs.push(job);
-          }
-        }
-
-        const results: NuQJob<JobData, JobReturnValue>[] = [];
-
-        // Batch size: 6 params per job, stay well under PG's 65535 param limit
-        // 1000 jobs = 6000 params, leaving plenty of headroom
-        const BATCH_SIZE = 1000;
-
-        // Helper function to build and execute bulk insert with batching
-        const bulkInsert = async (
-          jobsToInsert: typeof jobs,
-          tableSuffix: string,
-        ) => {
-          if (jobsToInsert.length === 0) return;
-
-          // Process in batches
-          for (
-            let offset = 0;
-            offset < jobsToInsert.length;
-            offset += BATCH_SIZE
-          ) {
-            const batch = jobsToInsert.slice(offset, offset + BATCH_SIZE);
-
-            // Build the VALUES clause and parameters array
-            const valuesPlaceholders: string[] = [];
-            const params: any[] = [];
-
-            const columns = [
-              "id",
-              "data",
-              "priority",
-              "listen_channel_id",
-              "owner_id",
-              "group_id",
-              ...(tableSuffix === "_backlog" ? ["times_out_at"] : []),
-            ];
-
-            for (let i = 0; i < batch.length; i++) {
-              const job = batch[i];
-              const baseIdx = i * columns.length + 1;
-
-              valuesPlaceholders.push(
-                `(${new Array(columns.length)
-                  .fill(0)
-                  .map((_, i) => "$" + (baseIdx + i))
-                  .join(", ")})`,
-              );
-
-              params.push(
-                ...[
-                  job.id,
-                  job.data,
-                  job.options.priority ?? 0,
-                  job.options.listenable ? this.listenChannelId : null,
-                  normalizeOwnerId(job.options.ownerId),
-                  job.options.groupId ?? null,
-                  ...(tableSuffix === "_backlog"
-                    ? [
-                        job.options.backloggedTimesOutAt
-                          ? job.options.backloggedTimesOutAt.toISOString()
-                          : null,
-                      ]
-                    : []),
-                ],
-              );
-            }
-
-            const query = `INSERT INTO ${this.queueName}${tableSuffix} (${columns.join(", ")}) VALUES ${valuesPlaceholders.join(", ")} RETURNING ${(tableSuffix === "_backlog" ? this.jobBacklogReturning : this.jobReturning).join(", ")};`;
-
-            const result = await nuqPool.query(query, params);
-
-            // Convert rows to jobs and maintain order
-            const jobMap = new Map(
-              result.rows.map(row => [
-                row.id,
-                this.rowToJob(row, tableSuffix === "_backlog")!,
-              ]),
-            );
-
-            for (const job of batch) {
-              const insertedJob = jobMap.get(job.id);
-              if (insertedJob) {
-                results.push(insertedJob);
-              }
-            }
-          }
-        };
-
-        // Insert regular jobs
-        await bulkInsert(regularJobs, "");
-
-        // Insert backlogged jobs
-        await bulkInsert(backloggedJobs, "_backlog");
+        const regularJobs = jobs.filter(job => !job.options.backlogged);
+        const backloggedJobs = jobs.filter(job => job.options.backlogged);
+        const results = (await this.publishJobsIdempotently(jobs)).jobs;
 
         setSpanAttributes(span, {
           "nuq.jobs_created": results.length,
@@ -1087,10 +1275,17 @@ class NuQ<JobData = any, JobReturnValue = any> {
       });
 
       const start = Date.now();
+      id = canonicalUuid(id);
+      const client = await nuqPool.connect();
       try {
-        const result = this.rowToJob(
+        await client.query("BEGIN");
+        await client.query(
+          `SELECT pg_advisory_xact_lock(hashtextextended($1, 0));`,
+          [id],
+        );
+        let result = this.rowToJob(
           (
-            await nuqPool.query(
+            await client.query(
               `
                 WITH ins AS (
                   INSERT INTO ${this.queueName} (id, data, created_at, priority, listen_channel_id, owner_id, group_id)
@@ -1111,15 +1306,13 @@ class NuQ<JobData = any, JobReturnValue = any> {
           ).rows[0],
         );
 
-        if (!result) {
-          return await this.addJobIfNotExists(id, data, {
-            ...options,
-            backlogged: false,
-          });
-        }
-
+        await client.query("COMMIT");
         return result;
+      } catch (error) {
+        await client.query("ROLLBACK").catch(() => {});
+        throw error;
       } finally {
+        client.release();
         const duration = Date.now() - start;
         setSpanAttributes(span, {
           "nuq.duration_ms": duration,
@@ -1708,6 +1901,41 @@ class NuQJobGroup {
       }
     });
   }
+}
+
+export async function getNuQPgOwnerLiveResidue(
+  ownerId: string,
+): Promise<NuQPgOwnerLiveResidue> {
+  const normalizedOwnerId = normalizeOwnerId(ownerId);
+  const row = (
+    await nuqPool.query(
+      `SELECT
+         (SELECT count(*)::int FROM nuq.queue_scrape
+          WHERE owner_id = $1 AND status IN ('queued', 'active')) AS scrape,
+         (SELECT count(*)::int FROM nuq.queue_scrape_backlog
+          WHERE owner_id = $1) AS backlog,
+         (SELECT count(*)::int FROM nuq.group_crawl
+          WHERE owner_id = $1 AND status = 'active') AS groups,
+         (SELECT count(*)::int FROM nuq.queue_crawl_finished
+          WHERE owner_id = $1 AND status IN ('queued', 'active')) AS crawl_finished;`,
+      [normalizedOwnerId],
+    )
+  ).rows[0] as {
+    scrape: number;
+    backlog: number;
+    groups: number;
+    crawl_finished: number;
+  };
+  const result = {
+    scrape: Number(row.scrape),
+    backlog: Number(row.backlog),
+    groups: Number(row.groups),
+    crawlFinished: Number(row.crawl_finished),
+    total: 0,
+  };
+  result.total =
+    result.scrape + result.backlog + result.groups + result.crawlFinished;
+  return result;
 }
 
 export function nuqGetLocalMetrics(): string {
