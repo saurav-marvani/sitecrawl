@@ -42,6 +42,9 @@ unflagged and draining teams while also running FDB consumers.
   {{- if hasKey $.Values.config.extra $key -}}
     {{- fail (printf "config.extra.%s is managed by nuq.mode and cannot be overridden" $key) -}}
   {{- end -}}
+  {{- if hasKey $.Values.secret.extra $key -}}
+    {{- fail (printf "secret.extra.%s is managed by nuq.mode and cannot be overridden" $key) -}}
+  {{- end -}}
 {{- end -}}
 {{- if include "firecrawl.fdbEnabled" . -}}
   {{- if not .Values.nuqFdb.clusterFile.existingSecret -}}
@@ -53,11 +56,14 @@ unflagged and draining teams while also running FDB consumers.
   {{- if not .Values.nuqFdb.clusterFile.mountPath -}}
     {{- fail "nuqFdb.clusterFile.mountPath is required for mixed and fdb modes" -}}
   {{- end -}}
-  {{- if lt (int .Values.nuqFdb.maintenanceWorker.replicaCount) 1 -}}
-    {{- fail "nuqFdb.maintenanceWorker.replicaCount must be at least 1" -}}
+  {{- if not (regexMatch "^[0-9]+$" (printf "%v" .Values.nuqFdb.scrapeWorker.replicaCount)) -}}
+    {{- fail "nuqFdb.scrapeWorker.replicaCount must be a nonnegative integer" -}}
   {{- end -}}
-  {{- if lt (int .Values.nuqFdb.crawlFinishedWorker.replicaCount) 1 -}}
-    {{- fail "nuqFdb.crawlFinishedWorker.replicaCount must be at least 1" -}}
+  {{- if not (regexMatch "^[1-9][0-9]*$" (printf "%v" .Values.nuqFdb.maintenanceWorker.replicaCount)) -}}
+    {{- fail "nuqFdb.maintenanceWorker.replicaCount must be a positive integer" -}}
+  {{- end -}}
+  {{- if not (regexMatch "^[1-9][0-9]*$" (printf "%v" .Values.nuqFdb.crawlFinishedWorker.replicaCount)) -}}
+    {{- fail "nuqFdb.crawlFinishedWorker.replicaCount must be a positive integer" -}}
   {{- end -}}
 {{- end -}}
 {{- end -}}

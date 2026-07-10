@@ -149,7 +149,7 @@ class TopologySmokeTest(unittest.TestCase):
         config = config_map(documents)["data"]
         self.assertEqual(config["NUQ_BACKEND"], "fdb")
 
-    def test_fdb_control_plane_cannot_scale_to_zero(self) -> None:
+    def assert_invalid_fdb_value(self, value: str, message: str) -> None:
         command = [
             "helm",
             "template",
@@ -160,11 +160,26 @@ class TopologySmokeTest(unittest.TestCase):
             "--set",
             "nuqFdb.clusterFile.existingSecret=fdb-cluster-file",
             "--set",
-            "nuqFdb.maintenanceWorker.replicaCount=0",
+            value,
         ]
         result = subprocess.run(command, capture_output=True, text=True)
         self.assertNotEqual(result.returncode, 0)
-        self.assertIn("must be at least 1", result.stderr)
+        self.assertIn(message, result.stderr)
+
+    def test_fdb_control_plane_cannot_scale_to_zero(self) -> None:
+        for worker in ("maintenanceWorker", "crawlFinishedWorker"):
+            with self.subTest(worker=worker):
+                self.assert_invalid_fdb_value(
+                    f"nuqFdb.{worker}.replicaCount=0", "must be a positive integer"
+                )
+
+    def test_fdb_scrape_replicas_must_be_nonnegative_integers(self) -> None:
+        for replicas in ("-1", "-0.5", "banana"):
+            with self.subTest(replicas=replicas):
+                self.assert_invalid_fdb_value(
+                    f"nuqFdb.scrapeWorker.replicaCount={replicas}",
+                    "must be a nonnegative integer",
+                )
 
 
 if __name__ == "__main__":

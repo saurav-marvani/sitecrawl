@@ -40,6 +40,11 @@ def api_environment(*, backend: Optional[str], cluster_file: Optional[str]) -> d
 
 
 class ComposeTopologySmokeTest(unittest.TestCase):
+    def test_unset_backend_defaults_to_pg(self) -> None:
+        environment = api_environment(backend=None, cluster_file=None)
+        self.assertEqual(environment["NUQ_BACKEND"], "pg")
+        self.assertEqual(environment["FDB_CLUSTER_FILE"], CLUSTER_FILE)
+
     def test_pg_only(self) -> None:
         environment = api_environment(backend="pg", cluster_file=None)
         self.assertEqual(environment["NUQ_BACKEND"], "pg")
