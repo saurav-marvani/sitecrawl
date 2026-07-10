@@ -87,9 +87,17 @@ async function processFinishCrawlJobInternal(_job: NuQJob) {
       // Stop both dequeue loops immediately, then let their in-flight jobs keep
       // renewing and drain within runNuqWorker's bounded grace period.
       crawlFinishedLoop?.stop();
+      getNuqFdbSweeper().stop();
     },
-    drain: () => crawlFinishedLoop?.done,
-    onShutdownDeadline: () => crawlFinishedLoop?.forceStop(),
-    shutdown: () => getNuqFdbSweeper().stop(),
+    drain: async () => {
+      await Promise.all([
+        crawlFinishedLoop?.done,
+        getNuqFdbSweeper().done,
+      ]);
+    },
+    onShutdownDeadline: () => {
+      crawlFinishedLoop?.forceStop();
+      getNuqFdbSweeper().forceStop();
+    },
   });
 })();

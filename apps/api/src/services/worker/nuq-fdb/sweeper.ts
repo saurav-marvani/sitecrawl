@@ -87,7 +87,26 @@ type PartitionClaim = {
   partition: number;
   generation: string;
   expiresAt: number;
+  lifecycleGeneration?: number;
 };
+
+type TickErrorDisposition = "transient" | "fatal";
+type TickErrorClassifier = (error: unknown) => TickErrorDisposition;
+
+// foundationdb@2 exposes native failures as FDBError instances whose stable
+// cross-package shape is Error + numeric code. Avoid importing the constructor
+// at runtime: doing so eagerly loads libfdb_c in processes that do not use FDB,
+// and instanceof would fail if more than one package copy were loaded.
+function defaultTickErrorClassifier(error: unknown): TickErrorDisposition {
+  if (
+    error instanceof Error &&
+    typeof (error as Error & { code?: unknown }).code === "number" &&
+    Number.isInteger((error as Error & { code: number }).code)
+  ) {
+    return "transient";
+  }
+  return "fatal";
+}
 
 type OverdueObservation = {
   queue: string;
@@ -155,20 +174,33 @@ export class NuqFdbSweeper {
   private readonly sweeperId = randomUUID();
   private loop: NodeJS.Timeout | null = null;
   private running = false;
+  private stopRequested = true;
+  private healthy = false;
+  private runGeneration = 0;
+  private donePromise: Promise<void> = Promise.resolve();
+  private resolveDone: (() => void) | null = null;
+  private rejectDone: ((error: unknown) => void) | null = null;
   private metricsEnabled = true;
   private partitionOffset = 0;
   private readonly overdueObservations = new Map<string, OverdueObservation>();
   private readonly lockTtlMs: number;
   private readonly maxPartitionsPerTick: number;
+  private readonly classifyTickError: TickErrorClassifier;
 
   constructor(
     public readonly queues: NuQFdbQueue[],
     public readonly externalSlots: NuqFdbExternalSlots[] = [],
-    options: { lockTtlMs?: number; maxPartitionsPerTick?: number } = {},
+    options: {
+      lockTtlMs?: number;
+      maxPartitionsPerTick?: number;
+      classifyTickError?: TickErrorClassifier;
+    } = {},
   ) {
     this.lockTtlMs = options.lockTtlMs ?? DEFAULT_SWEEP_LOCK_TTL_MS;
     this.maxPartitionsPerTick =
       options.maxPartitionsPerTick ?? DEFAULT_MAX_PARTITIONS_PER_TICK;
+    this.classifyTickError =
+      options.classifyTickError ?? defaultTickErrorClassifier;
   }
 
   private get db() {
@@ -180,6 +212,7 @@ export class NuqFdbSweeper {
     phase: string,
     partition: number,
     now: number = Date.now(),
+    lifecycleGeneration?: number,
   ): Promise<PartitionClaim | null> {
     const generation = randomUUID();
     const claim = await this.db.doTn(async tn => {
@@ -219,21 +252,42 @@ export class NuqFdbSweeper {
           x: expiresAt,
         } satisfies OwnershipRecord),
       );
-      return { ks, phase, partition, generation, expiresAt };
+      return {
+        ks,
+        phase,
+        partition,
+        generation,
+        expiresAt,
+        lifecycleGeneration,
+      };
     });
     // A new claim must be repopulated only by its own scan. A failed claim
     // means another replica owns the partition, so this process must not keep
-    // exporting an observation from an earlier generation.
-    this.clearOverdueObservation(ks, phase, partition);
+    // exporting an observation from an earlier generation. A detached pass is
+    // not allowed to clear observations belonging to a restarted lifecycle.
+    this.clearOverdueObservation(ks, phase, partition, lifecycleGeneration);
     return claim;
   }
 
+  private assertCurrentLifecycleClaim(claim: PartitionClaim): void {
+    if (
+      claim.lifecycleGeneration !== undefined &&
+      claim.lifecycleGeneration !== this.runGeneration
+    ) {
+      throw new OwnershipLostError();
+    }
+  }
+
   private async renewClaim(claim: PartitionClaim): Promise<void> {
+    this.assertCurrentLifecycleClaim(claim);
     const expiresAt = await this.db.doTn(async tn => {
+      this.assertCurrentLifecycleClaim(claim);
       const key = claim.ks.sweeperPartition(claim.phase, claim.partition);
       const current = decodeJson<OwnershipRecord>(await tn.get(key));
+      this.assertCurrentLifecycleClaim(claim);
       const legacyKey = this.queues[0].ks.legacySweeperLock();
       const legacy = decodeJson<LegacyOwnershipRecord>(await tn.get(legacyKey));
+      this.assertCurrentLifecycleClaim(claim);
       const now = Date.now();
       if (
         !current ||
@@ -259,6 +313,7 @@ export class NuqFdbSweeper {
       }
       return expiresAt;
     });
+    this.assertCurrentLifecycleClaim(claim);
     claim.expiresAt = expiresAt;
     const observation = this.overdueObservations.get(
       this.observationKey(claim.ks, claim.phase, claim.partition),
@@ -270,12 +325,15 @@ export class NuqFdbSweeper {
     tn: Transaction,
     claim: PartitionClaim,
   ): Promise<void> {
+    this.assertCurrentLifecycleClaim(claim);
     const current = decodeJson<OwnershipRecord>(
       await tn.get(claim.ks.sweeperPartition(claim.phase, claim.partition)),
     );
+    this.assertCurrentLifecycleClaim(claim);
     const legacy = decodeJson<LegacyOwnershipRecord>(
       await tn.get(this.queues[0].ks.legacySweeperLock()),
     );
+    this.assertCurrentLifecycleClaim(claim);
     if (
       !current ||
       current.w !== this.sweeperId ||
@@ -535,6 +593,7 @@ export class NuqFdbSweeper {
   public async sweepOnce(
     logger: Logger = _logger,
     maxPartitions: number = Number.POSITIVE_INFINITY,
+    lifecycleGeneration?: number,
   ): Promise<void> {
     const now = Date.now();
     const startedAt = Date.now();
@@ -545,6 +604,8 @@ export class NuqFdbSweeper {
     let scanned = 0;
     for (const item of ordered) {
       if (
+        (lifecycleGeneration !== undefined &&
+          lifecycleGeneration !== this.runGeneration) ||
         acquired >= maxPartitions ||
         (Number.isFinite(maxPartitions) &&
           Date.now() - startedAt >= PARTITION_WORK_BUDGET_MS)
@@ -557,14 +618,27 @@ export class NuqFdbSweeper {
         item.ks,
         item.phase,
         item.partition,
+        Date.now(),
+        lifecycleGeneration,
       );
+      if (
+        lifecycleGeneration !== undefined &&
+        lifecycleGeneration !== this.runGeneration
+      ) {
+        break;
+      }
       if (!claim) continue;
       acquired++;
       try {
         await item.run(claim);
       } catch (error) {
         if (error instanceof OwnershipLostError) {
-          this.clearOverdueObservation(item.ks, item.phase, item.partition);
+          this.clearOverdueObservation(
+            item.ks,
+            item.phase,
+            item.partition,
+            lifecycleGeneration,
+          );
           logger.info("NuQ FDB sweeper partition ownership lost", {
             canonicalLog: "nuq-fdb/sweeper_ownership_lost",
             queueName: item.ks.queueName,
@@ -579,31 +653,175 @@ export class NuqFdbSweeper {
   }
 
   public start(intervalMs: number = 1000, logger: Logger = _logger): void {
-    if (this.loop) return;
+    if (!this.stopRequested || this.loop || this.running) return;
+    const lifecycleGeneration = ++this.runGeneration;
+    this.stopRequested = false;
+    this.healthy = true;
     this.metricsEnabled = true;
-    this.loop = setInterval(async () => {
-      if (this.running) return;
-      this.running = true;
-      try {
-        await this.sweepOnce(logger, this.maxPartitionsPerTick);
-      } catch (error) {
-        logger.warn("NuQ FDB sweeper tick failed", {
-          module: "nuq-fdb/sweeper",
-          error,
-        });
-      } finally {
-        this.running = false;
+    this.donePromise = new Promise<void>((resolve, reject) => {
+      this.resolveDone = resolve;
+      this.rejectDone = reject;
+    });
+    // A lifecycle supervisor attaches immediately after start(), but retain a
+    // rejection handler here as well so a very short interval cannot create an
+    // unhandled rejection before the component is registered.
+    void this.donePromise.catch(() => undefined);
+    this.loop = setInterval(() => {
+      if (
+        lifecycleGeneration !== this.runGeneration ||
+        this.running ||
+        this.stopRequested
+      ) {
+        return;
       }
+      this.running = true;
+      void this.sweepOnce(
+        logger,
+        this.maxPartitionsPerTick,
+        lifecycleGeneration,
+      ).then(
+        () => this.completeTick(lifecycleGeneration),
+        error => this.rejectTick(lifecycleGeneration, error, logger),
+      );
     }, intervalMs);
   }
 
   public stop(): void {
+    const lifecycleGeneration = this.runGeneration;
+    this.stopRequested = true;
+    this.healthy = false;
     this.metricsEnabled = false;
     this.overdueObservations.clear();
     if (this.loop) {
       clearInterval(this.loop);
       this.loop = null;
     }
+    if (!this.running) this.finishLifecycle(lifecycleGeneration);
+  }
+
+  // Shutdown deadlines may not wait for a long FDB pass. Invalidate the run so
+  // a detached pass cannot mutate a restarted lifecycle when it later settles.
+  public forceStop(): void {
+    const resolve = this.resolveDone;
+    const hasActiveLifecycle =
+      resolve !== null ||
+      this.rejectDone !== null ||
+      this.loop !== null ||
+      this.running;
+    this.stopRequested = true;
+    this.healthy = false;
+    this.metricsEnabled = false;
+    this.overdueObservations.clear();
+    if (this.loop) clearInterval(this.loop);
+    this.loop = null;
+    this.running = false;
+    this.resolveDone = null;
+    this.rejectDone = null;
+    if (hasActiveLifecycle) this.runGeneration++;
+    resolve?.();
+  }
+
+  public get done(): Promise<void> {
+    return this.donePromise;
+  }
+
+  public isHealthy(): boolean {
+    return this.healthy && !this.stopRequested && this.loop !== null;
+  }
+
+  private completeTick(lifecycleGeneration: number): void {
+    if (lifecycleGeneration !== this.runGeneration) return;
+    this.running = false;
+    if (this.stopRequested) {
+      this.finishLifecycle(lifecycleGeneration);
+      return;
+    }
+    this.healthy = true;
+  }
+
+  private rejectTick(
+    lifecycleGeneration: number,
+    error: unknown,
+    logger: Logger,
+  ): void {
+    if (lifecycleGeneration !== this.runGeneration) return;
+    this.running = false;
+    if (this.stopRequested) {
+      this.finishLifecycle(lifecycleGeneration);
+      return;
+    }
+
+    let disposition: TickErrorDisposition;
+    try {
+      disposition = this.classifyTickError(error);
+    } catch (classifierError) {
+      const logging = this.tryLog(logger, "error", {
+        message: "NuQ FDB sweeper error classifier failed",
+        meta: {
+          module: "nuq-fdb/sweeper",
+          error: classifierError,
+          tickError: error,
+        },
+      });
+      this.failLifecycle(
+        lifecycleGeneration,
+        logging.ok ? classifierError : logging.error,
+      );
+      return;
+    }
+
+    if (disposition === "transient") {
+      this.healthy = false;
+      const logging = this.tryLog(logger, "warn", {
+        message: "NuQ FDB sweeper tick failed transiently; retrying",
+        meta: { module: "nuq-fdb/sweeper", error },
+      });
+      if (!logging.ok) {
+        this.failLifecycle(lifecycleGeneration, logging.error);
+      }
+      return;
+    }
+
+    const logging = this.tryLog(logger, "error", {
+      message: "NuQ FDB sweeper loop failed fatally",
+      meta: { module: "nuq-fdb/sweeper", error },
+    });
+    this.failLifecycle(lifecycleGeneration, logging.ok ? error : logging.error);
+  }
+
+  private tryLog(
+    logger: Logger,
+    level: "warn" | "error",
+    entry: { message: string; meta: Record<string, unknown> },
+  ): { ok: true } | { ok: false; error: unknown } {
+    try {
+      logger[level](entry.message, entry.meta);
+      return { ok: true };
+    } catch (error) {
+      return { ok: false, error };
+    }
+  }
+
+  private finishLifecycle(lifecycleGeneration: number): void {
+    if (lifecycleGeneration !== this.runGeneration) return;
+    const resolve = this.resolveDone;
+    this.resolveDone = null;
+    this.rejectDone = null;
+    resolve?.();
+  }
+
+  private failLifecycle(lifecycleGeneration: number, error: unknown): void {
+    if (lifecycleGeneration !== this.runGeneration) return;
+    const reject = this.rejectDone;
+    this.stopRequested = true;
+    this.healthy = false;
+    this.metricsEnabled = false;
+    this.overdueObservations.clear();
+    if (this.loop) clearInterval(this.loop);
+    this.loop = null;
+    this.resolveDone = null;
+    this.rejectDone = null;
+    reject?.(error);
   }
 
   private observationKey(
@@ -618,7 +836,14 @@ export class NuqFdbSweeper {
     ks: NuqFdbKeyspace,
     phase: string,
     partition: number,
+    lifecycleGeneration?: number,
   ): void {
+    if (
+      lifecycleGeneration !== undefined &&
+      lifecycleGeneration !== this.runGeneration
+    ) {
+      return;
+    }
     this.overdueObservations.delete(this.observationKey(ks, phase, partition));
   }
 
@@ -628,6 +853,12 @@ export class NuqFdbSweeper {
     due: readonly [unknown, unknown][],
     dueAt: (key: Buffer) => number,
   ): void {
+    if (
+      claim.lifecycleGeneration !== undefined &&
+      claim.lifecycleGeneration !== this.runGeneration
+    ) {
+      return;
+    }
     const key = this.observationKey(claim.ks, claim.phase, claim.partition);
     if (!this.metricsEnabled || due.length === 0) {
       this.overdueObservations.delete(key);
@@ -997,11 +1228,9 @@ export class NuqFdbSweeper {
             return true;
           }
           const jobsRange = ks.ingestJobRange(op);
-          const members = await tn.getRangeAll(
-            jobsRange.begin,
-            jobsRange.end,
-            { limit: SWEEP_BATCH },
-          );
+          const members = await tn.getRangeAll(jobsRange.begin, jobsRange.end, {
+            limit: SWEEP_BATCH,
+          });
           for (const [memberKey] of members) {
             const id = ks.unpackId(memberKey as Buffer);
             const status = decodeJson<JobStatusRecord>(
