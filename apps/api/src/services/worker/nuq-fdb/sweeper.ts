@@ -586,7 +586,19 @@ export class NuqFdbSweeper {
     const now = Date.now();
     const startedAt = Date.now();
     for (const queue of this.queues) {
+      if (
+        lifecycleGeneration !== undefined &&
+        lifecycleGeneration !== this.runGeneration
+      ) {
+        return;
+      }
       await queue.backfillMetricCounts(100, config.NUQ_FDB_METRICS_V2_ACTIVATE);
+      if (
+        lifecycleGeneration !== undefined &&
+        lifecycleGeneration !== this.runGeneration
+      ) {
+        return;
+      }
     }
     const work = this.partitionWork(now, logger);
     const offset = this.partitionOffset % Math.max(1, work.length);

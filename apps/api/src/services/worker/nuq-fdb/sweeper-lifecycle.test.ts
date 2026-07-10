@@ -231,6 +231,36 @@ describe("NuqFdbSweeper lifecycle", () => {
     await expect(restartedDone).resolves.toBeUndefined();
   });
 
+  it("does not continue queue backfills after force-stop and restart", async () => {
+    const firstBackfill = deferred();
+    const firstQueue = {
+      ks: { queueName: "first" },
+      backfillMetricCounts: vi.fn(() => firstBackfill.promise),
+    } as unknown as NuQFdbQueue;
+    const secondQueue = {
+      ks: { queueName: "second" },
+      backfillMetricCounts: vi.fn().mockResolvedValue(undefined),
+    } as unknown as NuQFdbQueue;
+    const sweeper = new NuqFdbSweeper([firstQueue, secondQueue]);
+
+    sweeper.start(10, logger);
+    const detachedDone = sweeper.done;
+    await vi.advanceTimersByTimeAsync(10);
+    expect(firstQueue.backfillMetricCounts).toHaveBeenCalledOnce();
+
+    sweeper.forceStop();
+    await detachedDone;
+    sweeper.start(100, logger);
+    const restartedDone = sweeper.done;
+    firstBackfill.resolve();
+    await flushPromises();
+
+    expect(secondQueue.backfillMetricCounts).not.toHaveBeenCalled();
+    expect(sweeper.isHealthy()).toBe(true);
+    sweeper.forceStop();
+    await restartedDone;
+  });
+
   it("does not let a stale renewal extend a restarted lifecycle's metric", async () => {
     const { ks, sweeper } = makeSweeper();
     let finishRenewal!: (expiresAt: number) => void;
