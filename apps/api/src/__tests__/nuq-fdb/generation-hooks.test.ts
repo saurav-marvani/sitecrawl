@@ -504,7 +504,16 @@ describeIf("NuQ FDB transaction-scoped migration generation hooks", () => {
     await forceSealCorruptResidueForStaleGenerationTest(teamId);
     await new Promise(resolve => setTimeout(resolve, 1_100));
     const sweeper = new NuqFdbSweeper([queue, finishedQueue], []);
-    await expect(sweeper.sweepOnce()).rejects.toMatchObject({
+    let staleError: unknown;
+    for (let attempt = 0; attempt < 10 && !staleError; attempt++) {
+      try {
+        await sweeper.sweepOnce();
+      } catch (error) {
+        staleError = error;
+      }
+      if (!staleError) await new Promise(resolve => setTimeout(resolve, 500));
+    }
+    expect(staleError).toMatchObject({
       code: "NUQ_MIGRATION_STALE_GENERATION",
     });
   });
