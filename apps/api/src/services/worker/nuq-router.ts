@@ -50,6 +50,7 @@ import {
   hasLegacyFdbTeamResidue,
   reconcileDesiredTeamBackend,
   recoverLegacyTeamState,
+  reconcileFdbResidueFence,
   reconcilePgResidueFence,
   resolveAuthoritativeObjectBackend,
   type BackendMarker,
@@ -109,37 +110,42 @@ async function desiredTeamBackend(teamId: string): Promise<QueueBackend> {
   return acuc?.flags?.nuqFdb === true ? "fdb" : "pg";
 }
 
+async function hasAuthoritativeFdbTeamResidue(
+  teamId: string,
+): Promise<boolean> {
+  return await optionalFdbRead(async () => {
+    const [
+      scrapePending,
+      scrapeActive,
+      crawlFinishedPending,
+      crawlFinishedActive,
+      crawlFinishedIndexedLive,
+      groups,
+    ] = await Promise.all([
+      scrapeQueueFdb.getTeamPendingCount(teamId),
+      scrapeQueueFdb.getTeamActiveCount(teamId),
+      crawlFinishedQueueFdb.getTeamPendingCount(teamId),
+      crawlFinishedQueueFdb.getTeamActiveCount(teamId),
+      crawlFinishedQueueFdb.hasReadyOrActiveJobForOwner(teamId),
+      crawlGroupFdb.getOngoingByOwner(teamId),
+    ]);
+    return hasLegacyFdbTeamResidue({
+      scrapePending,
+      scrapeActive,
+      crawlFinishedPending,
+      crawlFinishedActive,
+      crawlFinishedIndexedLive,
+      activeGroups: groups.length,
+    });
+  });
+}
+
 async function discoverLegacyTeamAuthority(
   teamId: string,
 ): Promise<QueueBackend> {
   return await discoverLegacyTeamBackend({
     teamId,
-    probeFdbResidue: () =>
-      optionalFdbRead(async () => {
-        const [
-          scrapePending,
-          scrapeActive,
-          crawlFinishedPending,
-          crawlFinishedActive,
-          crawlFinishedIndexedLive,
-          groups,
-        ] = await Promise.all([
-          scrapeQueueFdb.getTeamPendingCount(teamId),
-          scrapeQueueFdb.getTeamActiveCount(teamId),
-          crawlFinishedQueueFdb.getTeamPendingCount(teamId),
-          crawlFinishedQueueFdb.getTeamActiveCount(teamId),
-          crawlFinishedQueueFdb.hasReadyOrActiveJobForOwner(teamId),
-          crawlGroupFdb.getOngoingByOwner(teamId),
-        ]);
-        return hasLegacyFdbTeamResidue({
-          scrapePending,
-          scrapeActive,
-          crawlFinishedPending,
-          crawlFinishedActive,
-          crawlFinishedIndexedLive,
-          activeGroups: groups.length,
-        });
-      }),
+    probeFdbResidue: () => hasAuthoritativeFdbTeamResidue(teamId),
     probePgResidue: async () => {
       const [residue, redisOccupancy] = await Promise.all([
         getNuQPgOwnerLiveResidue(teamId),
@@ -245,11 +251,25 @@ async function authoritativeTeamBackend(teamId: string): Promise<QueueBackend> {
         observationId: `${teamId}/${current!.revision}/${pgResidueTotal === 0 ? "zero" : "nonzero"}`,
       }),
     );
-    // TODO(corrected-core): only the reconciler may call finalSeal after every
-    // queue/group/slot/sweeper mutation uses generation accounting in its own
-    // FDB transaction and publishes an authoritative readiness decision. This
-    // router refreshes durable PG residue but never infers seal readiness from
-    // an out-of-transaction PG/Redis observation.
+  }
+
+  // Existing FDB records from before generation hooks cannot be reconstructed
+  // from the new counters alone. Keep one generation-scoped durable fence until
+  // the authoritative source ledgers are empty; this also covers legacy
+  // external slots through the team's active count.
+  if (
+    desired === "pg" &&
+    current.activeBackend === "fdb" &&
+    (current.phase === "FDB_ONLY" || current.phase === "DRAINING_TO_PG")
+  ) {
+    const hasFdbResidue = await hasAuthoritativeFdbTeamResidue(teamId);
+    await fdbMutation(() =>
+      reconcileFdbResidueFence(nuqFdbMigrationStore, {
+        teamId,
+        total: hasFdbResidue ? 1 : 0,
+        observationId: `${teamId}/${current!.revision}/${hasFdbResidue ? "nonzero" : "zero"}`,
+      }),
+    );
   }
 
   if (current?.activeBackend === desired && current.phase !== "ERROR") {

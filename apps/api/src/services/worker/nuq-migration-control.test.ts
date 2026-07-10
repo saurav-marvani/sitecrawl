@@ -8,6 +8,7 @@ import {
   discoverLegacyTeamBackend,
   hasLegacyFdbTeamResidue,
   reconcileDesiredTeamBackend,
+  reconcileFdbResidueFence,
   reconcilePgResidueFence,
   recoverLegacyTeamState,
   resolveAuthoritativeObjectBackend,
@@ -393,11 +394,12 @@ describe("authoritative backend resolution", () => {
 });
 
 test("PG residue reconciliation changes only the durable seal fence", async () => {
-  const existing = pin("pg-residue/team", {
+  const existing = pin("pg-residue/team/generation/1", {
     kind: "cross_store_intent",
     residue: { ...pin("unused").residue, intent_unresolved: 1 },
   });
   const store = storeMock({
+    inspectState: vi.fn().mockResolvedValue(state()),
     inspectPin: vi.fn().mockResolvedValue(existing),
     transitionObjectResidue: vi.fn().mockImplementation(async input => ({
       ...existing,
@@ -418,7 +420,7 @@ test("PG residue reconciliation changes only the durable seal fence", async () =
   expect(store.transitionObjectResidue).toHaveBeenCalledWith({
     teamId: "team",
     kind: "cross_store_intent",
-    objectId: "pg-residue/team",
+    objectId: "pg-residue/team/generation/1",
     operationId: "nuq-router/v1/pg-residue/pg-snapshot-2/pin-revision/1",
     fromLifecycle: "prepared",
     toLifecycle: "prepared",
@@ -428,7 +430,7 @@ test("PG residue reconciliation changes only the durable seal fence", async () =
 });
 
 test("PG residue fence explicitly adopts the draining source generation", async () => {
-  const adopted = pin("pg-residue/team", {
+  const adopted = pin("pg-residue/team/generation/1", {
     kind: "cross_store_intent",
     admission: "legacy-backfill",
   });
@@ -457,13 +459,56 @@ test("PG residue fence explicitly adopts the draining source generation", async 
   expect(store.preparePinnedObject).toHaveBeenCalledWith({
     teamId: "team",
     kind: "cross_store_intent",
-    objectId: "pg-residue/team",
+    objectId: "pg-residue/team/generation/1",
     admission: {
       type: "legacy-backfill",
       backend: "pg",
       generation: 1,
     },
     requiredBackend: "pg",
+    residue: { intent_unresolved: 1 },
+  });
+});
+
+test("source residue fences are isolated by backend and never-reused generation", async () => {
+  const adopted = pin("fdb-residue/team/generation/7", {
+    kind: "cross_store_intent",
+    backend: "fdb",
+    generation: 7,
+    admission: "legacy-backfill",
+  });
+  const store = storeMock({
+    inspectState: vi.fn().mockResolvedValue(
+      state({
+        activeBackend: "fdb",
+        activeGeneration: 7,
+        maxGeneration: 7,
+        phase: "DRAINING_TO_PG",
+        targetBackend: "pg",
+        targetGeneration: 8,
+      }),
+    ),
+    inspectPin: vi.fn().mockResolvedValue(null),
+    preparePinnedObject: vi.fn().mockResolvedValue(adopted),
+  });
+
+  await expect(
+    reconcileFdbResidueFence(store, {
+      teamId: "team",
+      total: 2,
+      observationId: "legacy-fdb-snapshot",
+    }),
+  ).resolves.toEqual(adopted);
+  expect(store.preparePinnedObject).toHaveBeenCalledWith({
+    teamId: "team",
+    kind: "cross_store_intent",
+    objectId: "fdb-residue/team/generation/7",
+    admission: {
+      type: "legacy-backfill",
+      backend: "fdb",
+      generation: 7,
+    },
+    requiredBackend: "fdb",
     residue: { intent_unresolved: 1 },
   });
 });

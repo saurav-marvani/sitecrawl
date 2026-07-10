@@ -469,72 +469,102 @@ export class DurableNuQPgPublicationAdapter implements NuQPgPublicationAdapter {
   }
 }
 
-export function pgResidueFenceObjectId(teamId: string): string {
-  return `pg-residue/${teamId}`;
+export function sourceResidueFenceObjectId(
+  teamId: string,
+  backend: MigrationBackend,
+  generation: number,
+): string {
+  return `${backend}-residue/${teamId}/generation/${generation}`;
 }
 
 /**
- * Persist one unresolved fence while authoritative PG residue is non-zero.
- * observationId must be stable across retry of the same PG snapshot and unique
- * for a later observation (including A -> B -> A). The reconciler must call
- * this before finalSeal; finalSeal only reads durable FDB counters.
+ * Persist one unresolved fence while residue observed outside the generation
+ * counters is non-zero. A separate fence is burned for every never-reused
+ * source generation, so a later PG -> FDB -> PG cycle cannot reopen a closed
+ * generation's pin. observationId must identify the exact observation retry.
  */
-export async function reconcilePgResidueFence(
+export async function reconcileSourceResidueFence(
   store: NuQMigrationStorePort,
   input: {
     teamId: string;
+    backend: MigrationBackend;
     total: number;
     observationId: string;
   },
 ): Promise<MigrationObjectPin> {
   if (!Number.isSafeInteger(input.total) || input.total < 0) {
     throw new NuQRouterError(
-      "NUQ_MIGRATION_INVALID_PG_RESIDUE",
-      "PG residue total must be a nonnegative safe integer",
+      "NUQ_MIGRATION_INVALID_SOURCE_RESIDUE",
+      "source residue total must be a nonnegative safe integer",
     );
   }
-  const objectId = pgResidueFenceObjectId(input.teamId);
+  const state = await store.inspectState(input.teamId);
+  if (!state || state.activeBackend !== input.backend) {
+    throw new NuQRouterError(
+      "NUQ_MIGRATION_SOURCE_NOT_ACTIVE",
+      `team ${input.teamId} has no active ${input.backend} generation for residue adoption`,
+    );
+  }
+  const objectId = sourceResidueFenceObjectId(
+    input.teamId,
+    input.backend,
+    state.activeGeneration,
+  );
   let pin = await store.inspectPin("cross_store_intent", objectId);
   if (!pin) {
-    const state = await store.inspectState(input.teamId);
-    if (!state || state.activeBackend !== "pg") {
-      throw new NuQRouterError(
-        "NUQ_MIGRATION_PG_SOURCE_NOT_ACTIVE",
-        `team ${input.teamId} has no active PG generation for residue adoption`,
-      );
-    }
     pin = await store.preparePinnedObject({
       teamId: input.teamId,
       kind: "cross_store_intent",
       objectId,
-      admission:
-        state.phase === "DRAINING_TO_FDB"
-          ? {
-              type: "legacy-backfill",
-              backend: "pg",
-              generation: state.activeGeneration,
-            }
-          : { type: "new-root" },
-      requiredBackend: "pg",
+      admission: {
+        type: "legacy-backfill",
+        backend: input.backend,
+        generation: state.activeGeneration,
+      },
+      requiredBackend: input.backend,
       residue: { intent_unresolved: input.total === 0 ? 0 : 1 },
     });
     return pin;
   }
-  if (pin.backend !== "pg" || pin.lifecycle === "terminal") {
+  if (
+    pin.backend !== input.backend ||
+    pin.generation !== state.activeGeneration ||
+    pin.lifecycle === "terminal"
+  ) {
     throw new NuQRouterPinMismatchError(
       "cross_store_intent",
       objectId,
       pin.backend,
-      "pg",
+      input.backend,
     );
   }
   return await store.transitionObjectResidue({
     teamId: input.teamId,
     kind: "cross_store_intent",
     objectId,
-    operationId: `nuq-router/v1/pg-residue/${input.observationId}/pin-revision/${pin.revision}`,
+    operationId: `nuq-router/v1/${input.backend}-residue/${input.observationId}/pin-revision/${pin.revision}`,
     fromLifecycle: pin.lifecycle,
     toLifecycle: pin.lifecycle,
     residue: { intent_unresolved: input.total === 0 ? 0 : 1 },
+  });
+}
+
+export async function reconcilePgResidueFence(
+  store: NuQMigrationStorePort,
+  input: { teamId: string; total: number; observationId: string },
+): Promise<MigrationObjectPin> {
+  return await reconcileSourceResidueFence(store, {
+    ...input,
+    backend: "pg",
+  });
+}
+
+export async function reconcileFdbResidueFence(
+  store: NuQMigrationStorePort,
+  input: { teamId: string; total: number; observationId: string },
+): Promise<MigrationObjectPin> {
+  return await reconcileSourceResidueFence(store, {
+    ...input,
+    backend: "fdb",
   });
 }
