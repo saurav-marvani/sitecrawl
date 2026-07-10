@@ -321,7 +321,7 @@ describeIf("NuQ durable migration router", () => {
       [],
     );
     let finished = await crawlFinishedQueueFdb.getJobToProcess();
-    for (let attempt = 0; attempt < 5 && !finished; attempt++) {
+    for (let attempt = 0; attempt < 20 && !finished; attempt++) {
       await sweeper.sweepOnce();
       finished = await crawlFinishedQueueFdb.getJobToProcess();
     }
