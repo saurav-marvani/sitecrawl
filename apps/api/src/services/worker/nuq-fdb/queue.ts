@@ -62,6 +62,9 @@ import {
   bumpGroupStatusCount,
   bumpTeamActive,
   alignQueueMetricStatus,
+  bumpQueueStatus,
+  bumpKeyActive,
+  scheduleRaiseTask,
   GroupJobIndexValue,
 } from "./ops";
 import { NuqFdbGroupOps } from "./groups";
@@ -735,8 +738,11 @@ export class NuQFdbQueue<JobData = any, JobReturnValue = any> {
         const stored = storedBuf ? decodeI64(storedBuf) : null;
         if (stored !== gate.teamLimit) {
           tn.set(ks.teamLimit(ownerId), encodeI64(gate.teamLimit));
+          // Also indexes teams whose configured limit is zero.
+          tn.add(ks.teamActiveIndex(ownerId), encodeI64(0));
+          tn.set(ks.teamLedgerGcIndex(ownerId), EMPTY);
           if (stored !== null && gate.teamLimit > stored) {
-            tn.set(ks.taskTeamRaise(ownerId), EMPTY);
+            scheduleRaiseTask(tn, ks.taskTeamRaise(ownerId));
           }
         }
 
@@ -754,8 +760,9 @@ export class NuQFdbQueue<JobData = any, JobReturnValue = any> {
         const stored = storedBuf ? decodeI64(storedBuf) : null;
         if (stored !== gate.key.limit) {
           tn.set(ks.keyLimit(keyId), encodeI64(gate.key.limit));
+          tn.set(ks.keyLedgerIndex(keyId), EMPTY);
           if (stored !== null && gate.key.limit > stored) {
-            tn.set(ks.taskKeyRaise(keyId), EMPTY);
+            scheduleRaiseTask(tn, ks.taskKeyRaise(keyId));
           }
         }
         // key limits are small by definition: always the strict read
@@ -888,7 +895,7 @@ export class NuQFdbQueue<JobData = any, JobReturnValue = any> {
         bumpTeamActive(tn, ks, ownerId, granted);
       }
       if (keyGranted > 0 && keyId !== null) {
-        tn.add(ks.keyActive(keyId), encodeI64(keyGranted));
+        bumpKeyActive(tn, ks, keyId, keyGranted);
       }
       for (const [gid, n] of crawlAcquired) {
         tn.add(ks.groupCrawlActive(gid), encodeI64(n));
