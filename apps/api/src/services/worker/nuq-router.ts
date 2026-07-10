@@ -245,53 +245,60 @@ async function legacyGenerationForBackend(
 }
 
 async function reconcileTerminalPgPins(teamId: string): Promise<void> {
-  const pins = (await nuqFdbMigrationStore.inspectTeamPins(teamId)).filter(
-    pin => pin.backend === "pg" && pin.lifecycle !== "terminal",
-  );
-  const jobPins = pins.filter(pin => pin.kind === "scrape_job");
-  if (jobPins.length > 0) {
-    const ids = jobPins.map(pin => pin.objectId);
-    const [jobs, backlog] = await Promise.all([
-      scrapeQueuePg.getJobs(ids),
-      scrapeQueuePg.getJobsFromBacklog(ids),
-    ]);
-    const byId = new Map([...jobs, ...backlog].map(job => [job.id, job]));
-    for (const pin of jobPins) {
-      const job = byId.get(pin.objectId);
-      const terminal = job?.status === "completed" || job?.status === "failed";
-      // A missing prepared object may still be between FDB intent commit and
-      // PG publication. Only an observed terminal row, or disappearance after
-      // durable activation, proves that its residue can be retired.
-      if (terminal || (!job && pin.lifecycle === "active")) {
-        await completeRoutingPin(pin, "pg-reconcile-terminal");
+  let cursor: { kind: MigrationObjectKind; objectId: string } | undefined;
+  do {
+    const page = await nuqFdbMigrationStore.inspectTeamPinsPage(teamId, {
+      limit: 100,
+      cursor,
+    });
+    const pins = page.pins.filter(pin => pin.backend === "pg");
+    const jobPins = pins.filter(pin => pin.kind === "scrape_job");
+    if (jobPins.length > 0) {
+      const ids = jobPins.map(pin => pin.objectId);
+      const [jobs, backlog] = await Promise.all([
+        scrapeQueuePg.getJobs(ids),
+        scrapeQueuePg.getJobsFromBacklog(ids),
+      ]);
+      const byId = new Map([...jobs, ...backlog].map(job => [job.id, job]));
+      for (const pin of jobPins) {
+        const job = byId.get(pin.objectId);
+        const terminal =
+          job?.status === "completed" || job?.status === "failed";
+        // A missing prepared object may still be between FDB intent commit and
+        // PG publication. Only an observed terminal row, or disappearance after
+        // durable activation, proves that its residue can be retired.
+        if (terminal || (!job && pin.lifecycle === "active")) {
+          await completeRoutingPin(pin, "pg-reconcile-terminal");
+        }
       }
     }
-  }
-  for (const pin of pins) {
-    if (pin.kind === "group") {
-      const group = await crawlGroupPg.getGroup(pin.objectId);
-      if (
-        (group && group.status !== "active") ||
-        (!group && pin.lifecycle === "active")
-      ) {
-        await completeRoutingPin(pin, "pg-reconcile-terminal");
-      }
-    } else if (pin.kind === "external_holder") {
-      // Redis disappearance is not terminal evidence (flushes/failovers lose
-      // this hint). Explicit release or the corrected durable holder-expiry
-      // reconciler owns retirement, so an orphan conservatively blocks seal.
-      continue;
-    } else if (pin.kind === "crawl_finished") {
-      const job = await crawlFinishedQueuePg.getJob(pin.objectId);
-      if (
-        job?.status === "completed" ||
-        job?.status === "failed" ||
-        (!job && pin.lifecycle === "active")
-      ) {
-        await completeRoutingPin(pin, "pg-reconcile-terminal");
+    for (const pin of pins) {
+      if (pin.kind === "group") {
+        const group = await crawlGroupPg.getGroup(pin.objectId);
+        if (
+          (group && group.status !== "active") ||
+          (!group && pin.lifecycle === "active")
+        ) {
+          await completeRoutingPin(pin, "pg-reconcile-terminal");
+        }
+      } else if (pin.kind === "external_holder") {
+        // Redis disappearance is not terminal evidence (flushes/failovers lose
+        // this hint). Explicit release or the corrected durable holder-expiry
+        // reconciler owns retirement, so an orphan conservatively blocks seal.
+        continue;
+      } else if (pin.kind === "crawl_finished") {
+        const job = await crawlFinishedQueuePg.getJob(pin.objectId);
+        if (
+          job?.status === "completed" ||
+          job?.status === "failed" ||
+          (!job && pin.lifecycle === "active")
+        ) {
+          await completeRoutingPin(pin, "pg-reconcile-terminal");
+        }
       }
     }
-  }
+    cursor = page.nextCursor;
+  } while (cursor);
 }
 
 async function authoritativeTeamBackend(teamId: string): Promise<QueueBackend> {

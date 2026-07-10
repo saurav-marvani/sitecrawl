@@ -9,6 +9,7 @@ import {
   getFdb,
   getNuqFdbDatabase,
 } from "../../services/worker/nuq-fdb/client";
+import { reconcilePgResidueFence } from "../../services/worker/nuq-migration-control";
 
 // These tests intentionally exercise transaction conflicts and atomic ADDs on
 // a real FoundationDB cluster. They are skipped in ordinary PG-only runs.
@@ -104,6 +105,27 @@ describeIf("NuQ global FDB migration control plane", () => {
     await expect(store.resolveSteady(teamId, "fdb")).resolves.toMatchObject({
       status: "transition-required",
     });
+  });
+
+  test("initialize-if-absent replay returns current durable state after migration", async () => {
+    const teamId = team();
+    const initializeOperationId = randomUUID();
+    await store.initializeLegacyTeam(teamId, "pg", initializeOperationId);
+    const transitionOperationId = randomUUID();
+    await begin(teamId, transitionOperationId);
+    const sealed = await store.finalSeal({
+      teamId,
+      transitionOperationId,
+    });
+
+    await expect(
+      store.initializeLegacyTeam(teamId, "pg", initializeOperationId, {
+        ifAbsent: true,
+      }),
+    ).resolves.toEqual(sealed);
+    await expect(
+      store.initializeLegacyTeam(teamId, "pg", initializeOperationId),
+    ).resolves.toMatchObject({ revision: 1, activeBackend: "pg" });
   });
 
   test("revision CAS admits exactly one racing transition", async () => {
@@ -396,6 +418,202 @@ describeIf("NuQ global FDB migration control plane", () => {
     }
   });
 
+  test("pin revision CAS rejects delayed reorder but exact commit replay wins", async () => {
+    const teamId = team();
+    const objectId = object();
+    await initialize(teamId, "fdb");
+    const prepared = await store.preparePinnedObject({
+      teamId,
+      kind: "scrape_job",
+      objectId,
+      admission: { type: "new-root" },
+    });
+    const firstOperationId = randomUUID();
+    const first = await store.transitionObjectResidue({
+      teamId,
+      kind: "scrape_job",
+      objectId,
+      operationId: firstOperationId,
+      fromLifecycle: "prepared",
+      toLifecycle: "prepared",
+      residue: { intent_unresolved: 1 },
+      expectedRevision: prepared.revision,
+    });
+    await expect(
+      store.transitionObjectResidue({
+        teamId,
+        kind: "scrape_job",
+        objectId,
+        operationId: firstOperationId,
+        fromLifecycle: "prepared",
+        toLifecycle: "prepared",
+        residue: { intent_unresolved: 1 },
+        expectedRevision: prepared.revision,
+      }),
+    ).resolves.toEqual(first);
+    const second = await store.transitionObjectResidue({
+      teamId,
+      kind: "scrape_job",
+      objectId,
+      operationId: randomUUID(),
+      fromLifecycle: "prepared",
+      toLifecycle: "prepared",
+      residue: {},
+      expectedRevision: first.revision,
+    });
+    const newest = await store.transitionObjectResidue({
+      teamId,
+      kind: "scrape_job",
+      objectId,
+      operationId: randomUUID(),
+      fromLifecycle: "prepared",
+      toLifecycle: "prepared",
+      residue: { intent_unresolved: 1 },
+      expectedRevision: second.revision,
+    });
+
+    await expect(
+      store.transitionObjectResidue({
+        teamId,
+        kind: "scrape_job",
+        objectId,
+        operationId: randomUUID(),
+        fromLifecycle: "prepared",
+        toLifecycle: "prepared",
+        residue: {},
+        expectedRevision: second.revision,
+      }),
+    ).rejects.toMatchObject({
+      code: "NUQ_MIGRATION_CAS_MISMATCH",
+      retryable: true,
+    });
+    await expect(store.inspectPin("scrape_job", objectId)).resolves.toEqual(
+      newest,
+    );
+  });
+
+  test("source residue A-B-A reorder rejects the delayed observation", async () => {
+    const teamId = team();
+    await initialize(teamId, "pg");
+    await reconcilePgResidueFence(store, {
+      teamId,
+      total: 1,
+      observationId: "A-initial",
+    });
+
+    const originalTransition = store.transitionObjectResidue.bind(store);
+    let releaseDelayed!: () => void;
+    const delayedGate = new Promise<void>(resolve => {
+      releaseDelayed = resolve;
+    });
+    let captured!: () => void;
+    const capturedInput = new Promise<void>(resolve => {
+      captured = resolve;
+    });
+    const transitionSpy = vi
+      .spyOn(store, "transitionObjectResidue")
+      .mockImplementationOnce(async input => {
+        captured();
+        await delayedGate;
+        return await originalTransition(input);
+      });
+    const delayed = reconcilePgResidueFence(store, {
+      teamId,
+      total: 0,
+      observationId: "B-delayed",
+    });
+    await capturedInput;
+    try {
+      await reconcilePgResidueFence(store, {
+        teamId,
+        total: 0,
+        observationId: "B-current",
+      });
+      const newest = await reconcilePgResidueFence(store, {
+        teamId,
+        total: 1,
+        observationId: "A-newest",
+      });
+      releaseDelayed();
+      await expect(delayed).rejects.toMatchObject({
+        code: "NUQ_MIGRATION_CAS_MISMATCH",
+      });
+      await expect(
+        store.inspectPin("cross_store_intent", newest.objectId),
+      ).resolves.toMatchObject({
+        revision: newest.revision,
+        residue: { intent_unresolved: 1 },
+      });
+    } finally {
+      releaseDelayed();
+      transitionSpy.mockRestore();
+      await getNuqFdbDatabase().doTn(async tn =>
+        tn.clear(
+          store.objectKey(
+            "cross_store_intent",
+            `pg-residue/${teamId}/generation/1`,
+          ),
+        ),
+      );
+    }
+  });
+
+  test("independent residue counters commit without cross-counter conflicts", async () => {
+    const teamId = team();
+    const firstObjectId = object();
+    const secondObjectId = object();
+    await initialize(teamId, "fdb");
+    await Promise.all([
+      store.preparePinnedObject({
+        teamId,
+        kind: "scrape_job",
+        objectId: firstObjectId,
+        admission: { type: "new-root" },
+      }),
+      store.preparePinnedObject({
+        teamId,
+        kind: "scrape_job",
+        objectId: secondObjectId,
+        admission: { type: "new-root" },
+      }),
+    ]);
+
+    const db = getNuqFdbDatabase();
+    const firstTn = db.rawCreateTransaction();
+    const secondTn = db.rawCreateTransaction();
+    try {
+      await Promise.all([
+        store.transitionObjectResidueInTxn(firstTn, {
+          teamId,
+          kind: "scrape_job",
+          objectId: firstObjectId,
+          operationId: randomUUID(),
+          fromLifecycle: "prepared",
+          toLifecycle: "active",
+          residue: { capacity_ready_active: 1 },
+          expectedRevision: 1,
+        }),
+        store.transitionObjectResidueInTxn(secondTn, {
+          teamId,
+          kind: "scrape_job",
+          objectId: secondObjectId,
+          operationId: randomUUID(),
+          fromLifecycle: "prepared",
+          toLifecycle: "active",
+          residue: { control_groups: 1 },
+          expectedRevision: 1,
+        }),
+      ]);
+      await Promise.all([firstTn.rawCommit(), secondTn.rawCommit()]);
+    } finally {
+      firstTn.rawCancel();
+      secondTn.rawCancel();
+    }
+    await expect(store.inspectGeneration(teamId, 1)).resolves.toMatchObject({
+      residue: { capacity_ready_active: 1, control_groups: 1 },
+    });
+  });
+
   test("transaction-scoped hooks compose accounting with caller mutations", async () => {
     const teamId = team();
     const objectId = object();
@@ -572,6 +790,59 @@ describeIf("NuQ global FDB migration control plane", () => {
     );
   });
 
+  test("terminal tombstones leave the paged team index bounded to active pins", async () => {
+    const teamId = team();
+    const objectIds = [object(), object(), object()];
+    await initialize(teamId, "fdb");
+    await Promise.all(
+      objectIds.map(objectId =>
+        store.preparePinnedObject({
+          teamId,
+          kind: "scrape_job",
+          objectId,
+          admission: { type: "new-root" },
+        }),
+      ),
+    );
+    const terminal = await store.completePinnedObject({
+      teamId,
+      kind: "scrape_job",
+      objectId: objectIds[1],
+      operationId: randomUUID(),
+      fromLifecycle: "prepared",
+    });
+
+    const indexed: string[] = [];
+    let cursor: { kind: "scrape_job"; objectId: string } | undefined;
+    do {
+      const page = await store.inspectTeamPinsPage(teamId, {
+        limit: 1,
+        cursor,
+      });
+      indexed.push(...page.pins.map(pin => pin.objectId));
+      cursor = page.nextCursor as typeof cursor;
+    } while (cursor);
+    expect(indexed.sort()).toEqual(
+      objectIds.filter(objectId => objectId !== terminal.objectId).sort(),
+    );
+    await expect(
+      store.inspectPin("scrape_job", terminal.objectId),
+    ).resolves.toEqual(terminal);
+    await expect(
+      getNuqFdbDatabase().doTn(async tn =>
+        tn.get(
+          store.pack([
+            "team",
+            teamId,
+            "object",
+            "scrape_job",
+            terminal.objectId,
+          ]),
+        ),
+      ),
+    ).resolves.toBeUndefined();
+  });
+
   test("legacy object-operation rows replay once into the bounded pin token", async () => {
     const teamId = team();
     const objectId = object();
@@ -742,6 +1013,77 @@ describeIf("NuQ global FDB migration control plane", () => {
     } finally {
       doTn.mockRestore();
     }
+  });
+
+  test("counter-local deltas preserve underflow checks and final-seal corruption detection", async () => {
+    const teamId = team();
+    const objectId = object();
+    await initialize(teamId, "fdb");
+    const prepared = await store.preparePinnedObject({
+      teamId,
+      kind: "scrape_job",
+      objectId,
+      admission: { type: "new-root" },
+    });
+    await getNuqFdbDatabase().doTn(async tn =>
+      tn.set(
+        store.residueKey(teamId, 1, "capacity_external_holders"),
+        Buffer.from([1]),
+      ),
+    );
+    const active = await store.transitionObjectResidue({
+      teamId,
+      kind: "scrape_job",
+      objectId,
+      operationId: randomUUID(),
+      fromLifecycle: "prepared",
+      toLifecycle: "active",
+      residue: { capacity_ready_active: 1 },
+      expectedRevision: prepared.revision,
+    });
+    await store.completePinnedObject({
+      teamId,
+      kind: "scrape_job",
+      objectId,
+      operationId: randomUUID(),
+      fromLifecycle: "active",
+    });
+    const transitionOperationId = randomUUID();
+    await store.beginTransition({
+      teamId,
+      targetBackend: "pg",
+      operationId: transitionOperationId,
+    });
+    await expect(
+      store.finalSeal({ teamId, transitionOperationId }),
+    ).rejects.toMatchObject({ code: "NUQ_MIGRATION_CORRUPT" });
+
+    const underflowTeam = team();
+    const underflowObject = object();
+    await initialize(underflowTeam, "fdb");
+    await store.preparePinnedObject({
+      teamId: underflowTeam,
+      kind: "scrape_job",
+      objectId: underflowObject,
+      admission: { type: "new-root" },
+      residue: { capacity_ready_active: 1 },
+    });
+    await getNuqFdbDatabase().doTn(async tn =>
+      tn.clear(store.residueKey(underflowTeam, 1, "capacity_ready_active")),
+    );
+    await expect(
+      store.completePinnedObject({
+        teamId: underflowTeam,
+        kind: "scrape_job",
+        objectId: underflowObject,
+        operationId: randomUUID(),
+        fromLifecycle: "prepared",
+      }),
+    ).rejects.toMatchObject({
+      code: "NUQ_MIGRATION_CORRUPT",
+      message: expect.stringContaining("negative or overflow"),
+    });
+    expect(active.residue.capacity_ready_active).toBe(1);
   });
 
   test("malformed state and counters fail with deterministic corruption errors", async () => {

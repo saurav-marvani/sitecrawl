@@ -62,6 +62,7 @@ export type {
   MigrationResidue,
   MigrationResidueCounter,
   MigrationSteadyResolution,
+  MigrationTeamPinsPage,
   MigrationTeamState,
   PreparePinnedObjectInput,
   ReconcileManagedObjectInput,

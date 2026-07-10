@@ -4,6 +4,7 @@ import type {
   MigrationObjectPin,
   MigrationResidue,
   MigrationSteadyResolution,
+  MigrationTeamPinsPage,
   MigrationTeamState,
   PreparePinnedObjectInput,
   TransitionObjectResidueInput,
@@ -43,7 +44,13 @@ export interface NuQMigrationStorePort {
     transitionOperationId: string;
     expectedRevision?: number;
   }): Promise<MigrationTeamState>;
-  inspectTeamPins(teamId: string): Promise<MigrationObjectPin[]>;
+  inspectTeamPinsPage(
+    teamId: string,
+    options: {
+      limit: number;
+      cursor?: { kind: MigrationObjectKind; objectId: string };
+    },
+  ): Promise<MigrationTeamPinsPage>;
   inspectPin(
     kind: MigrationObjectKind,
     objectId: string,
@@ -510,6 +517,10 @@ export function sourceResidueFenceObjectId(
  * counters is non-zero. A separate fence is burned for every never-reused
  * source generation, so a later PG -> FDB -> PG cycle cannot reopen a closed
  * generation's pin. observationId must identify the exact observation retry.
+ * This bounded token reconciles commit-unknown only while it is the pin's
+ * current last operation. A caller retrying the outer reconciliation after an
+ * error must re-read the source; a superseded stale observation has no source
+ * epoch and is intentionally not replayable.
  */
 export async function reconcileSourceResidueFence(
   store: NuQMigrationStorePort,
@@ -566,14 +577,27 @@ export async function reconcileSourceResidueFence(
       input.backend,
     );
   }
+  const intentUnresolved = input.total === 0 ? 0 : 1;
+  const operationPrefix = `nuq-router/v1/${input.backend}-residue/${input.observationId}/pin-revision/`;
+  const replay =
+    pin.lastOperation?.operationId.startsWith(operationPrefix) === true &&
+    pin.lastOperation.fromLifecycle === pin.lifecycle &&
+    pin.lastOperation.toLifecycle === pin.lifecycle &&
+    pin.lastOperation.residue.intent_unresolved === intentUnresolved &&
+    Object.entries(pin.lastOperation.residue).every(
+      ([counter, value]) => counter === "intent_unresolved" || value === 0,
+    )
+      ? pin.lastOperation
+      : undefined;
   return await store.transitionObjectResidue({
     teamId: input.teamId,
     kind: "cross_store_intent",
     objectId,
-    operationId: `nuq-router/v1/${input.backend}-residue/${input.observationId}/pin-revision/${pin.revision}`,
+    operationId: replay?.operationId ?? `${operationPrefix}${pin.revision}`,
     fromLifecycle: pin.lifecycle,
     toLifecycle: pin.lifecycle,
-    residue: { intent_unresolved: input.total === 0 ? 0 : 1 },
+    residue: { intent_unresolved: intentUnresolved },
+    expectedRevision: replay ? replay.resultRevision - 1 : pin.revision,
   });
 }
 

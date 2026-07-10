@@ -117,6 +117,14 @@ export type TransitionObjectResidueInput = {
   fromLifecycle: MigrationObjectLifecycle;
   toLifecycle: MigrationObjectLifecycle;
   residue: Partial<MigrationResidue>;
+  /** Compared with the pin revision before mutation. Exact replay of the
+   * current lastOperation wins before this check for commit-unknown recovery. */
+  expectedRevision?: number;
+};
+
+export type MigrationTeamPinsPage = {
+  pins: MigrationObjectPin[];
+  nextCursor?: { kind: MigrationObjectKind; objectId: string };
 };
 
 export type CompletePinnedObjectInput = {
@@ -788,8 +796,7 @@ export class NuqFdbMigrationStore {
     from: MigrationResidue,
     to: MigrationResidue,
   ): Promise<void> {
-    const current = await this.readResidue(tn, teamId, generation);
-    for (const counter of MIGRATION_RESIDUE_COUNTERS) {
+    const changes = MIGRATION_RESIDUE_COUNTERS.flatMap(counter => {
       const delta = to[counter] - from[counter];
       if (!Number.isSafeInteger(delta)) {
         throw new MigrationStoreError(
@@ -797,15 +804,27 @@ export class NuqFdbMigrationStore {
           `counter delta for ${counter} is not a safe integer`,
         );
       }
-      if (!isNonnegativeInteger(current[counter] + delta)) {
+      return delta === 0 ? [] : [{ counter, delta }];
+    });
+    const current = await Promise.all(
+      changes.map(({ counter }) =>
+        tn.get(this.residueKey(teamId, generation, counter)),
+      ),
+    );
+    for (let index = 0; index < changes.length; index++) {
+      const { counter, delta } = changes[index];
+      const key = this.residueKey(teamId, generation, counter);
+      const value = decodeCounter(
+        current[index],
+        `team ${teamId} generation ${generation} residue ${counter}`,
+      );
+      if (!isNonnegativeInteger(value + delta)) {
         throw new MigrationCorruptionError(
           `team ${teamId} generation ${generation} residue ${counter}`,
           "pin delta would make counter negative or overflow",
         );
       }
-      if (delta !== 0) {
-        tn.add(this.residueKey(teamId, generation, counter), encodeI64(delta));
-      }
+      tn.add(key, encodeI64(delta));
     }
   }
 
@@ -879,8 +898,29 @@ export class NuqFdbMigrationStore {
     }));
   }
 
-  public async inspectTeamPins(teamId: string): Promise<MigrationObjectPin[]> {
+  public async inspectTeamPinsPage(
+    teamId: string,
+    options: {
+      limit: number;
+      cursor?: { kind: MigrationObjectKind; objectId: string };
+    },
+  ): Promise<MigrationTeamPinsPage> {
     assertNonempty(teamId, "teamId");
+    if (!isPositiveInteger(options.limit) || options.limit > 1000) {
+      throw new MigrationStoreError(
+        "NUQ_MIGRATION_INVALID_ARGUMENT",
+        "pin page limit must be between 1 and 1000",
+      );
+    }
+    if (options.cursor) {
+      assertNonempty(options.cursor.objectId, "cursor.objectId");
+      if (!OBJECT_KINDS.includes(options.cursor.kind)) {
+        throw new MigrationStoreError(
+          "NUQ_MIGRATION_INVALID_ARGUMENT",
+          "cursor.kind is invalid",
+        );
+      }
+    }
     return await this.db.doTn(async tn => {
       const range = getFdb().tuple.range([
         "nuq-migration",
@@ -889,22 +929,65 @@ export class NuqFdbMigrationStore {
         teamId,
         "object",
       ]);
+      const begin = options.cursor
+        ? Buffer.concat([
+            this.teamObjectKey(
+              teamId,
+              options.cursor.kind,
+              options.cursor.objectId,
+            ),
+            Buffer.from([0]),
+          ])
+        : (range.begin as Buffer);
       const rows = await tn
         .snapshot()
-        .getRangeAll(range.begin as Buffer, range.end as Buffer);
-      return rows.map(([, value]) => {
+        .getRangeAll(begin, range.end as Buffer, { limit: options.limit });
+      const indexed: MigrationObjectPin[] = [];
+      for (const [key, value] of rows) {
         const pin = validatePin(
-          parseJson(value as Buffer, `team ${teamId} object index`),
-          `team ${teamId} object index`,
+          parseJson(value as Buffer, `team ${teamId} active object index`),
+          `team ${teamId} active object index`,
         );
-        if (pin.teamId !== teamId) {
+        if (
+          pin.teamId !== teamId ||
+          !(key as Buffer).equals(
+            this.teamObjectKey(teamId, pin.kind, pin.objectId),
+          )
+        ) {
           throw new MigrationCorruptionError(
-            `team ${teamId} object index`,
-            "team id mismatch",
+            `team ${teamId} active object index`,
+            "identity mismatch",
           );
         }
-        return pin;
-      });
+        if (pin.lifecycle === "terminal") {
+          const globalRaw = await tn.get(
+            this.objectKey(pin.kind, pin.objectId),
+          );
+          const global = globalRaw
+            ? validatePin(
+                parseJson(globalRaw, `object ${pin.kind}/${pin.objectId}`),
+                `object ${pin.kind}/${pin.objectId}`,
+              )
+            : null;
+          if (!global || JSON.stringify(global) !== JSON.stringify(pin)) {
+            throw new MigrationCorruptionError(
+              `team ${teamId} active object index`,
+              "terminal tombstone mismatch",
+            );
+          }
+          // Compact indexes written by the prototype before this became an
+          // active-only index. The global tombstone remains routing authority.
+          tn.clear(key as Buffer);
+        }
+        indexed.push(pin);
+      }
+      const last = indexed.at(-1);
+      return {
+        pins: indexed.filter(pin => pin.lifecycle !== "terminal"),
+        ...(rows.length === options.limit && last
+          ? { nextCursor: { kind: last.kind, objectId: last.objectId } }
+          : {}),
+      };
     });
   }
 
@@ -931,6 +1014,41 @@ export class NuqFdbMigrationStore {
       throw new MigrationCorruptionError(record, "identity mismatch");
     }
     return pin;
+  }
+
+  private async validateTeamPinIndex(
+    tn: Transaction,
+    pin: MigrationObjectPin,
+    record: string,
+  ): Promise<void> {
+    const indexedRaw = await tn.get(
+      this.teamObjectKey(pin.teamId, pin.kind, pin.objectId),
+    );
+    if (pin.lifecycle === "terminal") {
+      if (indexedRaw) {
+        const indexed = validatePin(
+          parseJson(indexedRaw, `${record} team index`),
+          `${record} team index`,
+        );
+        if (JSON.stringify(indexed) !== JSON.stringify(pin)) {
+          throw new MigrationCorruptionError(record, "team pin index mismatch");
+        }
+        // Upgrade old terminal index entries in-place while preserving the
+        // global tombstone used for deterministic routing.
+        tn.clear(this.teamObjectKey(pin.teamId, pin.kind, pin.objectId));
+      }
+      return;
+    }
+    if (!indexedRaw) {
+      throw new MigrationCorruptionError(record, "missing team pin index");
+    }
+    const indexed = validatePin(
+      parseJson(indexedRaw, `${record} team index`),
+      `${record} team index`,
+    );
+    if (JSON.stringify(indexed) !== JSON.stringify(pin)) {
+      throw new MigrationCorruptionError(record, "team pin index mismatch");
+    }
   }
 
   public async validatePinnedObjectInTxn(
@@ -966,17 +1084,7 @@ export class NuqFdbMigrationStore {
         pin.generation,
       );
     }
-    const indexedRaw = await tn.get(this.teamObjectKey(teamId, kind, objectId));
-    if (!indexedRaw) {
-      throw new MigrationCorruptionError(record, "missing team pin index");
-    }
-    const indexed = validatePin(
-      parseJson(indexedRaw, `${record} team index`),
-      `${record} team index`,
-    );
-    if (JSON.stringify(indexed) !== JSON.stringify(pin)) {
-      throw new MigrationCorruptionError(record, "team pin index mismatch");
-    }
+    await this.validateTeamPinIndex(tn, pin, record);
     const generation = await this.requireGeneration(tn, teamId, pin.generation);
     if (
       generation.backend !== pin.backend ||
@@ -1078,24 +1186,6 @@ export class NuqFdbMigrationStore {
         pin.generation,
       );
     }
-    const rawIndex = await tn.get(this.teamObjectKey(teamId, kind, objectId));
-    if (!rawIndex) {
-      throw new MigrationCorruptionError(
-        `object ${kind}/${objectId}`,
-        "missing team pin index",
-      );
-    }
-    const indexed = validatePin(
-      parseJson(rawIndex, `object ${kind}/${objectId} team index`),
-      `object ${kind}/${objectId} team index`,
-    );
-    if (JSON.stringify(indexed) !== JSON.stringify(pin)) {
-      throw new MigrationCorruptionError(
-        `object ${kind}/${objectId}`,
-        "team pin index mismatch",
-      );
-    }
-
     const residue = normalizeResidue(input.residue);
     const terminal = input.terminal === true;
     const targetLifecycle: MigrationObjectLifecycle = terminal
@@ -1104,6 +1194,7 @@ export class NuqFdbMigrationStore {
         ? pin.lifecycle
         : "active";
     if (pin.lifecycle === "terminal") {
+      await this.validateTeamPinIndex(tn, pin, `object ${kind}/${objectId}`);
       if (!terminal || Object.values(residue).some(value => value !== 0)) {
         throw new MigrationStoreError(
           "NUQ_MIGRATION_LIFECYCLE_MISMATCH",
@@ -1112,6 +1203,7 @@ export class NuqFdbMigrationStore {
       }
       return pin;
     }
+    await this.validateTeamPinIndex(tn, pin, `object ${kind}/${objectId}`);
     if (
       pin.lifecycle === targetLifecycle &&
       residueEqual(pin.residue, residue)
@@ -1140,7 +1232,11 @@ export class NuqFdbMigrationStore {
     };
     const encoded = encodeJson(next);
     tn.set(this.objectKey(kind, objectId), encoded);
-    tn.set(this.teamObjectKey(teamId, kind, objectId), encoded);
+    if (next.lifecycle === "terminal") {
+      tn.clear(this.teamObjectKey(teamId, kind, objectId));
+    } else {
+      tn.set(this.teamObjectKey(teamId, kind, objectId), encoded);
+    }
     return next;
   }
 
@@ -1208,6 +1304,17 @@ export class NuqFdbMigrationStore {
         }
         if (op.kind !== "initialize" || op.backend !== backend) {
           throw new MigrationOperationConflictError(operationId);
+        }
+        if (options?.ifAbsent) {
+          const current = await this.readState(tn, teamId);
+          if (!current) {
+            throw new MigrationCorruptionError(
+              `control operation ${operationId}`,
+              "initialize operation exists without team state",
+            );
+          }
+          await this.validateTopology(tn, current);
+          return current;
         }
         return op.state;
       }
@@ -1525,16 +1632,7 @@ export class NuqFdbMigrationStore {
       ) {
         throw new MigrationOperationConflictError(`${kind}/${objectId}`);
       }
-      if (!rawIndex) {
-        throw new MigrationCorruptionError(record, "missing team pin index");
-      }
-      const indexed = validatePin(
-        parseJson(rawIndex, `${record} team index`),
-        `${record} team index`,
-      );
-      if (JSON.stringify(indexed) !== JSON.stringify(pin)) {
-        throw new MigrationCorruptionError(record, "team pin index mismatch");
-      }
+      await this.validateTeamPinIndex(tn, pin, record);
       return pin;
     }
     if (rawIndex) {
@@ -1597,29 +1695,7 @@ export class NuqFdbMigrationStore {
           sourcePin.generation,
         );
       }
-      const sourceIndexRaw = await tn.get(
-        this.teamObjectKey(
-          teamId,
-          admission.source.kind,
-          admission.source.objectId,
-        ),
-      );
-      if (!sourceIndexRaw) {
-        throw new MigrationCorruptionError(
-          sourceRecord,
-          "missing team pin index",
-        );
-      }
-      const sourceIndexed = validatePin(
-        parseJson(sourceIndexRaw, `${sourceRecord} team index`),
-        `${sourceRecord} team index`,
-      );
-      if (JSON.stringify(sourceIndexed) !== JSON.stringify(sourcePin)) {
-        throw new MigrationCorruptionError(
-          sourceRecord,
-          "team pin index mismatch",
-        );
-      }
+      await this.validateTeamPinIndex(tn, sourcePin, sourceRecord);
       backend = sourcePin.backend;
       generationNumber = sourcePin.generation;
     }
@@ -1689,7 +1765,7 @@ export class NuqFdbMigrationStore {
     );
     const encoded = encodeJson(pin);
     tn.set(key, encoded);
-    tn.set(indexKey, encoded);
+    if (!terminalLegacyBackfill) tn.set(indexKey, encoded);
     return pin;
   }
 
@@ -1705,11 +1781,27 @@ export class NuqFdbMigrationStore {
     tn: Transaction,
     input: TransitionObjectResidueInput,
   ): Promise<MigrationObjectPin> {
-    const { teamId, kind, objectId, operationId, fromLifecycle, toLifecycle } =
-      input;
+    const {
+      teamId,
+      kind,
+      objectId,
+      operationId,
+      fromLifecycle,
+      toLifecycle,
+      expectedRevision,
+    } = input;
     assertNonempty(teamId, "teamId");
     assertNonempty(objectId, "objectId");
     assertNonempty(operationId, "operationId");
+    if (
+      expectedRevision !== undefined &&
+      !isPositiveInteger(expectedRevision)
+    ) {
+      throw new MigrationStoreError(
+        "NUQ_MIGRATION_INVALID_ARGUMENT",
+        "expectedRevision must be a positive safe integer",
+      );
+    }
     const residue = normalizeResidue(input.residue);
     const key = this.objectKey(kind, objectId);
     const record = `object ${kind}/${objectId}`;
@@ -1736,19 +1828,7 @@ export class NuqFdbMigrationStore {
       ) {
         throw new MigrationOperationConflictError(operationId);
       }
-      const replayIndexRaw = await tn.get(
-        this.teamObjectKey(teamId, kind, objectId),
-      );
-      if (!replayIndexRaw) {
-        throw new MigrationCorruptionError(record, "missing team pin index");
-      }
-      const replayIndex = validatePin(
-        parseJson(replayIndexRaw, `${record} team index`),
-        `${record} team index`,
-      );
-      if (JSON.stringify(replayIndex) !== JSON.stringify(pin)) {
-        throw new MigrationCorruptionError(record, "team pin index mismatch");
-      }
+      await this.validateTeamPinIndex(tn, pin, record);
       return {
         ...pin,
         lifecycle: pin.lastOperation.toLifecycle,
@@ -1800,19 +1880,7 @@ export class NuqFdbMigrationStore {
           "legacy operation does not describe this pin revision history",
         );
       }
-      const legacyIndexRaw = await tn.get(
-        this.teamObjectKey(teamId, kind, objectId),
-      );
-      if (!legacyIndexRaw) {
-        throw new MigrationCorruptionError(record, "missing team pin index");
-      }
-      const legacyIndex = validatePin(
-        parseJson(legacyIndexRaw, `${record} team index`),
-        `${record} team index`,
-      );
-      if (JSON.stringify(legacyIndex) !== JSON.stringify(pin)) {
-        throw new MigrationCorruptionError(record, "team pin index mismatch");
-      }
+      await this.validateTeamPinIndex(tn, pin, record);
       if (!pin.lastOperation) {
         const migratedPin: MigrationObjectPin = {
           ...pin,
@@ -1827,10 +1895,15 @@ export class NuqFdbMigrationStore {
         };
         const migratedEncoded = encodeJson(migratedPin);
         tn.set(key, migratedEncoded);
-        tn.set(this.teamObjectKey(teamId, kind, objectId), migratedEncoded);
+        if (migratedPin.lifecycle !== "terminal") {
+          tn.set(this.teamObjectKey(teamId, kind, objectId), migratedEncoded);
+        }
         tn.clear(legacyOperationKey);
       }
       return legacyOperation.result;
+    }
+    if (expectedRevision !== undefined && pin.revision !== expectedRevision) {
+      throw new MigrationCasError(expectedRevision, pin.revision);
     }
     if (pin.lifecycle !== fromLifecycle) {
       throw new MigrationStoreError(
@@ -1858,17 +1931,7 @@ export class NuqFdbMigrationStore {
         pin.generation,
       );
     }
-    const rawIndex = await tn.get(this.teamObjectKey(teamId, kind, objectId));
-    if (!rawIndex) {
-      throw new MigrationCorruptionError(record, "missing team pin index");
-    }
-    const indexed = validatePin(
-      parseJson(rawIndex, `${record} team index`),
-      `${record} team index`,
-    );
-    if (JSON.stringify(indexed) !== JSON.stringify(pin)) {
-      throw new MigrationCorruptionError(record, "team pin index mismatch");
-    }
+    await this.validateTeamPinIndex(tn, pin, record);
     await this.applyResidueDelta(
       tn,
       teamId,
@@ -1896,7 +1959,11 @@ export class NuqFdbMigrationStore {
     };
     const encoded = encodeJson(next);
     tn.set(key, encoded);
-    tn.set(this.teamObjectKey(teamId, kind, objectId), encoded);
+    if (next.lifecycle === "terminal") {
+      tn.clear(this.teamObjectKey(teamId, kind, objectId));
+    } else {
+      tn.set(this.teamObjectKey(teamId, kind, objectId), encoded);
+    }
     return next;
   }
 

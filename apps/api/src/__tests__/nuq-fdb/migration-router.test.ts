@@ -51,6 +51,8 @@ import {
   crawlGroupFdb,
   externalSlotMigrationObjectId,
   externalSlotsFdb,
+  type MigrationObjectKind,
+  type MigrationObjectPin,
   NuqFdbSweeper,
   nuqFdbMigrationStore,
   scrapeQueueFdb,
@@ -66,15 +68,36 @@ const previousBackend = config.NUQ_BACKEND;
 const previousMetricsActivation = config.NUQ_FDB_METRICS_V2_ACTIVATE;
 
 async function clearTeam(teamId: string): Promise<void> {
-  const pins = await nuqFdbMigrationStore.inspectTeamPins(teamId);
+  const pins: MigrationObjectPin[] = [];
+  let cursor: { kind: MigrationObjectKind; objectId: string } | undefined;
+  do {
+    const page = await nuqFdbMigrationStore.inspectTeamPinsPage(teamId, {
+      limit: 1000,
+      cursor,
+    });
+    pins.push(...page.pins);
+    cursor = page.nextCursor;
+  } while (cursor);
+
   const fdb = getFdb();
   const db = getNuqFdbDatabase();
   await db.doTn(async tn => {
     for (const pin of pins) {
       tn.clear(nuqFdbMigrationStore.objectKey(pin.kind, pin.objectId));
     }
-    const range = fdb.tuple.range(["nuq-migration", 1, "team", teamId]);
-    tn.clearRange(range.begin as Buffer, range.end as Buffer);
+    // Terminal pins intentionally leave only global routing tombstones, so
+    // test cleanup must find those outside the active-only team index.
+    const objects = fdb.tuple.range(["nuq-migration", 1, "object"]);
+    const rows = await tn
+      .snapshot()
+      .getRangeAll(objects.begin as Buffer, objects.end as Buffer);
+    for (const [key, value] of rows) {
+      if (JSON.parse((value as Buffer).toString()).teamId === teamId) {
+        tn.clear(key as Buffer);
+      }
+    }
+    const team = fdb.tuple.range(["nuq-migration", 1, "team", teamId]);
+    tn.clearRange(team.begin as Buffer, team.end as Buffer);
   });
 }
 

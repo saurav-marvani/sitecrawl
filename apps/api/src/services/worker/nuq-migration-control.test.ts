@@ -73,7 +73,7 @@ function storeMock(
     beginTransition: vi.fn(),
     cancelTransition: vi.fn(),
     finalSeal: vi.fn(),
-    inspectTeamPins: vi.fn(),
+    inspectTeamPinsPage: vi.fn(),
     inspectPin: vi.fn(),
     preparePinnedObject: vi.fn(),
     preparePinnedObjects: vi.fn(),
@@ -426,8 +426,43 @@ test("PG residue reconciliation changes only the durable seal fence", async () =
     fromLifecycle: "prepared",
     toLifecycle: "prepared",
     residue: { intent_unresolved: 0 },
+    expectedRevision: 1,
   });
   expect(store.finalSeal).not.toHaveBeenCalled();
+});
+
+test("source residue commit-unknown retry replays its exact bounded operation", async () => {
+  const existing = pin("pg-residue/team/generation/1", {
+    kind: "cross_store_intent",
+    revision: 2,
+    residue: { ...pin("unused").residue, intent_unresolved: 0 },
+    lastOperation: {
+      schemaVersion: 1,
+      operationId: "nuq-router/v1/pg-residue/stable-observation/pin-revision/1",
+      fromLifecycle: "prepared",
+      toLifecycle: "prepared",
+      residue: { ...pin("unused").residue, intent_unresolved: 0 },
+      resultRevision: 2,
+    },
+  });
+  const transitionObjectResidue = vi.fn().mockResolvedValue(existing);
+  const store = storeMock({
+    inspectState: vi.fn().mockResolvedValue(state()),
+    inspectPin: vi.fn().mockResolvedValue(existing),
+    transitionObjectResidue,
+  });
+
+  await reconcilePgResidueFence(store, {
+    teamId: "team",
+    total: 0,
+    observationId: "stable-observation",
+  });
+  expect(transitionObjectResidue).toHaveBeenCalledWith(
+    expect.objectContaining({
+      operationId: "nuq-router/v1/pg-residue/stable-observation/pin-revision/1",
+      expectedRevision: 1,
+    }),
+  );
 });
 
 test("PG residue fence explicitly adopts the draining source generation", async () => {
