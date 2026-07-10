@@ -1,0 +1,328 @@
+import { describe, expect, test, vi } from "vitest";
+import type {
+  MigrationObjectPin,
+  MigrationTeamState,
+} from "./nuq-fdb/migration-store";
+import {
+  DurableNuQPgPublicationAdapter,
+  reconcileDesiredTeamBackend,
+  reconcilePgResidueFence,
+  resolveAuthoritativeObjectBackend,
+  stableTransitionOperationId,
+  type NuQMigrationStorePort,
+} from "./nuq-migration-control";
+
+function state(
+  overrides: Partial<MigrationTeamState> = {},
+): MigrationTeamState {
+  return {
+    schemaVersion: 1,
+    teamId: "team",
+    revision: 1,
+    maxGeneration: 1,
+    activeBackend: "pg",
+    activeGeneration: 1,
+    phase: "PG_ONLY",
+    ...overrides,
+  };
+}
+
+function pin(
+  objectId: string,
+  overrides: Partial<MigrationObjectPin> = {},
+): MigrationObjectPin {
+  const zero = {
+    capacity_team_pending: 0,
+    capacity_key_pending: 0,
+    capacity_crawl_pending: 0,
+    capacity_delayed: 0,
+    capacity_ready_active: 0,
+    capacity_external_holders: 0,
+    control_groups: 0,
+    control_crawl_finished: 0,
+    control_sweeper_tasks: 0,
+    intent_unresolved: 1,
+  };
+  return {
+    schemaVersion: 1,
+    teamId: "team",
+    kind: "scrape_job",
+    objectId,
+    backend: "pg",
+    generation: 1,
+    lifecycle: "prepared",
+    revision: 1,
+    admission: "new-root",
+    initialResidue: zero,
+    residue: zero,
+    ...overrides,
+  };
+}
+
+function storeMock(
+  overrides: Partial<NuQMigrationStorePort> = {},
+): NuQMigrationStorePort {
+  return {
+    inspectState: vi.fn(),
+    resolveSteady: vi.fn(),
+    initializeLegacyTeam: vi.fn(),
+    beginTransition: vi.fn(),
+    cancelTransition: vi.fn(),
+    finalSeal: vi.fn(),
+    inspectTeamPins: vi.fn(),
+    inspectPin: vi.fn(),
+    preparePinnedObject: vi.fn(),
+    preparePinnedObjects: vi.fn(),
+    transitionObjectResidue: vi.fn(),
+    completePinnedObject: vi.fn(),
+    ...overrides,
+  } as NuQMigrationStorePort;
+}
+
+describe("durable team state decisions", () => {
+  test("flag changes begin with stable operation IDs and fail admission retryably", async () => {
+    const current = state();
+    const store = storeMock({
+      resolveSteady: vi.fn().mockResolvedValue({
+        status: "transition-required",
+        state: current,
+      }),
+      beginTransition: vi.fn().mockResolvedValue(
+        state({
+          revision: 2,
+          maxGeneration: 2,
+          phase: "DRAINING_TO_FDB",
+          targetBackend: "fdb",
+          targetGeneration: 2,
+          transitionOperationId: stableTransitionOperationId(current, "fdb"),
+        }),
+      ),
+    });
+
+    await expect(
+      reconcileDesiredTeamBackend(store, "team", "fdb"),
+    ).rejects.toMatchObject({
+      code: "NUQ_MIGRATION_IN_PROGRESS",
+      retryable: true,
+    });
+    expect(store.beginTransition).toHaveBeenCalledWith({
+      teamId: "team",
+      targetBackend: "fdb",
+      operationId: "nuq-router/v1/team/team/after-generation/1/to/fdb",
+      expectedRevision: 1,
+    });
+  });
+
+  test("a flag flap cancels the same durable transition operation", async () => {
+    const draining = state({
+      revision: 2,
+      maxGeneration: 2,
+      phase: "DRAINING_TO_FDB",
+      targetBackend: "fdb",
+      targetGeneration: 2,
+      transitionOperationId: "stable-transition",
+    });
+    const cancelled = state({ revision: 3, maxGeneration: 2 });
+    const store = storeMock({
+      resolveSteady: vi.fn().mockResolvedValue({
+        status: "cancel-required",
+        state: draining,
+      }),
+      cancelTransition: vi.fn().mockResolvedValue(cancelled),
+    });
+
+    await expect(
+      reconcileDesiredTeamBackend(store, "team", "pg"),
+    ).resolves.toEqual(cancelled);
+    expect(store.cancelTransition).toHaveBeenCalledWith({
+      teamId: "team",
+      transitionOperationId: "stable-transition",
+      expectedRevision: 2,
+    });
+  });
+});
+
+describe("authoritative backend resolution", () => {
+  const base = {
+    kind: "scrape_job" as const,
+    objectId: "job",
+    readPin: vi.fn().mockResolvedValue(null),
+    probeFdb: vi.fn().mockResolvedValue(false),
+    probePg: vi.fn().mockResolvedValue(false),
+  };
+
+  test("a corrupt marker is repaired when exactly one backend contains the job", async () => {
+    const repairMarker = vi.fn();
+    await expect(
+      resolveAuthoritativeObjectBackend({
+        ...base,
+        marker: "corrupt",
+        probePg: vi.fn().mockResolvedValue(true),
+        repairMarker,
+      }),
+    ).resolves.toBe("pg");
+    expect(repairMarker).toHaveBeenCalledWith("pg");
+  });
+
+  test("failed Redis hint repair cannot override an authoritative result", async () => {
+    await expect(
+      resolveAuthoritativeObjectBackend({
+        ...base,
+        marker: null,
+        probeFdb: vi.fn().mockResolvedValue(true),
+        repairMarker: vi.fn().mockRejectedValue(new Error("Redis down")),
+      }),
+    ).resolves.toBe("fdb");
+  });
+
+  test("both-present is deterministic even when the marker names one backend", async () => {
+    await expect(
+      resolveAuthoritativeObjectBackend({
+        ...base,
+        marker: "pg",
+        probeFdb: vi.fn().mockResolvedValue(true),
+        probePg: vi.fn().mockResolvedValue(true),
+      }),
+    ).rejects.toMatchObject({ code: "NUQ_ROUTER_BOTH_BACKENDS_PRESENT" });
+  });
+
+  test("corrupt marker without an authoritative record is deterministic", async () => {
+    await expect(
+      resolveAuthoritativeObjectBackend({ ...base, marker: "corrupt" }),
+    ).rejects.toMatchObject({ code: "NUQ_ROUTER_CORRUPT_BACKEND_MARKER" });
+  });
+
+  test("FDB unavailability never probes or falls back to PG", async () => {
+    const probePg = vi.fn().mockResolvedValue(true);
+    await expect(
+      resolveAuthoritativeObjectBackend({
+        ...base,
+        marker: null,
+        readPin: vi.fn().mockRejectedValue(new Error("FDB down")),
+        probePg,
+      }),
+    ).rejects.toMatchObject({
+      code: "NUQ_ROUTER_FDB_UNAVAILABLE",
+      retryable: true,
+    });
+    expect(probePg).not.toHaveBeenCalled();
+  });
+});
+
+test("PG residue reconciliation changes only the durable seal fence", async () => {
+  const existing = pin("pg-residue/team", {
+    kind: "cross_store_intent",
+    residue: { ...pin("unused").residue, intent_unresolved: 1 },
+  });
+  const store = storeMock({
+    inspectPin: vi.fn().mockResolvedValue(existing),
+    transitionObjectResidue: vi.fn().mockImplementation(async input => ({
+      ...existing,
+      residue: {
+        ...existing.residue,
+        intent_unresolved: input.residue.intent_unresolved ?? 0,
+      },
+    })),
+  });
+
+  await expect(
+    reconcilePgResidueFence(store, {
+      teamId: "team",
+      total: 0,
+      observationId: "pg-snapshot-2",
+    }),
+  ).resolves.toMatchObject({ residue: { intent_unresolved: 0 } });
+  expect(store.transitionObjectResidue).toHaveBeenCalledWith({
+    teamId: "team",
+    kind: "cross_store_intent",
+    objectId: "pg-residue/team",
+    operationId: "nuq-router/v1/pg-residue/pg-snapshot-2/pin-revision/1",
+    fromLifecycle: "prepared",
+    toLifecycle: "prepared",
+    residue: { intent_unresolved: 0 },
+  });
+  expect(store.finalSeal).not.toHaveBeenCalled();
+});
+
+test("PG publication adapter prepares and resolves every intent exact-once", async () => {
+  const pins = new Map<string, MigrationObjectPin>();
+  const operations = new Map<string, MigrationObjectPin>();
+  const prepare = vi.fn(async input => {
+    const existing = pins.get(input.objectId);
+    if (existing) return existing;
+    const prepared = pin(input.objectId, {
+      teamId: input.teamId,
+      admission:
+        input.admission.type === "new-root"
+          ? "new-root"
+          : "pinned-continuation",
+      sourceKind:
+        input.admission.type === "pinned-continuation"
+          ? input.admission.source.kind
+          : undefined,
+      sourceObjectId:
+        input.admission.type === "pinned-continuation"
+          ? input.admission.source.objectId
+          : undefined,
+    });
+    pins.set(input.objectId, prepared);
+    return prepared;
+  });
+  const store = storeMock({
+    preparePinnedObject: prepare,
+    preparePinnedObjects: vi.fn(async inputs =>
+      Promise.all(inputs.map(prepare)),
+    ),
+    inspectPin: vi.fn(async (_kind, objectId) => pins.get(objectId) ?? null),
+    transitionObjectResidue: vi.fn(async input => {
+      const replay = operations.get(input.operationId);
+      if (replay) return replay;
+      const next = pin(input.objectId, {
+        ...pins.get(input.objectId),
+        lifecycle: input.toLifecycle,
+        residue: {
+          ...pin(input.objectId).residue,
+          intent_unresolved: 0,
+          capacity_team_pending: input.residue.capacity_team_pending ?? 0,
+          capacity_ready_active: input.residue.capacity_ready_active ?? 0,
+        },
+      });
+      operations.set(input.operationId, next);
+      pins.set(input.objectId, next);
+      return next;
+    }),
+  });
+  const adapter = new DurableNuQPgPublicationAdapter(store);
+  const publication = {
+    id: "job",
+    ownerId: "team",
+    groupId: "crawl",
+    placement: "backlog" as const,
+  };
+
+  await adapter.prepare([publication]);
+  await adapter.prepare([publication]);
+  await adapter.complete([publication], "published");
+  await adapter.complete([publication], "published");
+  await adapter.complete([publication], "promoted");
+  await adapter.complete([publication], "promoted");
+
+  expect(store.preparePinnedObjects).toHaveBeenNthCalledWith(1, [
+    {
+      teamId: "team",
+      kind: "scrape_job",
+      objectId: "job",
+      admission: {
+        type: "pinned-continuation",
+        source: { kind: "group", objectId: "crawl" },
+      },
+      requiredBackend: "pg",
+      residue: { intent_unresolved: 1 },
+    },
+  ]);
+  expect(operations).toHaveLength(2);
+  expect(pins.get("job")).toMatchObject({
+    lifecycle: "active",
+    residue: { intent_unresolved: 0, capacity_ready_active: 1 },
+  });
+});

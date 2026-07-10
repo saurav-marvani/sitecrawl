@@ -42,6 +42,7 @@ import { MONITOR_CHECK_STALE_TIMEOUT_MS } from "./monitoring/stale";
 import { getRedisConnection } from "./queue-service";
 import {
   completePreparedNuQPgPublication,
+  completePreparedNuQPgPublicationSubset,
   prepareNuQPgPublication,
   type NuQPgPublication,
 } from "./worker/nuq-pg-publication";
@@ -308,8 +309,18 @@ async function _addScrapeJobToConcurrencyQueue(
       throw error;
     }
     try {
-      if (inserted) {
+      let materialized = inserted;
+      if (!materialized) {
+        const [active, backlog] = await Promise.all([
+          scrapeQueue.getJob(jobId),
+          scrapeQueue.getJobsFromBacklog([jobId]),
+        ]);
+        materialized = active !== null || backlog.length > 0;
+      }
+      if (materialized) {
         await compensateAmbiguousBacklogRedisPublication([publication]);
+      } else {
+        await completePreparedNuQPgPublication(prepared, "compensated");
       }
     } catch (cleanupError) {
       throw new AggregateError(
@@ -404,12 +415,25 @@ async function _addScrapeJobsToConcurrencyQueue(
       throw error;
     }
     try {
+      const ids = publications.map(publication => publication.id);
+      const [active, backlog] = await Promise.all([
+        scrapeQueue.getJobs(ids),
+        scrapeQueue.getJobsFromBacklog(ids),
+      ]);
+      for (const job of [...active, ...backlog]) insertedIds.add(job.id);
       const insertedPublications = publications.filter(publication =>
         insertedIds.has(publication.id.toLowerCase()),
       );
       if (insertedPublications.length > 0) {
         await compensateAmbiguousBacklogRedisPublication(insertedPublications);
       }
+      await completePreparedNuQPgPublicationSubset(
+        prepared,
+        publications.filter(
+          publication => !insertedIds.has(publication.id.toLowerCase()),
+        ),
+        "compensated",
+      );
     } catch (cleanupError) {
       throw new AggregateError(
         [error, cleanupError],
@@ -584,9 +608,13 @@ async function _addScrapeJobsToBullMQ(
     );
     try {
       await rollbackActiveReservations(safeToRelease);
-      if (materialized.size === 0) {
-        await completePreparedNuQPgPublication(prepared, "compensated");
-      }
+      await completePreparedNuQPgPublicationSubset(
+        prepared,
+        publications.filter(
+          publication => !materialized.has(publication.id.toLowerCase()),
+        ),
+        "compensated",
+      );
     } catch (cleanupError) {
       throw new AggregateError(
         [error, cleanupError],

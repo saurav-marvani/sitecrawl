@@ -36,19 +36,30 @@ import {
   withFdbTimeout,
   NuQFdbQueue,
   NuQFdbJob,
+  nuqFdbMigrationStore,
+  type MigrationObjectKind,
+  type MigrationObjectPin,
 } from "./nuq-fdb";
 import type { QueueOperationOptions } from "./nuq-worker-runtime";
+import {
+  DurableNuQPgPublicationAdapter,
+  NuQRouterBothBackendsError,
+  NuQRouterObjectNotFoundError,
+  NuQRouterPinMismatchError,
+  reconcileDesiredTeamBackend,
+  reconcilePgResidueFence,
+  resolveAuthoritativeObjectBackend,
+  type BackendMarker,
+} from "./nuq-migration-control";
+import {
+  passthroughNuQPgPublicationAdapter,
+  setNuQPgPublicationAdapter,
+} from "./nuq-pg-publication";
 
-// Dual-backend router for the NuQ migration to FoundationDB. Exports the same
-// `scrapeQueue` / `crawlFinishedQueue` / `crawlGroup` names as ./nuq so call
-// sites only swap their import path. Routing rules:
-//  - new crawls: team flag (TeamFlags.nuqFdb) or NUQ_BACKEND=fdb decides; the
-//    choice is pinned in StoredCrawl.queueBackend so a crawl never spans
-//    backends
-//  - reads: stored crawl/job backend markers decide the backend; unmarked jobs
-//    default to PG so FDB outages do not affect non-FDB traffic
-//  - workers: production workers consume PG and FDB via separate entrypoints;
-//    this class still tracks in-flight backend for direct/router test consumers
+// Dual-backend router for the NuQ migration to FoundationDB. FDB migration
+// state and object pins are authoritative; Redis backend markers are repairable
+// hints only. Production workers still consume PG and FDB via separate
+// entrypoints, while this class tracks in-flight backend for direct consumers.
 
 export type QueueBackend = "pg" | "fdb";
 
@@ -58,8 +69,18 @@ export function fdbQueueEnabled(): boolean {
   return isFdbConfigured();
 }
 
+// PG-only deployments deliberately opt into passthrough. Once FDB migration is
+// configured, publication fails closed unless its durable pin/intent commits.
+setNuQPgPublicationAdapter(
+  fdbQueueEnabled()
+    ? new DurableNuQPgPublicationAdapter(nuqFdbMigrationStore)
+    : passthroughNuQPgPublicationAdapter,
+);
+
 function fdbForced(): boolean {
-  return config.NUQ_BACKEND === "fdb";
+  // Self-hosted forced-FDB deployments have no legacy PG ledger to migrate.
+  // Cloud-wide forcing still flows through durable per-team state.
+  return config.NUQ_BACKEND === "fdb" && isSelfHosted();
 }
 
 const FDB_OPTIONAL_OP_TIMEOUT_MS = 500;
@@ -79,113 +100,319 @@ async function fdbMutation<T>(operation: () => Promise<T>): Promise<T> {
   return await operation();
 }
 
-const teamFdbStateKey = (teamId: string) => `nuq:fdb_team:${teamId}`;
+async function desiredTeamBackend(teamId: string): Promise<QueueBackend> {
+  if (config.NUQ_BACKEND === "fdb") return "fdb";
+  const acuc = await getACUCTeam(teamId, false, true, RateLimiterMode.Crawl);
+  return acuc?.flags?.nuqFdb === true ? "fdb" : "pg";
+}
 
-async function markFdbTeamState(teamId: string): Promise<void> {
-  // One bounded key per migrated team is the durable drain barrier. Failure is
-  // fatal before the first FDB enqueue, so rollback can always identify teams
-  // whose pinned FDB work may remain.
-  await getRedisConnection().set(teamFdbStateKey(teamId), "1");
+async function reconcileTerminalPgPins(teamId: string): Promise<void> {
+  const pins = (await nuqFdbMigrationStore.inspectTeamPins(teamId)).filter(
+    pin => pin.backend === "pg" && pin.lifecycle !== "terminal",
+  );
+  const jobPins = pins.filter(pin => pin.kind === "scrape_job");
+  if (jobPins.length > 0) {
+    const ids = jobPins.map(pin => pin.objectId);
+    const [jobs, backlog] = await Promise.all([
+      scrapeQueuePg.getJobs(ids),
+      scrapeQueuePg.getJobsFromBacklog(ids),
+    ]);
+    const byId = new Map([...jobs, ...backlog].map(job => [job.id, job]));
+    for (const pin of jobPins) {
+      const job = byId.get(pin.objectId);
+      const terminal = job?.status === "completed" || job?.status === "failed";
+      // A missing prepared object may still be between FDB intent commit and
+      // PG publication. Only an observed terminal row, or disappearance after
+      // durable activation, proves that its residue can be retired.
+      if (terminal || (!job && pin.lifecycle === "active")) {
+        await completeRoutingPin(pin, "pg-reconcile-terminal");
+      }
+    }
+  }
+  for (const pin of pins) {
+    if (pin.kind === "group") {
+      const group = await crawlGroupPg.getGroup(pin.objectId);
+      if (
+        (group && group.status !== "active") ||
+        (!group && pin.lifecycle === "active")
+      ) {
+        await completeRoutingPin(pin, "pg-reconcile-terminal");
+      }
+    } else if (pin.kind === "external_holder") {
+      const present = await getRedisConnection().zscore(
+        constructConcurrencyLimitKey(teamId),
+        pin.objectId,
+      );
+      if (present === null && pin.lifecycle === "active") {
+        await completeRoutingPin(pin, "pg-reconcile-terminal");
+      }
+    } else if (pin.kind === "crawl_finished") {
+      const job = await crawlFinishedQueuePg.getJob(pin.objectId);
+      if (
+        job?.status === "completed" ||
+        job?.status === "failed" ||
+        (!job && pin.lifecycle === "active")
+      ) {
+        await completeRoutingPin(pin, "pg-reconcile-terminal");
+      }
+    }
+  }
+}
+
+async function authoritativeTeamBackend(teamId: string): Promise<QueueBackend> {
+  if (!fdbQueueEnabled()) return "pg";
+  if (fdbForced()) return "fdb";
+  const desired = await desiredTeamBackend(teamId);
+  let current = await optionalFdbRead(() =>
+    nuqFdbMigrationStore.inspectState(teamId),
+  );
+  if (!current) {
+    current = await fdbMutation(() =>
+      reconcileDesiredTeamBackend(nuqFdbMigrationStore, teamId, "pg"),
+    );
+  }
+
+  // Before pausing PG admissions, snapshot authoritative legacy PG residue
+  // into a durable FDB fence. During drain, refresh the fence first and ask
+  // finalSeal to decide exclusively from durable counters.
+  if (
+    desired === "fdb" &&
+    current?.activeBackend === "pg" &&
+    (current.phase === "PG_ONLY" || current.phase === "DRAINING_TO_FDB")
+  ) {
+    await fdbMutation(() => reconcileTerminalPgPins(teamId));
+    const [residue, redisOccupancy] = await Promise.all([
+      getNuQPgOwnerLiveResidue(teamId),
+      getConcurrencyLimitActiveJobsCount(teamId),
+    ]);
+    // Redis is authoritative only for legacy external holders, not backend
+    // routing. Including all PG occupancy is conservative and prevents a
+    // pre-control-plane holder from becoming invisible to the seal.
+    const pgResidueTotal = residue.total + redisOccupancy;
+    await fdbMutation(() =>
+      reconcilePgResidueFence(nuqFdbMigrationStore, {
+        teamId,
+        total: pgResidueTotal,
+        observationId: `${teamId}/${current!.revision}/${pgResidueTotal === 0 ? "zero" : "nonzero"}`,
+      }),
+    );
+    if (
+      current.phase === "DRAINING_TO_FDB" &&
+      pgResidueTotal === 0 &&
+      current.transitionOperationId
+    ) {
+      current = await fdbMutation(() =>
+        nuqFdbMigrationStore.finalSeal({
+          teamId,
+          transitionOperationId: current!.transitionOperationId!,
+          expectedRevision: current!.revision,
+        }),
+      );
+    }
+  }
+
+  if (
+    desired === "pg" &&
+    current?.phase === "DRAINING_TO_PG" &&
+    current.transitionOperationId
+  ) {
+    current = await fdbMutation(() =>
+      nuqFdbMigrationStore.finalSeal({
+        teamId,
+        transitionOperationId: current!.transitionOperationId!,
+        expectedRevision: current!.revision,
+      }),
+    );
+  }
+
+  if (current?.activeBackend === desired && current.phase !== "ERROR") {
+    if (current.phase === "PG_ONLY" || current.phase === "FDB_ONLY") {
+      return current.activeBackend;
+    }
+  }
+  const state = await fdbMutation(() =>
+    reconcileDesiredTeamBackend(nuqFdbMigrationStore, teamId, desired),
+  );
+  return state.activeBackend;
 }
 
 async function teamUsesFdbLedger(teamId: string): Promise<boolean> {
   if (!fdbQueueEnabled()) return false;
   if (fdbForced()) return true;
-  if (await isFdbTeam(teamId)) return true;
-  return (await getRedisConnection().get(teamFdbStateKey(teamId))) === "1";
+  const state = await optionalFdbRead(() =>
+    nuqFdbMigrationStore.inspectState(teamId),
+  );
+  if (!state) return (await authoritativeTeamBackend(teamId)) === "fdb";
+  return state.activeBackend === "fdb" || state.targetBackend === "fdb";
 }
 
-// Whether NEW work for this team should go to FDB. Existing crawls follow
-// their StoredCrawl.queueBackend marker instead.
+// Whether NEW root work may use FDB. A flag only requests a durable state
+// transition; transition phases reject admission with a retryable error.
 export async function isFdbTeam(teamId: string | undefined): Promise<boolean> {
-  if (!fdbQueueEnabled()) return false;
-  if (fdbForced()) return true;
-  if (!teamId) return false;
-  let enabled = false;
-  try {
-    const acuc = await getACUCTeam(teamId, false, true, RateLimiterMode.Crawl);
-    enabled = acuc?.flags?.nuqFdb === true;
-  } catch (error) {
-    _logger.warn("Failed to resolve nuqFdb team flag, defaulting to pg", {
-      module: "nuq-router",
-      teamId,
-      error,
-    });
-  }
-  if (enabled) await markFdbTeamState(teamId);
-  return enabled;
+  if (!teamId || !fdbQueueEnabled()) return false;
+  return (await authoritativeTeamBackend(teamId)) === "fdb";
 }
 
 export async function resolveNewGroupBackend(
   teamId: string,
 ): Promise<QueueBackend> {
-  return (await isFdbTeam(teamId)) ? "fdb" : "pg";
+  return await authoritativeTeamBackend(teamId);
 }
 
-// Reads only the queueBackend marker off the stored crawl. Deliberately not
-// getCrawl() -- importing crawl-redis pulls the whole scraper tree in.
-async function getCrawlQueueBackend(
-  crawlId: string,
-): Promise<QueueBackend | null> {
-  if (fdbForced()) return "fdb";
-  const raw = await redisEvictConnection.get("crawl:" + crawlId);
-  if (raw) {
-    try {
-      const sc = JSON.parse(raw);
-      if (sc?.queueBackend === "fdb") return "fdb";
-      // Stored crawls predating the rollout have no marker and are PG.
-      if (sc) return "pg";
-    } catch {
-      // Fall through to the authoritative FDB group probe.
-    }
-  }
-  if (!fdbQueueEnabled()) return raw ? "pg" : null;
-  const group = await optionalFdbRead(() => crawlGroupFdb.getGroup(crawlId));
-  return group ? "fdb" : raw ? "pg" : null;
+function decodeBackendMarker(raw: string | null): BackendMarker {
+  if (raw === null) return null;
+  return raw === "pg" || raw === "fdb" ? raw : "corrupt";
 }
 
+const groupBackendKey = (groupId: string) => `nuq:group_backend:${groupId}`;
 const jobBackendKey = (jobId: string) => `nuq:job_backend:${jobId}`;
+
+async function markBackend(key: string, backend: QueueBackend): Promise<void> {
+  if (fdbForced()) return;
+  await redisEvictConnection.set(key, backend, "EX", 30 * 24 * 60 * 60);
+}
 
 async function markJobBackend(
   jobId: string,
   backend: QueueBackend,
 ): Promise<void> {
-  if (fdbForced()) return;
-  // This is only a bounded cache; never trust its absence. FDB job metadata
-  // remains the durable source of truth after expiry or a failed write.
-  await redisEvictConnection.set(
-    jobBackendKey(jobId),
-    backend,
-    "EX",
-    30 * 24 * 60 * 60,
-  );
+  await markBackend(jobBackendKey(jobId), backend);
+}
+
+async function readRedisBackendHint(key: string): Promise<string | null> {
+  try {
+    return await redisEvictConnection.get(key);
+  } catch (error) {
+    _logger.warn("Failed to read Redis backend hint", {
+      module: "nuq-router",
+      key,
+      error,
+    });
+    return null;
+  }
+}
+
+async function pgHasScrapeJob(jobId: string): Promise<boolean> {
+  if (await scrapeQueuePg.getJob(jobId)) return true;
+  return (await scrapeQueuePg.getJobsFromBacklog([jobId])).length > 0;
+}
+
+async function getCrawlQueueBackend(
+  crawlId: string,
+): Promise<QueueBackend | null> {
+  if (fdbForced()) return "fdb";
+  const [markerRaw, crawlRaw] = await Promise.all([
+    readRedisBackendHint(groupBackendKey(crawlId)),
+    readRedisBackendHint("crawl:" + crawlId),
+  ]);
+  let marker = decodeBackendMarker(markerRaw);
+  if (marker === null && crawlRaw) {
+    try {
+      const stored = JSON.parse(crawlRaw);
+      marker =
+        stored?.queueBackend === "pg" || stored?.queueBackend === "fdb"
+          ? stored.queueBackend
+          : stored?.queueBackend === undefined
+            ? null
+            : "corrupt";
+    } catch {
+      marker = "corrupt";
+    }
+  }
+  if (!fdbQueueEnabled()) return crawlRaw ? "pg" : null;
+  const backend = await resolveAuthoritativeObjectBackend({
+    kind: "group",
+    objectId: crawlId,
+    marker,
+    readPin: () =>
+      optionalFdbRead(() => nuqFdbMigrationStore.inspectPin("group", crawlId)),
+    probeFdb: () =>
+      optionalFdbRead(
+        async () => (await crawlGroupFdb.getGroup(crawlId)) !== null,
+      ),
+    probePg: async () => (await crawlGroupPg.getGroup(crawlId)) !== null,
+    repairMarker: backend => markBackend(groupBackendKey(crawlId), backend),
+  });
+  if (
+    backend === "pg" &&
+    !(await optionalFdbRead(() =>
+      nuqFdbMigrationStore.inspectPin("group", crawlId),
+    ))
+  ) {
+    const group = await crawlGroupPg.getGroup(crawlId);
+    if (!group) return null;
+    let state = await optionalFdbRead(() =>
+      nuqFdbMigrationStore.inspectState(group.ownerId),
+    );
+    if (!state) {
+      state = await fdbMutation(() =>
+        reconcileDesiredTeamBackend(nuqFdbMigrationStore, group.ownerId, "pg"),
+      );
+    }
+    let generation = state.activeGeneration;
+    if (state.activeBackend !== "pg") {
+      if (group.status === "active") {
+        throw new NuQRouterPinMismatchError("group", crawlId, "fdb", "pg");
+      }
+      generation = 0;
+      for (let candidate = state.maxGeneration; candidate >= 1; candidate--) {
+        const record = await optionalFdbRead(() =>
+          nuqFdbMigrationStore.inspectGeneration(group.ownerId, candidate),
+        );
+        if (record.generation.backend === "pg") {
+          generation = candidate;
+          break;
+        }
+      }
+      if (generation === 0) {
+        throw new NuQRouterPinMismatchError("group", crawlId, "fdb", "pg");
+      }
+    }
+    await fdbMutation(() =>
+      nuqFdbMigrationStore.preparePinnedObject({
+        teamId: group.ownerId,
+        kind: "group",
+        objectId: crawlId,
+        admission: {
+          type: "legacy-backfill",
+          backend: "pg",
+          generation,
+          terminal: group.status !== "active",
+        },
+        residue: { control_groups: group.status === "active" ? 1 : 0 },
+      }),
+    );
+  }
+  return backend;
 }
 
 async function getJobQueueBackend(
   jobId: string,
   hint?: QueueBackend,
-  hasFdbJob: () => Promise<boolean> = () => scrapeQueueFdb.hasJob(jobId),
-): Promise<QueueBackend> {
-  if (hint) return hint;
+  probes: {
+    kind?: MigrationObjectKind;
+    hasFdbJob?: () => Promise<boolean>;
+    hasPgJob?: () => Promise<boolean>;
+  } = {},
+): Promise<QueueBackend | null> {
   if (fdbForced()) return "fdb";
-  if ((await redisEvictConnection.get(jobBackendKey(jobId))) === "fdb") {
-    return "fdb";
-  }
+  const cachedMarker = decodeBackendMarker(
+    await readRedisBackendHint(jobBackendKey(jobId)),
+  );
+  const marker = cachedMarker ?? hint ?? null;
   if (!fdbQueueEnabled()) return "pg";
-
-  // Redis marker writes are best-effort and old markers may have expired.
-  // Probe the durable FDB record before routing a wait/remove/read to PG.
-  if (await optionalFdbRead(hasFdbJob)) {
-    void markJobBackend(jobId, "fdb").catch(error =>
-      _logger.warn("Failed to repair FDB job backend marker", {
-        module: "nuq-router",
-        jobId,
-        error,
-      }),
-    );
-    return "fdb";
-  }
-  return "pg";
+  const kind = probes.kind ?? "scrape_job";
+  return await resolveAuthoritativeObjectBackend({
+    kind,
+    objectId: jobId,
+    marker,
+    readPin: () =>
+      optionalFdbRead(() => nuqFdbMigrationStore.inspectPin(kind, jobId)),
+    probeFdb: () =>
+      optionalFdbRead(probes.hasFdbJob ?? (() => scrapeQueueFdb.hasJob(jobId))),
+    probePg: probes.hasPgJob ?? (() => pgHasScrapeJob(jobId)),
+    repairMarker: backend => markJobBackend(jobId, backend),
+  });
 }
 
 // Which backend a job belongs to at enqueue time. Crawl jobs follow their
@@ -196,9 +423,12 @@ export async function resolveJobBackend(
   if (!fdbQueueEnabled()) return "pg";
   if (fdbForced()) return "fdb";
   if (data.crawl_id) {
-    return (await getCrawlQueueBackend(data.crawl_id)) ?? "pg";
+    const backend = await getCrawlQueueBackend(data.crawl_id);
+    if (!backend)
+      throw new NuQRouterObjectNotFoundError("group", data.crawl_id);
+    return backend;
   }
-  return (await isFdbTeam(data.team_id)) ? "fdb" : "pg";
+  return await authoritativeTeamBackend(data.team_id);
 }
 
 function tagFdbJob<T extends object>(job: T): T & { backend: "fdb" } {
@@ -206,25 +436,173 @@ function tagFdbJob<T extends object>(job: T): T & { backend: "fdb" } {
   return job as T & { backend: "fdb" };
 }
 
+async function prepareRoutingPin(input: {
+  teamId: string;
+  kind: MigrationObjectKind;
+  objectId: string;
+  sourceGroupId?: string;
+}): Promise<MigrationObjectPin | null> {
+  if (!fdbQueueEnabled() || fdbForced()) return null;
+  return await fdbMutation(() =>
+    nuqFdbMigrationStore.preparePinnedObject({
+      teamId: input.teamId,
+      kind: input.kind,
+      objectId: input.objectId,
+      admission: input.sourceGroupId
+        ? {
+            type: "pinned-continuation",
+            source: { kind: "group", objectId: input.sourceGroupId },
+          }
+        : { type: "new-root" },
+      // This pre-intent is deliberately durable before a backend mutation.
+      // TODO(corrected-core): queue/group/slot mutations and sweeper lifecycle
+      // generation accounting must compose the exported *InTxn hooks in their
+      // own FDB transaction. Until then an ambiguous outcome remains fenced;
+      // this prototype does not pretend the separate transactions are atomic.
+      residue: { intent_unresolved: 1 },
+    }),
+  );
+}
+
+async function activateRoutingPin(
+  pin: MigrationObjectPin | null,
+  residue: Partial<
+    Record<
+      | "capacity_team_pending"
+      | "capacity_ready_active"
+      | "capacity_external_holders"
+      | "control_groups",
+      number
+    >
+  >,
+  operation: string,
+): Promise<void> {
+  if (!pin || pin.lifecycle === "active") return;
+  if (pin.lifecycle === "terminal") {
+    throw new Error(
+      `Cannot reactivate terminal migration pin ${pin.kind}/${pin.objectId}`,
+    );
+  }
+  await fdbMutation(() =>
+    nuqFdbMigrationStore.transitionObjectResidue({
+      teamId: pin.teamId,
+      kind: pin.kind,
+      objectId: pin.objectId,
+      operationId: `nuq-router/v1/${operation}/${pin.objectId}`,
+      fromLifecycle: "prepared",
+      toLifecycle: "active",
+      residue,
+    }),
+  );
+}
+
+async function inspectRoutingPin(
+  kind: MigrationObjectKind,
+  objectId: string,
+): Promise<MigrationObjectPin | null> {
+  if (!fdbQueueEnabled() || fdbForced()) return null;
+  return await optionalFdbRead(() =>
+    nuqFdbMigrationStore.inspectPin(kind, objectId),
+  );
+}
+
+async function completeRoutingPin(
+  pin: MigrationObjectPin | null,
+  operation: string,
+): Promise<void> {
+  if (!pin || pin.lifecycle === "terminal") return;
+  const fromLifecycle = pin.lifecycle;
+  await fdbMutation(() =>
+    nuqFdbMigrationStore.completePinnedObject({
+      teamId: pin.teamId,
+      kind: pin.kind,
+      objectId: pin.objectId,
+      operationId: `nuq-router/v1/${operation}/${pin.objectId}`,
+      fromLifecycle,
+    }),
+  );
+}
+
 // === External capacity holders (browser sessions, sync scrapes)
 //
-// Non-queue work that occupies team capacity mirrors itself into whichever
-// ledger the team runs on. Mismatched acquire/release pairs (flag flipped
-// mid-hold) self-heal: Redis entries expire by score, FDB external slots are
-// reaped by the sweeper.
+// Non-queue work that occupies team capacity is durably pinned. Renew/release
+// follows that pin even if the rollout flag changes mid-hold.
 
 async function acquireExternalSlot(
   teamId: string,
   holderId: string,
   ttlMs: number,
 ): Promise<void> {
-  if (await isFdbTeam(teamId)) {
-    if (!isSelfHosted()) await markFdbTeamState(teamId);
-    await fdbMutation(() => externalSlotsFdb.acquire(teamId, holderId, ttlMs));
-    return;
+  let existingPin =
+    !fdbQueueEnabled() || fdbForced()
+      ? null
+      : await optionalFdbRead(() =>
+          nuqFdbMigrationStore.inspectPin("external_holder", holderId),
+        );
+  if (!existingPin && fdbQueueEnabled() && !fdbForced()) {
+    let state = await optionalFdbRead(() =>
+      nuqFdbMigrationStore.inspectState(teamId),
+    );
+    if (!state) {
+      state = await fdbMutation(() =>
+        reconcileDesiredTeamBackend(nuqFdbMigrationStore, teamId, "pg"),
+      );
+    }
+    const [fdbPresent, pgPresent] = await Promise.all([
+      optionalFdbRead(() => externalSlotsFdb.has(teamId, holderId)),
+      getRedisConnection().zscore(
+        constructConcurrencyLimitKey(teamId),
+        holderId,
+      ),
+    ]);
+    if (fdbPresent && pgPresent !== null) {
+      throw new NuQRouterBothBackendsError("external_holder", holderId);
+    }
+    const legacyBackend = fdbPresent ? "fdb" : pgPresent !== null ? "pg" : null;
+    if (legacyBackend) {
+      if (state.activeBackend !== legacyBackend) {
+        throw new NuQRouterPinMismatchError(
+          "external_holder",
+          holderId,
+          state.activeBackend,
+          legacyBackend,
+        );
+      }
+      existingPin = await fdbMutation(() =>
+        nuqFdbMigrationStore.preparePinnedObject({
+          teamId,
+          kind: "external_holder",
+          objectId: holderId,
+          admission: {
+            type: "legacy-backfill",
+            backend: legacyBackend,
+            generation: state.activeGeneration,
+          },
+          residue: { capacity_external_holders: 1 },
+        }),
+      );
+    }
   }
-  await pushConcurrencyLimitActiveJob(teamId, holderId, ttlMs);
-  await syncFdbLimitToPgOccupancy(teamId);
+  if (!existingPin) await authoritativeTeamBackend(teamId);
+  const pin =
+    existingPin ??
+    (await prepareRoutingPin({
+      teamId,
+      kind: "external_holder",
+      objectId: holderId,
+    }));
+  const backend = pin?.backend ?? (await authoritativeTeamBackend(teamId));
+  if (backend === "fdb") {
+    await fdbMutation(() => externalSlotsFdb.acquire(teamId, holderId, ttlMs));
+  } else {
+    await pushConcurrencyLimitActiveJob(teamId, holderId, ttlMs);
+    await syncFdbLimitToPgOccupancy(teamId);
+  }
+  await activateRoutingPin(
+    pin,
+    { capacity_external_holders: 1 },
+    "external-holder-active",
+  );
 }
 
 export async function reserveExternalSlot(
@@ -257,18 +635,20 @@ export async function mirrorExternalSlotRelease(
   holderId: string,
 ): Promise<void> {
   await withTeamMigrationAdmission(teamId, async () => {
-    // The flag may flip while a holder is alive. Route by the durable slot,
-    // rather than today's flag, so rollback cannot leak FDB occupancy.
-    if (
-      fdbForced() ||
-      ((await teamUsesFdbLedger(teamId)) &&
-        (await optionalFdbRead(() => externalSlotsFdb.has(teamId, holderId))))
-    ) {
+    const pin =
+      !fdbQueueEnabled() || fdbForced()
+        ? null
+        : await optionalFdbRead(() =>
+            nuqFdbMigrationStore.inspectPin("external_holder", holderId),
+          );
+    const backend = pin?.backend ?? (fdbForced() ? "fdb" : "pg");
+    if (backend === "fdb") {
       await fdbMutation(() => externalSlotsFdb.release(teamId, holderId));
-      return;
+    } else {
+      await removeConcurrencyLimitActiveJob(teamId, holderId);
+      await syncFdbLimitToPgOccupancy(teamId);
     }
-    await removeConcurrencyLimitActiveJob(teamId, holderId);
-    await syncFdbLimitToPgOccupancy(teamId);
+    await completeRoutingPin(pin, "external-holder-terminal");
   });
 }
 
@@ -324,13 +704,17 @@ export function backlogTimeoutMsForGate(timeoutMs: number): Date {
   return new Date(Date.now() + timeoutMs);
 }
 
-// Compatibility boundary for callers while durable generation admission is
-// integrated. A Redis lease cannot make PG/FDB admission atomic and must not
-// be treated as a correctness primitive.
+// Compatibility boundary retained for callers that release/renew existing
+// work. It only verifies that durable FDB authority is reachable. New-root and
+// continuation admission happens through conflictful object-pin operations,
+// not a process-local critical section.
 export async function withTeamMigrationAdmission<T>(
-  _teamId: string,
+  teamId: string,
   operation: () => Promise<T>,
 ): Promise<T> {
+  if (fdbQueueEnabled() && !fdbForced()) {
+    await optionalFdbRead(() => nuqFdbMigrationStore.inspectState(teamId));
+  }
   return await operation();
 }
 
@@ -355,7 +739,39 @@ export async function fdbEnqueueScrapeJobs(
   backloggedCount: number;
   teamLimit: number | null;
 }> {
-  if (!isSelfHosted()) await markFdbTeamState(teamId);
+  const pins =
+    !fdbQueueEnabled() || fdbForced()
+      ? jobs.map(() => null)
+      : await fdbMutation(() =>
+          nuqFdbMigrationStore.preparePinnedObjects(
+            jobs.map(job => ({
+              teamId,
+              kind: "scrape_job" as const,
+              objectId: job.jobId,
+              admission: job.data.crawl_id
+                ? ({
+                    type: "pinned-continuation",
+                    source: {
+                      kind: "group",
+                      objectId: job.data.crawl_id,
+                    },
+                  } as const)
+                : ({ type: "new-root" } as const),
+              requiredBackend: "fdb" as const,
+              residue: { intent_unresolved: 1 },
+            })),
+          ),
+        );
+  for (const pin of pins) {
+    if (pin && pin.backend !== "fdb") {
+      throw new NuQRouterPinMismatchError(
+        pin.kind,
+        pin.objectId,
+        pin.backend,
+        "fdb",
+      );
+    }
+  }
   let teamLimit: number | null = null;
   if (!isSelfHosted() && !fdbForced()) {
     const acuc = await getACUCTeam(teamId, false, true, RateLimiterMode.Crawl);
@@ -419,6 +835,17 @@ export async function fdbEnqueueScrapeJobs(
   );
 
   const tagged = results.map(r => tagFdbJob(r as NuQJob<ScrapeJobData>));
+  await Promise.all(
+    tagged.map((job, index) =>
+      activateRoutingPin(
+        pins[index],
+        job.status === "backlog"
+          ? { capacity_team_pending: 1 }
+          : { capacity_ready_active: 1 },
+        "fdb-job-active",
+      ),
+    ),
+  );
   for (const job of tagged) {
     void markJobBackend(job.id, "fdb").catch(error =>
       _logger.warn("Failed to cache FDB job backend", {
@@ -534,26 +961,19 @@ class RoutedScrapeQueue {
     operation?: QueueOperationOptions,
   ): Promise<boolean> {
     const backend = this.backendFor(id);
-    if (backend === "fdb") {
-      const finished = await fdbMutation(() =>
-        scrapeQueueFdb.jobFinish(
-          id,
-          lock,
-          returnvalue,
-          logger,
-          operation,
-        ),
+    const finished =
+      backend === "fdb"
+        ? await fdbMutation(() =>
+            scrapeQueueFdb.jobFinish(id, lock, returnvalue, logger, operation),
+          )
+        : await scrapeQueuePg.jobFinish(id, lock, returnvalue, logger);
+    if (finished) {
+      this.inflightBackend.delete(id);
+      await completeRoutingPin(
+        await inspectRoutingPin("scrape_job", id),
+        "job-finish",
       );
-      if (finished) this.inflightBackend.delete(id);
-      return finished;
     }
-    const finished = await scrapeQueuePg.jobFinish(
-      id,
-      lock,
-      returnvalue,
-      logger,
-    );
-    if (finished) this.inflightBackend.delete(id);
     return finished;
   }
 
@@ -565,15 +985,19 @@ class RoutedScrapeQueue {
     operation?: QueueOperationOptions,
   ): Promise<boolean> {
     const backend = this.backendFor(id);
-    if (backend === "fdb") {
-      const failed = await fdbMutation(() =>
-        scrapeQueueFdb.jobFail(id, lock, failedReason, logger, operation),
+    const failed =
+      backend === "fdb"
+        ? await fdbMutation(() =>
+            scrapeQueueFdb.jobFail(id, lock, failedReason, logger, operation),
+          )
+        : await scrapeQueuePg.jobFail(id, lock, failedReason, logger);
+    if (failed) {
+      this.inflightBackend.delete(id);
+      await completeRoutingPin(
+        await inspectRoutingPin("scrape_job", id),
+        "job-fail",
       );
-      if (failed) this.inflightBackend.delete(id);
-      return failed;
     }
-    const failed = await scrapeQueuePg.jobFail(id, lock, failedReason, logger);
-    if (failed) this.inflightBackend.delete(id);
     return failed;
   }
 
@@ -581,7 +1005,9 @@ class RoutedScrapeQueue {
     id: string,
     logger: Logger = _logger,
   ): Promise<NuQJob<ScrapeJobData> | null> {
-    if ((await getJobQueueBackend(id)) === "fdb") {
+    const backend = await getJobQueueBackend(id);
+    if (!backend) return null;
+    if (backend === "fdb") {
       const job = await optionalFdbRead(() =>
         scrapeQueueFdb.getJob(id, logger),
       );
@@ -680,8 +1106,12 @@ class RoutedScrapeQueue {
   }
 
   public async removeJob(id: string, logger: Logger = _logger): Promise<void> {
-    if ((await getJobQueueBackend(id)) === "fdb") {
+    const backend = await getJobQueueBackend(id);
+    if (!backend) return;
+    const pin = await inspectRoutingPin("scrape_job", id);
+    if (backend === "fdb") {
       await fdbMutation(() => scrapeQueueFdb.removeJob(id, logger));
+      await completeRoutingPin(pin, "job-remove");
       return;
     }
     const redis = getRedisConnection();
@@ -727,6 +1157,7 @@ class RoutedScrapeQueue {
       };
     }
     await cleanPgRedisJobResidue(id, descriptor, queuedPayload);
+    await completeRoutingPin(pin, "job-remove");
   }
 
   public async removeJobs(
@@ -744,7 +1175,9 @@ class RoutedScrapeQueue {
     logger: Logger = _logger,
     backendHint?: QueueBackend,
   ): Promise<T> {
-    if ((await getJobQueueBackend(id, backendHint)) === "fdb") {
+    const backend = await getJobQueueBackend(id, backendHint);
+    if (!backend) throw new NuQRouterObjectNotFoundError("scrape_job", id);
+    if (backend === "fdb") {
       // Waiting is intentionally long-lived; callers pass the real scrape
       // timeout. The backend hint from the enqueue result also avoids any
       // dependency on the best-effort Redis marker.
@@ -863,9 +1296,12 @@ class RoutedCrawlFinishedQueue {
     logger: Logger = _logger,
   ): Promise<NuQJob<any> | null> {
     if (
-      (await getJobQueueBackend(id, undefined, () =>
-        crawlFinishedQueueFdb.hasJob(id),
-      )) === "fdb"
+      (await getJobQueueBackend(id, undefined, {
+        kind: "crawl_finished",
+        hasFdbJob: () => crawlFinishedQueueFdb.hasJob(id),
+        hasPgJob: async () =>
+          (await crawlFinishedQueuePg.getJob(id, logger)) !== null,
+      })) === "fdb"
     ) {
       const job = await optionalFdbRead(() =>
         crawlFinishedQueueFdb.getJob(id, logger),
@@ -890,23 +1326,44 @@ class RoutedCrawlGroup {
     },
     logger: Logger = _logger,
   ): Promise<NuQJobGroupInstance> {
-    if (opts?.backend === "fdb") {
-      if (!isSelfHosted()) await markFdbTeamState(ownerId);
-      const g = await fdbMutation(() =>
-        crawlGroupFdb.addGroup(
-          id,
-          ownerId,
-          ttl,
-          {
-            maxConcurrency: opts.maxConcurrency,
-            delaySeconds: opts.delaySeconds,
-          },
-          logger,
-        ),
+    const pin = await prepareRoutingPin({
+      teamId: ownerId,
+      kind: "group",
+      objectId: id,
+    });
+    const backend = pin?.backend ?? opts?.backend ?? "pg";
+    if (opts?.backend && opts.backend !== backend) {
+      throw new NuQRouterPinMismatchError(
+        "group",
+        id,
+        pin?.backend ?? backend,
+        opts.backend,
       );
-      return g as NuQJobGroupInstance;
     }
-    return crawlGroupPg.addGroup(id, ownerId, ttl, logger);
+    const group =
+      backend === "fdb"
+        ? ((await fdbMutation(() =>
+            crawlGroupFdb.addGroup(
+              id,
+              ownerId,
+              ttl,
+              {
+                maxConcurrency: opts?.maxConcurrency,
+                delaySeconds: opts?.delaySeconds,
+              },
+              logger,
+            ),
+          )) as NuQJobGroupInstance)
+        : await crawlGroupPg.addGroup(id, ownerId, ttl, logger);
+    await activateRoutingPin(pin, { control_groups: 1 }, "group-active");
+    void markBackend(groupBackendKey(id), backend).catch(error =>
+      _logger.warn("Failed to cache group backend", {
+        module: "nuq-router",
+        groupId: id,
+        error,
+      }),
+    );
+    return group;
   }
 
   public async getGroup(
@@ -937,6 +1394,10 @@ class RoutedCrawlGroup {
     // stops new FDB groups; pinned groups remain authoritative until drained.
     const pg = await crawlGroupPg.getOngoingByOwner(ownerId, logger);
     const seen = new Set(fdb.map(g => g.id));
+    const duplicate = pg.find(group => seen.has(group.id));
+    if (duplicate) {
+      throw new NuQRouterBothBackendsError("group", duplicate.id);
+    }
     return [
       ...(fdb as NuQJobGroupInstance[]),
       ...pg.filter(g => !seen.has(g.id)),
@@ -951,7 +1412,16 @@ class RoutedCrawlGroup {
   ): Promise<boolean> {
     const backend = await getCrawlQueueBackend(id);
     if (backend !== "fdb" && !(backend === null && fdbForced())) return false;
-    return await fdbMutation(() => crawlGroupFdb.cancelGroup(id, logger));
+    const cancelled = await fdbMutation(() =>
+      crawlGroupFdb.cancelGroup(id, logger),
+    );
+    if (cancelled) {
+      await completeRoutingPin(
+        await inspectRoutingPin("group", id),
+        "group-cancel",
+      );
+    }
+    return cancelled;
   }
 }
 

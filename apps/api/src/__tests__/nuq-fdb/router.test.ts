@@ -20,29 +20,14 @@ vi.mock("../../services/ab-test", () => ({
 vi.mock("../../lib/crawl-redis", () => ({
   getCrawl: vi.fn(),
 }));
-vi.mock("../../services/redlock", () => ({
-  redlock: {
-    using: vi.fn(
-      async (
-        _resources: string[],
-        _duration: number,
-        _options: object,
-        fn: (signal: { aborted: boolean; error?: Error }) => unknown,
-      ) => await fn({ aborted: false }),
-    ),
-  },
-}));
-
 import { config } from "../../config";
 import { redisEvictConnection } from "../../services/redis";
-import { getRedisConnection } from "../../services/queue-service";
 import {
   fdbQueueEnabled,
   isFdbTeam,
   resolveJobBackend,
   resolveNewGroupBackend,
   fdbEnqueueScrapeJobs,
-  getCombinedTeamActiveCount,
   scrapeQueue,
   crawlGroup,
   crawlFinishedQueue,
@@ -182,7 +167,6 @@ describeIf("NuQ router (forced FDB mode)", () => {
     const forcedBackend = config.NUQ_BACKEND;
     const redisGet = vi.spyOn(redisEvictConnection, "get");
     const redisSet = vi.spyOn(redisEvictConnection, "set");
-    config.NUQ_BACKEND = "pg";
     try {
       const teamId = randomUUID();
       const jobId = randomUUID();
@@ -210,6 +194,7 @@ describeIf("NuQ router (forced FDB mode)", () => {
       expect(jobs[0].backend).toBe("fdb");
       expect(backloggedCount).toBe(0);
 
+      config.NUQ_BACKEND = "pg";
       const wait = scrapeQueue.waitForJob(jobId, 15_000);
 
       await new Promise(resolve => setTimeout(resolve, 800));
@@ -230,15 +215,11 @@ describeIf("NuQ router (forced FDB mode)", () => {
     const forcedBackend = config.NUQ_BACKEND;
     const redisGet = vi.spyOn(redisEvictConnection, "get");
     const redisSet = vi.spyOn(redisEvictConnection, "set");
-    config.NUQ_BACKEND = "pg";
     try {
       const teamId = randomUUID();
       const jobId = randomUUID();
       redisGet.mockResolvedValue(null);
-      redisSet.mockImplementation(async key => {
-        if (key === `nuq:fdb_team:${teamId}`) return "OK" as any;
-        throw new Error("marker unavailable");
-      });
+      redisSet.mockRejectedValue(new Error("marker unavailable"));
 
       const { jobs } = await fdbEnqueueScrapeJobs(
         [
@@ -260,6 +241,7 @@ describeIf("NuQ router (forced FDB mode)", () => {
       // The returned backend survives queue-jobs and can route a wait without
       // consulting Redis. ID-only reads/removes recover from durable FDB state.
       expect(jobs[0].backend).toBe("fdb");
+      config.NUQ_BACKEND = "pg";
       expect((await scrapeQueue.getJob(jobId))?.id).toBe(jobId);
       const wait = waitForQueuedJob(jobs[0], 15_000, false);
       const taken = await scrapeQueueFdb.getJobToProcess();
@@ -269,6 +251,7 @@ describeIf("NuQ router (forced FDB mode)", () => {
       await scrapeQueue.removeJob(jobId);
 
       const cancelId = randomUUID();
+      config.NUQ_BACKEND = "fdb";
       await fdbEnqueueScrapeJobs(
         [
           {
@@ -285,6 +268,7 @@ describeIf("NuQ router (forced FDB mode)", () => {
         teamId,
       );
       // ID-only standalone cancellation also probes durable FDB state.
+      config.NUQ_BACKEND = "pg";
       await scrapeQueue.removeJob(cancelId);
       expect(await scrapeQueue.getJob(cancelId)).toBeNull();
     } finally {
@@ -356,110 +340,6 @@ describeIf("NuQ router (forced FDB mode)", () => {
     expect(await scrapeQueueFdb.getTeamActiveCount(teamId)).toBe(1);
     await scrapeQueueFdb.removeJob(directId);
     expect(await scrapeQueueFdb.getTeamActiveCount(teamId)).toBe(0);
-  });
-
-  test("flag rollback keeps crawl jobs pinned to their durable FDB group", async () => {
-    const forcedBackend = config.NUQ_BACKEND;
-    const redisGet = vi.spyOn(redisEvictConnection, "get");
-    const redisStateGet = vi.spyOn(getRedisConnection(), "get");
-    const redisCount = vi.spyOn(getRedisConnection(), "zcount");
-    const teamId = randomUUID();
-    const groupId = randomUUID();
-    const holderId = randomUUID();
-    try {
-      await crawlGroup.addGroup(groupId, teamId, 60_000, { backend: "fdb" });
-      await mirrorExternalSlotAcquire(teamId, holderId, 60_000);
-      config.NUQ_BACKEND = "pg";
-      redisGet.mockResolvedValue(null);
-      redisStateGet.mockImplementation(async key =>
-        key === `nuq:fdb_team:${teamId}` ? "1" : null,
-      );
-      redisCount.mockResolvedValue(0);
-
-      await expect(getCombinedTeamActiveCount(teamId)).resolves.toBe(1);
-      await mirrorExternalSlotRelease(teamId, holderId);
-      await expect(getCombinedTeamActiveCount(teamId)).resolves.toBe(0);
-      await expect(
-        resolveJobBackend({
-          mode: "single_urls",
-          url: "https://example.com",
-          team_id: teamId,
-          crawl_id: groupId,
-        } as any),
-      ).resolves.toBe("fdb");
-      await expect(crawlGroup.cancelGroup(groupId)).resolves.toBe(true);
-    } finally {
-      config.NUQ_BACKEND = forcedBackend;
-      redisGet.mockRestore();
-      redisStateGet.mockRestore();
-      redisCount.mockRestore();
-    }
-  });
-
-  test("forced-cloud external-only occupancy survives rollback", async () => {
-    const forcedBackend = config.NUQ_BACKEND;
-    const previousDbAuth = config.USE_DB_AUTHENTICATION;
-    const redisStateSet = vi
-      .spyOn(getRedisConnection(), "set")
-      .mockResolvedValue("OK");
-    const redisStateGet = vi.spyOn(getRedisConnection(), "get");
-    const redisCount = vi
-      .spyOn(getRedisConnection(), "zcount")
-      .mockResolvedValue(0);
-    const teamId = randomUUID();
-    const holderId = randomUUID();
-    try {
-      config.NUQ_BACKEND = "fdb";
-      config.USE_DB_AUTHENTICATION = true;
-      await mirrorExternalSlotAcquire(teamId, holderId, 60_000);
-      expect(redisStateSet).toHaveBeenCalledWith(`nuq:fdb_team:${teamId}`, "1");
-
-      config.NUQ_BACKEND = "pg";
-      config.USE_DB_AUTHENTICATION = false;
-      redisStateGet.mockImplementation(async key =>
-        key === `nuq:fdb_team:${teamId}` ? "1" : null,
-      );
-      await expect(getCombinedTeamActiveCount(teamId)).resolves.toBe(1);
-      await mirrorExternalSlotRelease(teamId, holderId);
-      await expect(getCombinedTeamActiveCount(teamId)).resolves.toBe(0);
-    } finally {
-      config.NUQ_BACKEND = forcedBackend;
-      config.USE_DB_AUTHENTICATION = previousDbAuth;
-      redisStateSet.mockRestore();
-      redisStateGet.mockRestore();
-      redisCount.mockRestore();
-    }
-  });
-
-  test("pure PG teams avoid FDB outages while migrated teams fail closed", async () => {
-    const forcedBackend = config.NUQ_BACKEND;
-    const redisStateGet = vi
-      .spyOn(getRedisConnection(), "get")
-      .mockResolvedValue(null);
-    const redisCount = vi
-      .spyOn(getRedisConnection(), "zcount")
-      .mockResolvedValue(0);
-    const fdbCount = vi
-      .spyOn(scrapeQueueFdb, "getTeamActiveCount")
-      .mockRejectedValue(new Error("FDB unavailable"));
-    const teamId = randomUUID();
-    config.NUQ_BACKEND = "pg";
-    try {
-      await expect(getCombinedTeamActiveCount(teamId)).resolves.toBe(0);
-      expect(fdbCount).not.toHaveBeenCalled();
-
-      redisStateGet.mockImplementation(async key =>
-        key === `nuq:fdb_team:${teamId}` ? "1" : null,
-      );
-      await expect(getCombinedTeamActiveCount(teamId)).rejects.toThrow(
-        "FDB unavailable",
-      );
-    } finally {
-      config.NUQ_BACKEND = forcedBackend;
-      redisStateGet.mockRestore();
-      redisCount.mockRestore();
-      fdbCount.mockRestore();
-    }
   });
 
   test("optional router never attempts an FDB dequeue before PG fallback", async () => {

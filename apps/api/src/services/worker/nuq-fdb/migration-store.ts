@@ -65,7 +65,8 @@ export type MigrationObjectPin = {
   backend: MigrationBackend;
   generation: number;
   lifecycle: MigrationObjectLifecycle;
-  admission: "new-root" | "pinned-continuation";
+  revision: number;
+  admission: "new-root" | "pinned-continuation" | "legacy-backfill";
   sourceKind?: MigrationObjectKind;
   sourceObjectId?: string;
   initialResidue: MigrationResidue;
@@ -77,6 +78,14 @@ export type MigrationPinAdmission =
   | {
       type: "pinned-continuation";
       source: { kind: MigrationObjectKind; objectId: string };
+    }
+  | {
+      // Explicit interpretation for an object known to predate control-plane
+      // initialization. Never infer this from Redis or today's rollout flag.
+      type: "legacy-backfill";
+      backend: MigrationBackend;
+      generation: number;
+      terminal?: boolean;
     };
 
 export type PreparePinnedObjectInput = {
@@ -84,6 +93,7 @@ export type PreparePinnedObjectInput = {
   kind: MigrationObjectKind;
   objectId: string;
   admission: MigrationPinAdmission;
+  requiredBackend?: MigrationBackend;
   residue?: Partial<MigrationResidue>;
 };
 
@@ -384,12 +394,15 @@ function validatePin(value: unknown, record: string): MigrationObjectPin {
     !BACKENDS.includes(pin.backend as MigrationBackend) ||
     !isPositiveInteger(pin.generation) ||
     !OBJECT_LIFECYCLES.includes(pin.lifecycle as MigrationObjectLifecycle) ||
-    (pin.admission !== "new-root" && pin.admission !== "pinned-continuation")
+    !isPositiveInteger(pin.revision) ||
+    (pin.admission !== "new-root" &&
+      pin.admission !== "pinned-continuation" &&
+      pin.admission !== "legacy-backfill")
   ) {
     throw new MigrationCorruptionError(record, "invalid object pin fields");
   }
   if (
-    (pin.admission === "new-root" &&
+    ((pin.admission === "new-root" || pin.admission === "legacy-backfill") &&
       (pin.sourceKind !== undefined || pin.sourceObjectId !== undefined)) ||
     (pin.admission === "pinned-continuation" &&
       (!OBJECT_KINDS.includes(pin.sourceKind as MigrationObjectKind) ||
@@ -778,6 +791,35 @@ export class NuqFdbMigrationStore {
       generation: await this.requireGeneration(tn, teamId, generation),
       residue: await this.readResidue(tn, teamId, generation),
     }));
+  }
+
+  public async inspectTeamPins(teamId: string): Promise<MigrationObjectPin[]> {
+    assertNonempty(teamId, "teamId");
+    return await this.db.doTn(async tn => {
+      const range = getFdb().tuple.range([
+        "nuq-migration",
+        1,
+        "team",
+        teamId,
+        "object",
+      ]);
+      const rows = await tn
+        .snapshot()
+        .getRangeAll(range.begin as Buffer, range.end as Buffer);
+      return rows.map(([, value]) => {
+        const pin = validatePin(
+          parseJson(value as Buffer, `team ${teamId} object index`),
+          `team ${teamId} object index`,
+        );
+        if (pin.teamId !== teamId) {
+          throw new MigrationCorruptionError(
+            `team ${teamId} object index`,
+            "team id mismatch",
+          );
+        }
+        return pin;
+      });
+    });
   }
 
   public async inspectPin(
@@ -1175,9 +1217,19 @@ export class NuqFdbMigrationStore {
   public async preparePinnedObject(
     input: PreparePinnedObjectInput,
   ): Promise<MigrationObjectPin> {
-    return await this.db.doTn(async tn =>
-      this.preparePinnedObjectInTxn(tn, input),
-    );
+    return (await this.preparePinnedObjects([input]))[0];
+  }
+
+  public async preparePinnedObjects(
+    inputs: readonly PreparePinnedObjectInput[],
+  ): Promise<MigrationObjectPin[]> {
+    return await this.db.doTn(async tn => {
+      const pins: MigrationObjectPin[] = [];
+      for (const input of inputs) {
+        pins.push(await this.preparePinnedObjectInTxn(tn, input));
+      }
+      return pins;
+    });
   }
 
   // Transaction-scoped hook for queue/group/slot/sweeper code. The caller can
@@ -1189,7 +1241,7 @@ export class NuqFdbMigrationStore {
     tn: Transaction,
     input: PreparePinnedObjectInput,
   ): Promise<MigrationObjectPin> {
-    const { teamId, kind, objectId, admission } = input;
+    const { teamId, kind, objectId, admission, requiredBackend } = input;
     assertNonempty(teamId, "teamId");
     assertNonempty(objectId, "objectId");
     const initialResidue = normalizeResidue(input.residue);
@@ -1200,17 +1252,21 @@ export class NuqFdbMigrationStore {
     if (rawPin) {
       const record = `object ${kind}/${objectId}`;
       const pin = validatePin(parseJson(rawPin, record), record);
-      const expectedAdmission =
-        admission.type === "new-root" ? "new-root" : "pinned-continuation";
+      const expectedAdmission = admission.type;
       if (
         pin.teamId !== teamId ||
         pin.kind !== kind ||
         pin.objectId !== objectId ||
         pin.admission !== expectedAdmission ||
         !residueEqual(pin.initialResidue, initialResidue) ||
+        (requiredBackend !== undefined && pin.backend !== requiredBackend) ||
         (admission.type === "pinned-continuation" &&
           (pin.sourceKind !== admission.source.kind ||
-            pin.sourceObjectId !== admission.source.objectId))
+            pin.sourceObjectId !== admission.source.objectId)) ||
+        (admission.type === "legacy-backfill" &&
+          (pin.backend !== admission.backend ||
+            pin.generation !== admission.generation ||
+            (pin.lifecycle === "terminal") !== (admission.terminal === true)))
       ) {
         throw new MigrationOperationConflictError(`${kind}/${objectId}`);
       }
@@ -1242,6 +1298,20 @@ export class NuqFdbMigrationStore {
       }
       backend = state.activeBackend;
       generationNumber = state.activeGeneration;
+    } else if (admission.type === "legacy-backfill") {
+      backend = admission.backend;
+      generationNumber = admission.generation;
+      if (
+        admission.terminal !== true &&
+        (state.activeBackend !== backend ||
+          state.activeGeneration !== generationNumber)
+      ) {
+        throw new MigrationStaleGenerationError(
+          teamId,
+          backend,
+          generationNumber,
+        );
+      }
     } else {
       assertNonempty(admission.source.objectId, "admission.source.objectId");
       const sourceRecord = `source object ${admission.source.kind}/${admission.source.objectId}`;
@@ -1298,16 +1368,35 @@ export class NuqFdbMigrationStore {
       backend = sourcePin.backend;
       generationNumber = sourcePin.generation;
     }
+    if (requiredBackend !== undefined && backend !== requiredBackend) {
+      throw new MigrationStaleGenerationError(
+        teamId,
+        requiredBackend,
+        generationNumber,
+      );
+    }
     const generation = await this.requireGeneration(
       tn,
       teamId,
       generationNumber,
     );
+    const terminalLegacyBackfill =
+      admission.type === "legacy-backfill" && admission.terminal === true;
+    if (
+      terminalLegacyBackfill &&
+      Object.values(initialResidue).some(value => value !== 0)
+    ) {
+      throw new MigrationStoreError(
+        "NUQ_MIGRATION_INVALID_ARGUMENT",
+        "terminal legacy backfill cannot carry residue",
+      );
+    }
     const allowed =
       generation.backend === backend &&
-      (admission.type === "new-root"
-        ? generation.status === "open"
-        : generation.status === "open" || generation.status === "draining");
+      (terminalLegacyBackfill ||
+        (admission.type === "new-root"
+          ? generation.status === "open"
+          : generation.status === "open" || generation.status === "draining"));
     if (!allowed) {
       throw new MigrationStaleGenerationError(
         teamId,
@@ -1322,9 +1411,9 @@ export class NuqFdbMigrationStore {
       objectId,
       backend,
       generation: generationNumber,
-      lifecycle: "prepared",
-      admission:
-        admission.type === "new-root" ? "new-root" : "pinned-continuation",
+      lifecycle: terminalLegacyBackfill ? "terminal" : "prepared",
+      revision: 1,
+      admission: admission.type,
       sourceKind:
         admission.type === "pinned-continuation"
           ? admission.source.kind
@@ -1453,9 +1542,14 @@ export class NuqFdbMigrationStore {
       pin.residue,
       residue,
     );
+    const revision = pin.revision + 1;
+    if (!Number.isSafeInteger(revision)) {
+      throw new MigrationCorruptionError(record, "pin revision exhausted");
+    }
     const next: MigrationObjectPin = {
       ...pin,
       lifecycle: toLifecycle,
+      revision,
       residue,
     };
     const encoded = encodeJson(next);

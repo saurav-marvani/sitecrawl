@@ -45,7 +45,7 @@ function isExtractJob(data: ScrapeJobData): boolean {
 
 function publicationForBacklogJob(
   ownerId: string,
-  job: NuQJob<ScrapeJobData>,
+  job: Pick<NuQJob<ScrapeJobData>, "id" | "data">,
 ): NuQPgPublication {
   return {
     id: job.id,
@@ -321,7 +321,10 @@ async function reconcileTeam(
     }
 
     if (promoted !== null) {
-      await completeNuQPgPublication([publicationForBacklogJob(ownerId, job)]);
+      await completeNuQPgPublication(
+        [publicationForBacklogJob(ownerId, job)],
+        "promoted",
+      );
       jobsStarted++;
     } else {
       await rollbackPgReservations(
@@ -453,6 +456,10 @@ async function drainQueue(
     }
 
     if (promoted !== null) {
+      await completeNuQPgPublication(
+        [publicationForBacklogJob(ownerId, nextJob.job)],
+        "promoted",
+      );
       await acknowledgeConcurrentJob(nextJob);
       if (isExtract) extractCount++;
       else crawlCount++;

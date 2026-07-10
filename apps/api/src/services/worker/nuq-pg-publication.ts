@@ -7,7 +7,7 @@ export type NuQPgPublication = {
   placement: NuQPgPublicationPlacement;
 };
 
-export type NuQPgPublicationOutcome = "published" | "compensated";
+export type NuQPgPublicationOutcome = "published" | "promoted" | "compensated";
 
 /**
  * Boundary for the durable generation intent which must surround PG + Redis
@@ -21,14 +21,43 @@ export interface NuQPgPublicationAdapter {
     publications: readonly NuQPgPublication[],
     outcome: NuQPgPublicationOutcome,
   ): Promise<void>;
+  retire(
+    kind: "scrape_job" | "crawl_finished",
+    objectId: string,
+  ): Promise<void>;
 }
 
-const noOpAdapter: NuQPgPublicationAdapter = {
-  async prepare() {},
-  async complete() {},
+export class NuQPgPublicationAdapterUnavailableError extends Error {
+  public readonly code = "NUQ_PG_PUBLICATION_ADAPTER_UNAVAILABLE";
+  public readonly retryable = true;
+
+  constructor() {
+    super(
+      "NUQ_PG_PUBLICATION_ADAPTER_UNAVAILABLE: durable PG publication adapter is not registered",
+    );
+    this.name = this.constructor.name;
+  }
+}
+
+const failClosedAdapter: NuQPgPublicationAdapter = {
+  async prepare() {
+    throw new NuQPgPublicationAdapterUnavailableError();
+  },
+  async complete() {
+    throw new NuQPgPublicationAdapterUnavailableError();
+  },
+  async retire() {
+    throw new NuQPgPublicationAdapterUnavailableError();
+  },
 };
 
-let adapter: NuQPgPublicationAdapter = noOpAdapter;
+export const passthroughNuQPgPublicationAdapter: NuQPgPublicationAdapter = {
+  async prepare() {},
+  async complete() {},
+  async retire() {},
+};
+
+let adapter: NuQPgPublicationAdapter = passthroughNuQPgPublicationAdapter;
 
 export type PreparedNuQPgPublication = {
   publications: readonly NuQPgPublication[];
@@ -38,7 +67,7 @@ export type PreparedNuQPgPublication = {
 export function setNuQPgPublicationAdapter(
   next: NuQPgPublicationAdapter | null,
 ): void {
-  adapter = next ?? noOpAdapter;
+  adapter = next ?? failClosedAdapter;
 }
 
 export async function prepareNuQPgPublication(
@@ -53,9 +82,28 @@ export async function completePreparedNuQPgPublication(
   prepared: PreparedNuQPgPublication,
   outcome: NuQPgPublicationOutcome = "published",
 ): Promise<void> {
-  if (prepared.publications.length > 0) {
-    await prepared.adapter.complete(prepared.publications, outcome);
+  await completePreparedNuQPgPublicationSubset(
+    prepared,
+    prepared.publications,
+    outcome,
+  );
+}
+
+export async function completePreparedNuQPgPublicationSubset(
+  prepared: PreparedNuQPgPublication,
+  publications: readonly NuQPgPublication[],
+  outcome: NuQPgPublicationOutcome,
+): Promise<void> {
+  if (publications.length > 0) {
+    await prepared.adapter.complete(publications, outcome);
   }
+}
+
+export async function retireNuQPgObject(
+  kind: "scrape_job" | "crawl_finished",
+  objectId: string,
+): Promise<void> {
+  await adapter.retire(kind, objectId);
 }
 
 export async function completeNuQPgPublication(

@@ -1,0 +1,434 @@
+import type {
+  MigrationBackend,
+  MigrationObjectKind,
+  MigrationObjectPin,
+  MigrationResidue,
+  MigrationSteadyResolution,
+  MigrationTeamState,
+  PreparePinnedObjectInput,
+  TransitionObjectResidueInput,
+  CompletePinnedObjectInput,
+} from "./nuq-fdb/migration-store";
+import type {
+  NuQPgPublication,
+  NuQPgPublicationAdapter,
+  NuQPgPublicationOutcome,
+} from "./nuq-pg-publication";
+
+export interface NuQMigrationStorePort {
+  inspectState(teamId: string): Promise<MigrationTeamState | null>;
+  resolveSteady(
+    teamId: string,
+    desiredBackend: MigrationBackend,
+  ): Promise<MigrationSteadyResolution>;
+  initializeLegacyTeam(
+    teamId: string,
+    backend: MigrationBackend,
+    operationId: string,
+  ): Promise<MigrationTeamState>;
+  beginTransition(input: {
+    teamId: string;
+    targetBackend: MigrationBackend;
+    operationId: string;
+    expectedRevision?: number;
+  }): Promise<MigrationTeamState>;
+  cancelTransition(input: {
+    teamId: string;
+    transitionOperationId: string;
+    expectedRevision?: number;
+  }): Promise<MigrationTeamState>;
+  finalSeal(input: {
+    teamId: string;
+    transitionOperationId: string;
+    expectedRevision?: number;
+  }): Promise<MigrationTeamState>;
+  inspectTeamPins(teamId: string): Promise<MigrationObjectPin[]>;
+  inspectPin(
+    kind: MigrationObjectKind,
+    objectId: string,
+  ): Promise<MigrationObjectPin | null>;
+  preparePinnedObject(
+    input: PreparePinnedObjectInput,
+  ): Promise<MigrationObjectPin>;
+  preparePinnedObjects(
+    inputs: readonly PreparePinnedObjectInput[],
+  ): Promise<MigrationObjectPin[]>;
+  transitionObjectResidue(
+    input: TransitionObjectResidueInput,
+  ): Promise<MigrationObjectPin>;
+  completePinnedObject(
+    input: CompletePinnedObjectInput,
+  ): Promise<MigrationObjectPin>;
+}
+
+export class NuQRouterError extends Error {
+  constructor(
+    public readonly code: string,
+    message: string,
+    public readonly retryable = false,
+  ) {
+    super(`${code}: ${message}`);
+    this.name = this.constructor.name;
+  }
+}
+
+export class NuQRouterMigrationInProgressError extends NuQRouterError {
+  constructor(teamId: string, operationId: string) {
+    super(
+      "NUQ_MIGRATION_IN_PROGRESS",
+      `team ${teamId} is changing queue backends (${operationId})`,
+      true,
+    );
+  }
+}
+
+export class NuQRouterBackendUnavailableError extends NuQRouterError {
+  constructor(kind: string, objectId: string, cause?: unknown) {
+    super(
+      "NUQ_ROUTER_FDB_UNAVAILABLE",
+      `cannot authoritatively resolve ${kind}/${objectId}`,
+      true,
+    );
+    if (cause !== undefined) this.cause = cause;
+  }
+}
+
+export class NuQRouterBothBackendsError extends NuQRouterError {
+  constructor(kind: string, objectId: string) {
+    super(
+      "NUQ_ROUTER_BOTH_BACKENDS_PRESENT",
+      `${kind}/${objectId} exists in both pg and fdb`,
+    );
+  }
+}
+
+export class NuQRouterCorruptMarkerError extends NuQRouterError {
+  constructor(kind: string, objectId: string) {
+    super(
+      "NUQ_ROUTER_CORRUPT_BACKEND_MARKER",
+      `${kind}/${objectId} has a corrupt backend marker and no authoritative record`,
+    );
+  }
+}
+
+export class NuQRouterPinMismatchError extends NuQRouterError {
+  constructor(
+    kind: string,
+    objectId: string,
+    pinned: MigrationBackend,
+    actual: MigrationBackend,
+  ) {
+    super(
+      "NUQ_ROUTER_PIN_BACKEND_MISMATCH",
+      `${kind}/${objectId} is pinned to ${pinned} but exists in ${actual}`,
+    );
+  }
+}
+
+export class NuQRouterObjectNotFoundError extends NuQRouterError {
+  constructor(kind: string, objectId: string) {
+    super("NUQ_ROUTER_OBJECT_NOT_FOUND", `${kind}/${objectId} was not found`);
+  }
+}
+
+export type BackendMarker = MigrationBackend | "corrupt" | null;
+
+export function stableLegacyInitializationOperationId(teamId: string): string {
+  return `nuq-router/v1/team/${teamId}/initialize/pg`;
+}
+
+export function stableTransitionOperationId(
+  state: MigrationTeamState,
+  targetBackend: MigrationBackend,
+): string {
+  return `nuq-router/v1/team/${state.teamId}/after-generation/${state.maxGeneration}/to/${targetBackend}`;
+}
+
+/**
+ * Resolve the desired flag against durable FDB state. A flag is a request, not
+ * routing authority. This function starts/cancels transitions but never seals
+ * one; finalSeal is reserved for a reconciler after durable residue is zero.
+ */
+export async function reconcileDesiredTeamBackend(
+  store: NuQMigrationStorePort,
+  teamId: string,
+  desiredBackend: MigrationBackend,
+): Promise<MigrationTeamState> {
+  let resolution = await store.resolveSteady(teamId, desiredBackend);
+  if (resolution.status === "legacy-uninitialized") {
+    await store.initializeLegacyTeam(
+      teamId,
+      "pg",
+      stableLegacyInitializationOperationId(teamId),
+    );
+    resolution = await store.resolveSteady(teamId, desiredBackend);
+  }
+
+  if (resolution.status === "legacy-uninitialized") {
+    throw new NuQRouterError(
+      "NUQ_MIGRATION_INITIALIZATION_NOT_VISIBLE",
+      `team ${teamId} initialization did not become visible`,
+      true,
+    );
+  }
+  if (resolution.status === "steady") return resolution.state;
+  if (resolution.status === "cancel-required") {
+    return await store.cancelTransition({
+      teamId,
+      transitionOperationId: resolution.state.transitionOperationId!,
+      expectedRevision: resolution.state.revision,
+    });
+  }
+  if (resolution.status === "transition-required") {
+    const operationId = stableTransitionOperationId(
+      resolution.state,
+      desiredBackend,
+    );
+    await store.beginTransition({
+      teamId,
+      targetBackend: desiredBackend,
+      operationId,
+      expectedRevision: resolution.state.revision,
+    });
+    throw new NuQRouterMigrationInProgressError(teamId, operationId);
+  }
+  throw new NuQRouterMigrationInProgressError(
+    teamId,
+    resolution.state.transitionOperationId!,
+  );
+}
+
+export async function resolveAuthoritativeObjectBackend(input: {
+  kind: MigrationObjectKind;
+  objectId: string;
+  marker: BackendMarker;
+  readPin: () => Promise<MigrationObjectPin | null>;
+  probeFdb: () => Promise<boolean>;
+  probePg: () => Promise<boolean>;
+  repairMarker?: (backend: MigrationBackend) => Promise<void> | void;
+}): Promise<MigrationBackend | null> {
+  const { kind, objectId } = input;
+  let pin: MigrationObjectPin | null;
+  let fdbPresent: boolean;
+  try {
+    // Both reads are FDB-authoritative. Do not probe PG if FDB is unavailable:
+    // doing so would turn an outage into an unsafe PG fallback.
+    [pin, fdbPresent] = await Promise.all([input.readPin(), input.probeFdb()]);
+  } catch (error) {
+    throw new NuQRouterBackendUnavailableError(kind, objectId, error);
+  }
+  const pgPresent = await input.probePg();
+  if (fdbPresent && pgPresent) {
+    throw new NuQRouterBothBackendsError(kind, objectId);
+  }
+  const actual: MigrationBackend | null = fdbPresent
+    ? "fdb"
+    : pgPresent
+      ? "pg"
+      : null;
+  if (pin && actual && pin.backend !== actual) {
+    throw new NuQRouterPinMismatchError(kind, objectId, pin.backend, actual);
+  }
+  const backend = actual ?? pin?.backend ?? null;
+  if (backend) {
+    if (input.marker !== backend) {
+      try {
+        await input.repairMarker?.(backend);
+      } catch {
+        // A Redis hint repair is never part of the authoritative decision.
+      }
+    }
+    return backend;
+  }
+  if (input.marker === "corrupt") {
+    throw new NuQRouterCorruptMarkerError(kind, objectId);
+  }
+  return null;
+}
+
+function publicationResidue(
+  publication: NuQPgPublication,
+  outcome: NuQPgPublicationOutcome,
+): Partial<MigrationResidue> {
+  return outcome === "promoted" || publication.placement === "active"
+    ? { capacity_ready_active: 1 }
+    : { capacity_team_pending: 1 };
+}
+
+function publicationOperationId(
+  publication: NuQPgPublication,
+  outcome: NuQPgPublicationOutcome,
+): string {
+  return `nuq-router/v1/pg-publication/${publication.id}/${outcome}`;
+}
+
+/**
+ * FDB intent first, PG/Redis publication second, durable resolution last.
+ * The stable per-job operation IDs make complete retries exact-once.
+ */
+export class DurableNuQPgPublicationAdapter implements NuQPgPublicationAdapter {
+  constructor(private readonly store: NuQMigrationStorePort) {}
+
+  public async prepare(
+    publications: readonly NuQPgPublication[],
+  ): Promise<void> {
+    const seen = new Set<string>();
+    for (const publication of publications) {
+      if (seen.has(publication.id)) {
+        throw new NuQRouterError(
+          "NUQ_PG_PUBLICATION_DUPLICATE_ID",
+          `publication batch repeats ${publication.id}`,
+        );
+      }
+      seen.add(publication.id);
+    }
+    const pins = await this.store.preparePinnedObjects(
+      publications.map(publication => ({
+        teamId: publication.ownerId,
+        kind: "scrape_job" as const,
+        objectId: publication.id,
+        admission: publication.groupId
+          ? ({
+              type: "pinned-continuation",
+              source: { kind: "group", objectId: publication.groupId },
+            } as const)
+          : ({ type: "new-root" } as const),
+        requiredBackend: "pg" as const,
+        residue: { intent_unresolved: 1 },
+      })),
+    );
+    for (let index = 0; index < publications.length; index++) {
+      const publication = publications[index];
+      const pin = pins[index];
+      if (pin.backend !== "pg") {
+        throw new NuQRouterPinMismatchError(
+          "scrape_job",
+          publication.id,
+          pin.backend,
+          "pg",
+        );
+      }
+      if (pin.lifecycle === "terminal") {
+        throw new NuQRouterError(
+          "NUQ_PG_PUBLICATION_TERMINAL_PIN",
+          `scrape_job/${publication.id} cannot be republished`,
+        );
+      }
+    }
+  }
+
+  public async complete(
+    publications: readonly NuQPgPublication[],
+    outcome: NuQPgPublicationOutcome,
+  ): Promise<void> {
+    for (const publication of publications) {
+      if (outcome === "compensated") {
+        await this.store.completePinnedObject({
+          teamId: publication.ownerId,
+          kind: "scrape_job",
+          objectId: publication.id,
+          operationId: publicationOperationId(publication, outcome),
+          fromLifecycle: "prepared",
+        });
+      } else {
+        const pin = await this.store.inspectPin("scrape_job", publication.id);
+        if (!pin) {
+          throw new NuQRouterError(
+            "NUQ_MIGRATION_PIN_NOT_FOUND",
+            `scrape_job/${publication.id} has no publication pin`,
+          );
+        }
+        if (outcome === "promoted" && pin.lifecycle === "prepared") {
+          await this.store.transitionObjectResidue({
+            teamId: publication.ownerId,
+            kind: "scrape_job",
+            objectId: publication.id,
+            operationId: publicationOperationId(publication, "published"),
+            fromLifecycle: "prepared",
+            toLifecycle: "active",
+            residue: publicationResidue(publication, "published"),
+          });
+        }
+        await this.store.transitionObjectResidue({
+          teamId: publication.ownerId,
+          kind: "scrape_job",
+          objectId: publication.id,
+          operationId: publicationOperationId(publication, outcome),
+          fromLifecycle: outcome === "promoted" ? "active" : "prepared",
+          toLifecycle: "active",
+          residue: publicationResidue(publication, outcome),
+        });
+      }
+    }
+  }
+
+  public async retire(
+    kind: "scrape_job" | "crawl_finished",
+    objectId: string,
+  ): Promise<void> {
+    const pin = await this.store.inspectPin(kind, objectId);
+    if (!pin || pin.lifecycle === "terminal") return;
+    await this.store.completePinnedObject({
+      teamId: pin.teamId,
+      kind,
+      objectId,
+      operationId: `nuq-router/v1/pg-terminal/${kind}/${objectId}`,
+      fromLifecycle: pin.lifecycle,
+    });
+  }
+}
+
+export function pgResidueFenceObjectId(teamId: string): string {
+  return `pg-residue/${teamId}`;
+}
+
+/**
+ * Persist one unresolved fence while authoritative PG residue is non-zero.
+ * observationId must be stable across retry of the same PG snapshot and unique
+ * for a later observation (including A -> B -> A). The reconciler must call
+ * this before finalSeal; finalSeal only reads durable FDB counters.
+ */
+export async function reconcilePgResidueFence(
+  store: NuQMigrationStorePort,
+  input: {
+    teamId: string;
+    total: number;
+    observationId: string;
+  },
+): Promise<MigrationObjectPin> {
+  if (!Number.isSafeInteger(input.total) || input.total < 0) {
+    throw new NuQRouterError(
+      "NUQ_MIGRATION_INVALID_PG_RESIDUE",
+      "PG residue total must be a nonnegative safe integer",
+    );
+  }
+  const objectId = pgResidueFenceObjectId(input.teamId);
+  let pin = await store.inspectPin("cross_store_intent", objectId);
+  if (!pin) {
+    pin = await store.preparePinnedObject({
+      teamId: input.teamId,
+      kind: "cross_store_intent",
+      objectId,
+      admission: { type: "new-root" },
+      residue: { intent_unresolved: input.total === 0 ? 0 : 1 },
+    });
+    return pin;
+  }
+  if (pin.backend !== "pg" || pin.lifecycle === "terminal") {
+    throw new NuQRouterPinMismatchError(
+      "cross_store_intent",
+      objectId,
+      pin.backend,
+      "pg",
+    );
+  }
+  return await store.transitionObjectResidue({
+    teamId: input.teamId,
+    kind: "cross_store_intent",
+    objectId,
+    operationId: `nuq-router/v1/pg-residue/${input.observationId}/pin-revision/${pin.revision}`,
+    fromLifecycle: pin.lifecycle,
+    toLifecycle: pin.lifecycle,
+    residue: { intent_unresolved: input.total === 0 ? 0 : 1 },
+  });
+}

@@ -14,10 +14,18 @@ const publication: NuQPgPublication = {
 
 afterEach(() => setNuQPgPublicationAdapter(null));
 
+test("unregistered PG publication boundary fails closed", async () => {
+  setNuQPgPublicationAdapter(null);
+  await expect(prepareNuQPgPublication([publication])).rejects.toMatchObject({
+    code: "NUQ_PG_PUBLICATION_ADAPTER_UNAVAILABLE",
+    retryable: true,
+  });
+});
+
 test("injectable PG publication boundary forwards prepare and complete", async () => {
   const prepare = vi.fn(async () => {});
   const complete = vi.fn(async () => {});
-  setNuQPgPublicationAdapter({ prepare, complete });
+  setNuQPgPublicationAdapter({ prepare, complete, retire: vi.fn() });
 
   const prepared = await prepareNuQPgPublication([publication]);
   setNuQPgPublicationAdapter(null);

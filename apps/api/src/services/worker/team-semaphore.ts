@@ -1,13 +1,7 @@
 import {
-  pushConcurrencyLimitActiveJob,
-  removeConcurrencyLimitActiveJob,
-} from "../../lib/concurrency-limit";
-import {
-  isFdbTeam,
-  syncFdbLimitToPgOccupancy,
-  withTeamMigrationAdmission,
+  mirrorExternalSlotAcquire,
+  mirrorExternalSlotRelease,
 } from "./nuq-router";
-import { externalSlotsFdb } from "./nuq-fdb";
 import { isSelfHosted } from "../../lib/deployment";
 import { ScrapeJobTimeoutError, TransportableError } from "../../lib/error";
 import { logger as _logger } from "../../lib/logger";
@@ -36,8 +30,7 @@ const semaphoreHoldDuration = new Histogram({
 const { scripts, runScript, ensure } = nuqRedis;
 
 const SEMAPHORE_TTL = 30 * 1000;
-type MirrorBackend = "pg" | "fdb";
-type MirrorState = { backend?: MirrorBackend };
+type MirrorState = { acquired: boolean };
 
 async function acquire(
   teamId: string,
@@ -207,43 +200,15 @@ function startHeartbeat(
 }
 
 // Sync scrapes occupy queue capacity so async jobs see the team's real load.
-// PG-backed teams mirror into the Redis ZSET; FDB-backed teams consume an
-// external slot on the FDB ledger.
-async function resolveMirrorBackend(teamId: string): Promise<MirrorBackend> {
-  return (await isFdbTeam(teamId)) ? "fdb" : "pg";
-}
-
-async function releaseMirrorBackend(
-  teamId: string,
-  holderId: string,
-  backend: MirrorBackend,
-): Promise<void> {
-  if (backend === "fdb") {
-    await externalSlotsFdb.release(teamId, holderId);
-  } else {
-    await removeConcurrencyLimitActiveJob(teamId, holderId);
-    await syncFdbLimitToPgOccupancy(teamId);
-  }
-}
-
+// Router-owned durable holder pins survive rollout flag changes and remove the
+// old convention that an in-memory backend choice was sufficient authority.
 async function mirrorSlotAcquire(
   teamId: string,
   holderId: string,
   state: MirrorState,
 ): Promise<void> {
-  // Pin the mirror ledger for the holder's lifetime. A transient FDB health
-  // failure or rollout-flag change must not move one holder between ledgers
-  // and double-count (or later release) both.
-  const backend = state.backend ?? (await resolveMirrorBackend(teamId));
-  state.backend = backend;
-  await withTeamMigrationAdmission(teamId, async () => {
-    if (backend === "fdb") {
-      await externalSlotsFdb.acquire(teamId, holderId, 60 * 1000);
-    } else {
-      await pushConcurrencyLimitActiveJob(teamId, holderId, 60 * 1000);
-      await syncFdbLimitToPgOccupancy(teamId);
-    }
-  });
+  await mirrorExternalSlotAcquire(teamId, holderId, 60 * 1000);
+  state.acquired = true;
 }
 
 async function mirrorSlotRelease(
@@ -251,12 +216,9 @@ async function mirrorSlotRelease(
   holderId: string,
   state: MirrorState,
 ): Promise<void> {
-  const backend = state.backend;
-  if (!backend) return;
-  await withTeamMigrationAdmission(teamId, async () =>
-    releaseMirrorBackend(teamId, holderId, backend),
-  );
-  state.backend = undefined;
+  if (!state.acquired) return;
+  await mirrorExternalSlotRelease(teamId, holderId);
+  state.acquired = false;
 }
 
 async function withSemaphore<T>(
@@ -284,7 +246,7 @@ async function withSemaphore<T>(
   });
 
   const endTimer = semaphoreHoldDuration.startTimer();
-  const mirrorState: MirrorState = {};
+  const mirrorState: MirrorState = { acquired: false };
   let hb: ReturnType<typeof startHeartbeat> | null = null;
 
   activeSemaphores.inc();

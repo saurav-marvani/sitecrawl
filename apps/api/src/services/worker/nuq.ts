@@ -7,6 +7,7 @@ import amqp from "amqplib";
 import { normalizeOwnerId } from "../../lib/owner-id";
 import { config } from "../../config";
 import { nuqRedis } from "./redis";
+import { retireNuQPgObject } from "./nuq-pg-publication";
 
 // === Basics
 
@@ -1597,6 +1598,22 @@ class NuQ<JobData = any, JobReturnValue = any> {
           "nuq.job_finished": success,
         });
 
+        if (
+          this.queueName === "scrape" ||
+          this.queueName === "crawl_finished"
+        ) {
+          const terminal =
+            success ||
+            ["completed", "failed"].includes(
+              (await this.getJob(id, _logger))?.status ?? "",
+            );
+          if (terminal) {
+            await retireNuQPgObject(
+              this.queueName === "scrape" ? "scrape_job" : "crawl_finished",
+              id,
+            );
+          }
+        }
         return success;
       } finally {
         const duration = Date.now() - start;
@@ -1655,6 +1672,22 @@ class NuQ<JobData = any, JobReturnValue = any> {
           "nuq.job_failed": success,
         });
 
+        if (
+          this.queueName === "scrape" ||
+          this.queueName === "crawl_finished"
+        ) {
+          const terminal =
+            success ||
+            ["completed", "failed"].includes(
+              (await this.getJob(id, _logger))?.status ?? "",
+            );
+          if (terminal) {
+            await retireNuQPgObject(
+              this.queueName === "scrape" ? "scrape_job" : "crawl_finished",
+              id,
+            );
+          }
+        }
         return success;
       } finally {
         const duration = Date.now() - start;

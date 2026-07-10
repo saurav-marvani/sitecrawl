@@ -289,6 +289,47 @@ describeIf("NuQ global FDB migration control plane", () => {
     });
   });
 
+  test("legacy objects require explicit backend and generation backfill", async () => {
+    const teamId = team();
+    const groupId = object("group");
+    const childId = object();
+    await initialize(teamId);
+    await begin(teamId);
+
+    await expect(
+      store.preparePinnedObject({
+        teamId,
+        kind: "group",
+        objectId: groupId,
+        admission: { type: "legacy-backfill", backend: "fdb", generation: 1 },
+      }),
+    ).rejects.toMatchObject({ code: "NUQ_MIGRATION_STALE_GENERATION" });
+
+    const group = await store.preparePinnedObject({
+      teamId,
+      kind: "group",
+      objectId: groupId,
+      admission: { type: "legacy-backfill", backend: "pg", generation: 1 },
+      residue: { control_groups: 1 },
+    });
+    expect(group).toMatchObject({
+      admission: "legacy-backfill",
+      backend: "pg",
+      generation: 1,
+    });
+    await expect(
+      store.preparePinnedObject({
+        teamId,
+        kind: "scrape_job",
+        objectId: childId,
+        admission: {
+          type: "pinned-continuation",
+          source: { kind: "group", objectId: groupId },
+        },
+      }),
+    ).resolves.toMatchObject({ backend: "pg", generation: 1 });
+  });
+
   test("a concurrent residue increment and final seal cannot both win", async () => {
     const teamId = team();
     const pinId = object();
