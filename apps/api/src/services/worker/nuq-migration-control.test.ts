@@ -324,6 +324,51 @@ describe("authoritative backend resolution", () => {
     ).rejects.toMatchObject({ code: "NUQ_ROUTER_BOTH_BACKENDS_PRESENT" });
   });
 
+  test("a live pin with no backend object is unresolved, never silently routed", async () => {
+    await expect(
+      resolveAuthoritativeObjectBackend({
+        ...base,
+        marker: "pg",
+        readPin: vi.fn().mockResolvedValue(
+          pin("job", {
+            lifecycle: "active",
+            residue: { ...pin("job").residue, capacity_ready_active: 1 },
+          }),
+        ),
+      }),
+    ).rejects.toMatchObject({
+      code: "NUQ_ROUTER_LIVE_PIN_OBJECT_MISSING",
+      retryable: true,
+    });
+  });
+
+  test("a terminal tombstone remains authoritative after object retention", async () => {
+    await expect(
+      resolveAuthoritativeObjectBackend({
+        ...base,
+        marker: null,
+        readPin: vi.fn().mockResolvedValue(
+          pin("job", {
+            lifecycle: "terminal",
+            residue: { ...pin("job").residue, intent_unresolved: 0 },
+          }),
+        ),
+      }),
+    ).resolves.toBe("pg");
+  });
+
+  test("a stale valid marker is cleared and fails deterministically", async () => {
+    const repairMarker = vi.fn();
+    await expect(
+      resolveAuthoritativeObjectBackend({
+        ...base,
+        marker: "fdb",
+        repairMarker,
+      }),
+    ).rejects.toMatchObject({ code: "NUQ_ROUTER_STALE_BACKEND_MARKER" });
+    expect(repairMarker).toHaveBeenCalledWith(null);
+  });
+
   test("corrupt marker without an authoritative record is deterministic", async () => {
     await expect(
       resolveAuthoritativeObjectBackend({ ...base, marker: "corrupt" }),

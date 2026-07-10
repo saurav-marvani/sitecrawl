@@ -126,6 +126,25 @@ export class NuQRouterPinMismatchError extends NuQRouterError {
   }
 }
 
+export class NuQRouterLivePinMissingError extends NuQRouterError {
+  constructor(kind: string, objectId: string, lifecycle: string) {
+    super(
+      "NUQ_ROUTER_LIVE_PIN_OBJECT_MISSING",
+      `${kind}/${objectId} has a ${lifecycle} durable pin but no backend object`,
+      true,
+    );
+  }
+}
+
+export class NuQRouterStaleMarkerError extends NuQRouterError {
+  constructor(kind: string, objectId: string, marker: MigrationBackend) {
+    super(
+      "NUQ_ROUTER_STALE_BACKEND_MARKER",
+      `${kind}/${objectId} has a stale ${marker} marker and no durable record`,
+    );
+  }
+}
+
 export class NuQRouterObjectNotFoundError extends NuQRouterError {
   constructor(kind: string, objectId: string) {
     super("NUQ_ROUTER_OBJECT_NOT_FOUND", `${kind}/${objectId} was not found`);
@@ -257,7 +276,7 @@ export async function resolveAuthoritativeObjectBackend(input: {
   readPin: () => Promise<MigrationObjectPin | null>;
   probeFdb: () => Promise<boolean>;
   probePg: () => Promise<boolean>;
-  repairMarker?: (backend: MigrationBackend) => Promise<void> | void;
+  repairMarker?: (backend: MigrationBackend | null) => Promise<void> | void;
 }): Promise<MigrationBackend | null> {
   const { kind, objectId } = input;
   let pin: MigrationObjectPin | null;
@@ -281,19 +300,39 @@ export async function resolveAuthoritativeObjectBackend(input: {
   if (pin && actual && pin.backend !== actual) {
     throw new NuQRouterPinMismatchError(kind, objectId, pin.backend, actual);
   }
-  const backend = actual ?? pin?.backend ?? null;
-  if (backend) {
-    if (input.marker !== backend) {
+  if (actual) {
+    if (input.marker !== actual) {
       try {
-        await input.repairMarker?.(backend);
+        await input.repairMarker?.(actual);
       } catch {
         // A Redis hint repair is never part of the authoritative decision.
       }
     }
-    return backend;
+    return actual;
+  }
+  if (pin) {
+    if (pin.lifecycle !== "terminal") {
+      throw new NuQRouterLivePinMissingError(kind, objectId, pin.lifecycle);
+    }
+    if (input.marker !== pin.backend) {
+      try {
+        await input.repairMarker?.(pin.backend);
+      } catch {
+        // The terminal tombstone remains authoritative without its hint.
+      }
+    }
+    return pin.backend;
   }
   if (input.marker === "corrupt") {
     throw new NuQRouterCorruptMarkerError(kind, objectId);
+  }
+  if (input.marker) {
+    try {
+      await input.repairMarker?.(null);
+    } catch {
+      // Still return the deterministic stale-marker error.
+    }
+    throw new NuQRouterStaleMarkerError(kind, objectId, input.marker);
   }
   return null;
 }

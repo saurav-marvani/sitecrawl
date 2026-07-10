@@ -301,6 +301,14 @@ async function markBackend(key: string, backend: QueueBackend): Promise<void> {
   await redisEvictConnection.set(key, backend, "EX", 30 * 24 * 60 * 60);
 }
 
+async function repairBackendMarker(
+  key: string,
+  backend: QueueBackend | null,
+): Promise<void> {
+  if (backend) await markBackend(key, backend);
+  else await redisEvictConnection.del(key);
+}
+
 async function markJobBackend(
   jobId: string,
   backend: QueueBackend,
@@ -360,7 +368,8 @@ async function getCrawlQueueBackend(
         async () => (await crawlGroupFdb.getGroup(crawlId)) !== null,
       ),
     probePg: async () => (await crawlGroupPg.getGroup(crawlId)) !== null,
-    repairMarker: backend => markBackend(groupBackendKey(crawlId), backend),
+    repairMarker: backend =>
+      repairBackendMarker(groupBackendKey(crawlId), backend),
   });
   if (
     backend === "pg" &&
@@ -442,7 +451,7 @@ async function getJobQueueBackend(
     probeFdb: () =>
       optionalFdbRead(probes.hasFdbJob ?? (() => scrapeQueueFdb.hasJob(jobId))),
     probePg: probes.hasPgJob ?? (() => pgHasScrapeJob(jobId)),
-    repairMarker: backend => markJobBackend(jobId, backend),
+    repairMarker: backend => repairBackendMarker(jobBackendKey(jobId), backend),
   });
 }
 
