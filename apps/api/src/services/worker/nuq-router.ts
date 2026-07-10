@@ -44,6 +44,7 @@ import type { QueueOperationOptions } from "./nuq-worker-runtime";
 import {
   DurableNuQPgPublicationAdapter,
   NuQRouterBothBackendsError,
+  NuQRouterError,
   NuQRouterObjectNotFoundError,
   NuQRouterPinMismatchError,
   discoverLegacyTeamBackend,
@@ -140,6 +141,22 @@ async function hasAuthoritativeFdbTeamResidue(
   });
 }
 
+async function requireFdbCoreMetricReadiness(): Promise<void> {
+  const [scrape, crawlFinished] = await optionalFdbRead(() =>
+    Promise.all([
+      scrapeQueueFdb.getMetricCounterBackfillStatus(),
+      crawlFinishedQueueFdb.getMetricCounterBackfillStatus(),
+    ]),
+  );
+  if (scrape?.phase !== "ready" || crawlFinished?.phase !== "ready") {
+    throw new NuQRouterError(
+      "NUQ_FDB_CORE_METRICS_NOT_READY",
+      "NuQ FDB migration is frozen until scrape and crawl_finished metric counters are ready",
+      true,
+    );
+  }
+}
+
 async function discoverLegacyTeamAuthority(
   teamId: string,
 ): Promise<QueueBackend> {
@@ -217,6 +234,9 @@ async function authoritativeTeamBackend(teamId: string): Promise<QueueBackend> {
     nuqFdbMigrationStore.inspectState(teamId),
   );
   if (!current) {
+    // Authority discovery must not trust indexes that can still be written by
+    // a pre-protocol binary. Core readiness is the release-B deployment fence.
+    await requireFdbCoreMetricReadiness();
     current = await fdbMutation(() =>
       recoverLegacyTeamState(nuqFdbMigrationStore, teamId, () =>
         discoverLegacyTeamAuthority(teamId),
@@ -225,6 +245,14 @@ async function authoritativeTeamBackend(teamId: string): Promise<QueueBackend> {
     // Discovery may have lost an initialize-if-absent race. Trust the durable
     // winner exactly as returned; desired begin/cancel is a subsequent request.
     return current.activeBackend;
+  }
+
+  const advancingRequestedTransition =
+    ((current.phase === "PG_ONLY" || current.phase === "FDB_ONLY") &&
+      current.activeBackend !== desired) ||
+    current.targetBackend === desired;
+  if (advancingRequestedTransition) {
+    await requireFdbCoreMetricReadiness();
   }
 
   // Before pausing PG admissions, snapshot authoritative legacy PG residue
@@ -272,7 +300,20 @@ async function authoritativeTeamBackend(teamId: string): Promise<QueueBackend> {
     );
   }
 
-  if (current?.activeBackend === desired && current.phase !== "ERROR") {
+  if (
+    current.targetBackend === desired &&
+    current.transitionOperationId !== undefined
+  ) {
+    current = await fdbMutation(() =>
+      nuqFdbMigrationStore.finalSeal({
+        teamId,
+        transitionOperationId: current!.transitionOperationId!,
+        expectedRevision: current!.revision,
+      }),
+    );
+  }
+
+  if (current.activeBackend === desired && current.phase !== "ERROR") {
     if (current.phase === "PG_ONLY" || current.phase === "FDB_ONLY") {
       return current.activeBackend;
     }
