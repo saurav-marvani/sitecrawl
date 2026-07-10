@@ -187,7 +187,7 @@ async function withSemaphore<T>(
   limit: number,
   signal: AbortSignal,
   timeoutMs: number,
-  func: (limited: boolean) => Promise<T>,
+  func: (limited: boolean, signal: AbortSignal) => Promise<T>,
 ): Promise<T> {
   // Bypass concurrency limits for self-hosted deployments
   if (isSelfHosted()) {
@@ -195,7 +195,7 @@ async function withSemaphore<T>(
       teamId,
       jobId: holderId,
     });
-    return await func(false);
+    return await func(false, signal);
   }
 
   // Reserve the backend-specific ledger shared with queue jobs. The legacy
@@ -215,15 +215,32 @@ async function withSemaphore<T>(
 
   const endTimer = semaphoreHoldDuration.startTimer();
   const mirrorState: MirrorState = { acquired: true };
+  const protection = new AbortController();
+  const abortProtection = () => protection.abort(signal.reason);
+  signal.addEventListener("abort", abortProtection, { once: true });
+  if (signal.aborted) abortProtection();
   let hb: ReturnType<typeof startHeartbeat> | null = null;
 
   activeSemaphores.inc();
   try {
     hb = startHeartbeat(teamId, holderId, SEMAPHORE_TTL / 2, mirrorState);
-
-    const result = await Promise.race([func(limited), hb.promise]);
-    return result;
+    const protectedWork = Promise.resolve().then(() =>
+      func(limited, protection.signal),
+    );
+    return await Promise.race([
+      protectedWork,
+      hb.promise.catch(async error => {
+        // Ownership loss is a cancellation boundary, not merely a competing
+        // rejected promise. Abort the callback and wait for its abort-aware
+        // cleanup before releasing the authoritative holder.
+        protection.abort(error);
+        await protectedWork.catch(() => undefined);
+        throw error;
+      }),
+    ]);
   } finally {
+    protection.abort();
+    signal.removeEventListener("abort", abortProtection);
     await hb?.stop();
 
     await mirrorSlotRelease(teamId, holderId, mirrorState).catch(() => {

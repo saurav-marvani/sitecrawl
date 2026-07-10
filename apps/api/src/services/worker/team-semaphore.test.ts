@@ -62,16 +62,34 @@ describe("team semaphore authoritative routed capacity", () => {
     controls.reserveResults = [true];
     controls.renewResult = renewalError;
 
+    let callbackAborted = false;
+    let sideEffectAfterAbort = false;
     const work = teamConcurrencySemaphore.withSemaphore(
       "team",
       "holder",
       1,
       new AbortController().signal,
       1_000,
-      async () => await new Promise<never>(() => {}),
+      async (_limited, signal) =>
+        await new Promise<never>((_resolve, reject) => {
+          signal.addEventListener(
+            "abort",
+            () => {
+              callbackAborted = true;
+              queueMicrotask(() => {
+                if (!signal.aborted) sideEffectAfterAbort = true;
+              });
+              reject(signal.reason);
+            },
+            { once: true },
+          );
+        }),
     );
 
     await expect(work).rejects.toBe(renewalError);
+    await Promise.resolve();
+    expect(callbackAborted).toBe(true);
+    expect(sideEffectAfterAbort).toBe(false);
     expect(controls.reserve).toHaveBeenCalledTimes(1);
     expect(controls.renew).toHaveBeenCalledTimes(1);
     expect(controls.release).toHaveBeenCalledWith("team", "holder");

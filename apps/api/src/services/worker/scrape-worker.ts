@@ -268,7 +268,17 @@ function billThreatBlockedDiscoveries(
   });
 }
 
-async function processJob(job: NuQJob<ScrapeJobSingleUrls>) {
+function throwIfProtectionAborted(signal?: AbortSignal): void {
+  if (!signal?.aborted) return;
+  throw signal.reason instanceof Error
+    ? signal.reason
+    : new ScrapeJobTimeoutError();
+}
+
+async function processJob(
+  job: NuQJob<ScrapeJobSingleUrls>,
+  protectionSignal?: AbortSignal,
+) {
   const logger = _logger.child({
     module: "queue-worker",
     method: "processJob",
@@ -302,6 +312,7 @@ async function processJob(job: NuQJob<ScrapeJobSingleUrls>) {
   let pipeline: ScrapeUrlResponse | null = null;
 
   try {
+    throwIfProtectionAborted(protectionSignal);
     if (remainingTime !== undefined && remainingTime < 0) {
       throw new ScrapeJobTimeoutError();
     }
@@ -319,6 +330,7 @@ async function processJob(job: NuQJob<ScrapeJobSingleUrls>) {
         startWebScraperPipeline({
           job,
           costTracking,
+          signal: protectionSignal,
         }),
         ...(remainingTime !== undefined
           ? [
@@ -338,6 +350,7 @@ async function processJob(job: NuQJob<ScrapeJobSingleUrls>) {
       }
     }
 
+    throwIfProtectionAborted(protectionSignal);
     try {
       signal?.throwIfAborted();
     } catch (e) {
@@ -388,6 +401,8 @@ async function processJob(job: NuQJob<ScrapeJobSingleUrls>) {
       document: doc,
     };
 
+    throwIfProtectionAborted(protectionSignal);
+
     // Ensure the parent `requests` row is committed before any child
     // `scrapes`/`parses` insert, to avoid a request_id FK violation. Runs on
     // both the crawl and single-scrape paths; only single scrapes actually
@@ -403,6 +418,7 @@ async function processJob(job: NuQJob<ScrapeJobSingleUrls>) {
       }
     }
 
+    throwIfProtectionAborted(protectionSignal);
     if (job.data.crawl_id) {
       const sc = (await getCrawl(job.data.crawl_id)) as StoredCrawl;
 
@@ -824,9 +840,13 @@ async function processJob(job: NuQJob<ScrapeJobSingleUrls>) {
       }
     }
 
+    throwIfProtectionAborted(protectionSignal);
     logger.info(`🐂 Job done ${job.id}`);
     return data;
   } catch (error) {
+    // A lost capacity/lease owner must not publish failure side effects after
+    // its protection boundary has been revoked.
+    throwIfProtectionAborted(protectionSignal);
     // Record top-level robots.txt rejections so crawl status can warn
     try {
       if (
@@ -1505,7 +1525,10 @@ async function processKickoffSitemapJob(job: NuQJob<ScrapeJobKickoffSitemap>) {
   }
 }
 
-export const processJobInternal = async (job: NuQJob<ScrapeJobData>) => {
+export const processJobInternal = async (
+  job: NuQJob<ScrapeJobData>,
+  protectionSignal?: AbortSignal,
+) => {
   const logger = _logger.child({
     module: "queue-worker",
     method: "processJobInternal",
@@ -1527,15 +1550,19 @@ export const processJobInternal = async (job: NuQJob<ScrapeJobData>) => {
           "worker.url": job.data.mode === "single_urls" ? job.data.url : "n/a",
         });
 
-        return processJobWithTracing(job, logger);
+        return processJobWithTracing(job, logger, protectionSignal);
       }),
     );
   } else {
-    return processJobWithTracing(job, logger);
+    return processJobWithTracing(job, logger, protectionSignal);
   }
 };
 
-async function processJobWithTracing(job: NuQJob<ScrapeJobData>, logger: any) {
+async function processJobWithTracing(
+  job: NuQJob<ScrapeJobData>,
+  logger: any,
+  protectionSignal?: AbortSignal,
+) {
   // FDB-backed jobs hold their concurrency slot through the queue lease; the
   // Redis slot mirror and promotion-on-done below are PG-backend machinery
   const isFdbJob = (job as any).backend === "fdb";
@@ -1603,7 +1630,10 @@ async function processJobWithTracing(job: NuQJob<ScrapeJobData>, logger: any) {
             throw (result as any).error;
           }
         } else {
-          const result = await processJob(job as NuQJob<ScrapeJobSingleUrls>);
+          const result = await processJob(
+            job as NuQJob<ScrapeJobSingleUrls>,
+            protectionSignal,
+          );
           if (result.success) {
             try {
               if (job.data.team_id) {
