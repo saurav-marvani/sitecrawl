@@ -165,6 +165,7 @@ export class NuqFdbSweeper {
   public async sweepOnce(logger: Logger = _logger): Promise<void> {
     const now = Date.now();
     for (const queue of this.queues) {
+      await queue.backfillMetricCounts();
       await this.sweepLeases(queue, now, logger);
       await this.sweepBacklogTimeouts(queue, now, logger);
       await this.sweepDelayed(queue, now, logger);
@@ -252,8 +253,8 @@ export class NuqFdbSweeper {
             // requeue directly to ready -- the job retains its slots
             pushReady(tn, ks, entry, txc);
             setStatusQueued(tn, ks, id, st.st + 1);
-            bumpQueueStatus(tn, ks, id, "active", -1);
-            bumpQueueStatus(tn, ks, id, "queued", 1);
+            await bumpQueueStatus(tn, ks, id, "active", -1);
+            await bumpQueueStatus(tn, ks, id, "queued", 1);
             if (meta.g && meta.f & F_COUNTABLE) {
               bumpGroupStatusCount(tn, ks, meta.g, "active", -1);
               bumpGroupStatusCount(tn, ks, meta.g, "queued", 1);
@@ -271,7 +272,7 @@ export class NuqFdbSweeper {
               ks.jobFailedReason(id),
               Buffer.from(STALL_FAILED_REASON, "utf8"),
             );
-            bumpQueueStatus(tn, ks, id, "active", -1);
+            await bumpQueueStatus(tn, ks, id, "active", -1);
             if (meta.g && meta.f & F_GACC && queue.groupOps) {
               await queue.groupOps.terminalAccounting(
                 tn,
@@ -338,7 +339,7 @@ export class NuqFdbSweeper {
           if (!st || st.s !== "pending" || !st.loc) return;
           const meta = decodeJson<JobMeta>(await tn.get(ks.jobMeta(id)));
           if (!meta) return;
-          bumpQueueStatus(tn, ks, id, "pending", -1);
+          await bumpQueueStatus(tn, ks, id, "pending", -1);
           clearPendingPlacement(
             tn,
             ks,
@@ -563,7 +564,7 @@ export class NuqFdbSweeper {
             if (!st || st.s !== "pending" || !st.loc) continue;
             const meta = decodeJson<JobMeta>(await tn.get(ks.jobMeta(id)));
             if (!meta) continue;
-            bumpQueueStatus(tn, ks, id, "pending", -1);
+            await bumpQueueStatus(tn, ks, id, "pending", -1);
             clearPendingPlacement(
               tn,
               ks,
@@ -629,7 +630,7 @@ export class NuqFdbSweeper {
         while (free > 0) {
           const e = await popTeamPending(tn, ks, tid);
           if (!e) break;
-          promoteEntryToReady(tn, ks, e, txc);
+          await promoteEntryToReady(tn, ks, e, txc);
           promoted++;
           free--;
         }
@@ -740,7 +741,7 @@ export class NuqFdbSweeper {
               status?.s === "active" ||
               status?.s === "pending"
             ) {
-              bumpQueueStatus(tn, ks, id, status.s, -1);
+              await bumpQueueStatus(tn, ks, id, status.s, -1);
             }
             deleteJobRecords(tn, ks, id);
             tn.clear(mKey as Buffer);
@@ -764,7 +765,7 @@ export class NuqFdbSweeper {
             status?.s === "active" ||
             status?.s === "pending"
           ) {
-            bumpQueueStatus(tn, finishedKs, fid, status.s, -1);
+            await bumpQueueStatus(tn, finishedKs, fid, status.s, -1);
           }
           deleteJobRecords(tn, finishedKs, fid);
         }

@@ -443,6 +443,8 @@ export class NuQFdbQueue<JobData = any, JobReturnValue = any> {
       encodedJsonBytes(meta) +
       ks.jobStatus(job.id).length +
       encodedJsonBytes({ s: "pending", st: 0 }) +
+      ks.jobMetricTracked(job.id).length +
+      1 +
       ks.readyPrefix(READY_SHARDS - 1, priority).length +
       encodedJsonBytes(entry) +
       ks.readyShardCount(READY_SHARDS - 1).length +
@@ -515,6 +517,16 @@ export class NuQFdbQueue<JobData = any, JobReturnValue = any> {
     const ks = this.ks;
     await this.db.doTn(async tn => {
       if (await tn.get(ks.ingest(op))) return;
+      if (
+        !(await tn.get(ks.metricBackfillDone())) &&
+        !(await tn.get(ks.metricBackfillCursor()))
+      ) {
+        const jobs = ks.jobRootRange();
+        const existing = await tn.getRangeAll(jobs.begin, jobs.end, {
+          limit: 1,
+        });
+        if (existing.length === 0) tn.set(ks.metricBackfillDone(), EMPTY);
+      }
       const createdAt = Date.now();
       const meta: IngestMeta = {
         o: ownerId ?? "",
@@ -803,6 +815,7 @@ export class NuQFdbQueue<JobData = any, JobReturnValue = any> {
           dc: j.dataChunks.length,
         };
         tn.set(ks.jobMeta(j.id), encodeJson(meta));
+        tn.set(ks.jobMetricTracked(j.id), EMPTY);
 
         let placedStatus: NuqFdbJobStatus;
         if (!gated) {
@@ -844,7 +857,7 @@ export class NuQFdbQueue<JobData = any, JobReturnValue = any> {
           }
         }
 
-        bumpQueueStatus(
+        await bumpQueueStatus(
           tn,
           ks,
           j.id,
@@ -1166,7 +1179,7 @@ export class NuQFdbQueue<JobData = any, JobReturnValue = any> {
               tn.set(ks.taskGroupFinish(e.g), EMPTY);
             }
           }
-          bumpQueueStatus(tn, ks, e.i, "queued", -1);
+          await bumpQueueStatus(tn, ks, e.i, "queued", -1);
           deleteJobRecords(tn, ks, e.i);
           await releaseSlotsAndPromote(
             tn,
@@ -1184,7 +1197,7 @@ export class NuQFdbQueue<JobData = any, JobReturnValue = any> {
         await tn.snapshot().get(ks.jobMeta(e.i)),
       );
       if (!meta) {
-        bumpQueueStatus(tn, ks, e.i, "queued", -1);
+        await bumpQueueStatus(tn, ks, e.i, "queued", -1);
         return "dropped";
       }
       const dataRange = ks.jobDataRange(e.i);
@@ -1205,8 +1218,8 @@ export class NuQFdbQueue<JobData = any, JobReturnValue = any> {
         encodeJson({ i: e.i, l: lock, e: exp } satisfies ClaimRecord),
       );
       tn.set(ks.claimExpiry(exp, op), EMPTY);
-      bumpQueueStatus(tn, ks, e.i, "queued", -1);
-      bumpQueueStatus(tn, ks, e.i, "active", 1);
+      await bumpQueueStatus(tn, ks, e.i, "queued", -1);
+      await bumpQueueStatus(tn, ks, e.i, "active", 1);
       if (e.g && e.f & F_COUNTABLE) {
         bumpGroupStatusCount(tn, ks, e.g, "queued", -1);
         bumpGroupStatusCount(tn, ks, e.g, "active", 1);
@@ -1385,7 +1398,7 @@ export class NuQFdbQueue<JobData = any, JobReturnValue = any> {
         );
       }
 
-      bumpQueueStatus(tn, ks, id, "active", -1);
+      await bumpQueueStatus(tn, ks, id, "active", -1);
 
       // Shed job input data early on cloud (results live in GCS) and always for
       // ZDR. Group members are exempt on the plain cloud path: the crawl-finish
@@ -1589,7 +1602,7 @@ export class NuQFdbQueue<JobData = any, JobReturnValue = any> {
       const accounted = !!(meta.f & F_GACC) && !!meta.g && !!this.groupOps;
 
       if (st.s === "pending") {
-        bumpQueueStatus(tn, ks, id, "pending", -1);
+        await bumpQueueStatus(tn, ks, id, "pending", -1);
         clearPendingPlacement(
           tn,
           ks,
@@ -1620,7 +1633,7 @@ export class NuQFdbQueue<JobData = any, JobReturnValue = any> {
         }
         deleteJobRecords(tn, ks, id);
       } else if (st.s === "queued" || st.s === "active") {
-        bumpQueueStatus(tn, ks, id, st.s, -1);
+        await bumpQueueStatus(tn, ks, id, st.s, -1);
         tn.set(
           ks.jobStatus(id),
           encodeJson({ s: "cancelled", st: st.st } satisfies JobStatusRecord),
@@ -1909,6 +1922,53 @@ export class NuQFdbQueue<JobData = any, JobReturnValue = any> {
     );
   }
 
+  // Enrolls one bounded page of jobs created before maintained counters were
+  // introduced. A per-job marker and normal status reads make this conflict
+  // safely with concurrent transitions. Metrics stay unavailable until the
+  // durable cursor reaches the end, rather than reporting partial counts.
+  public async backfillMetricCounts(batchSize = 100): Promise<boolean> {
+    const ks = this.ks;
+    return await this.db.doTn(async tn => {
+      if (await tn.get(ks.metricBackfillDone())) return true;
+      const range = ks.jobRootRange();
+      const cursor = await tn.get(ks.metricBackfillCursor());
+      const begin = cursor
+        ? Buffer.concat([cursor as Buffer, Buffer.from([0])])
+        : range.begin;
+      const rows = await tn.getRangeAll(begin, range.end, {
+        limit: Math.max(1, batchSize),
+      });
+
+      for (const [key, value] of rows) {
+        const parts = ks.unpack(key as Buffer);
+        if (parts[4] !== "m" || typeof parts[3] !== "string") continue;
+        const id = parts[3];
+        if (await tn.get(ks.jobMetricTracked(id))) continue;
+        const meta = decodeJson<JobMeta>(value as Buffer);
+        const status = decodeJson<JobStatusRecord>(
+          await tn.get(ks.jobStatus(id)),
+        );
+        if (!meta || !status) continue;
+        tn.set(ks.jobMetricTracked(id), EMPTY);
+        if (
+          status.s === "pending" ||
+          status.s === "queued" ||
+          status.s === "active"
+        ) {
+          await bumpQueueStatus(tn, ks, id, status.s, 1);
+        }
+      }
+
+      if (rows.length < Math.max(1, batchSize)) {
+        tn.clear(ks.metricBackfillCursor());
+        tn.set(ks.metricBackfillDone(), EMPTY);
+        return true;
+      }
+      tn.set(ks.metricBackfillCursor(), rows[rows.length - 1][0] as Buffer);
+      return false;
+    });
+  }
+
   public async getWorkerLoadCount(): Promise<number> {
     const counts = await this.getMetricCounts();
     return counts.queued + counts.active;
@@ -1918,18 +1978,24 @@ export class NuQFdbQueue<JobData = any, JobReturnValue = any> {
     const ks = this.ks;
     return await this.db.doTn(async tn => {
       const internal = ["queued", "active", "pending"] as const;
-      // Read only the fixed-width maintained counter set. Point reads make the
-      // scrape footprint exactly statuses * METRIC_SHARDS regardless of jobs,
-      // teams, leases, ready entries, or unexpected keys in these prefixes.
-      const rows = await Promise.all(
-        internal.map(status =>
-          Promise.all(
-            Array.from({ length: METRIC_SHARDS }, (_, shard) =>
-              tn.snapshot().get(ks.metricCount(status, shard)),
+      // Read only the fixed-width maintained counter set plus its readiness
+      // marker. The scrape footprint is independent of jobs, teams, leases,
+      // ready entries, and unexpected keys in these prefixes.
+      const [ready, rows] = await Promise.all([
+        tn.snapshot().get(ks.metricBackfillDone()),
+        Promise.all(
+          internal.map(status =>
+            Promise.all(
+              Array.from({ length: METRIC_SHARDS }, (_, shard) =>
+                tn.snapshot().get(ks.metricCount(status, shard)),
+              ),
             ),
           ),
         ),
-      );
+      ]);
+      if (!ready) {
+        throw new Error("NuQ FDB metrics are initializing");
+      }
       const totals = rows.map(statusRows =>
         statusRows.reduce((sum, value) => sum + decodeI64(value), 0),
       );

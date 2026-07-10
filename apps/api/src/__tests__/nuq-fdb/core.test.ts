@@ -447,6 +447,54 @@ describeIf("NuQ FDB core", () => {
     );
   });
 
+  test("metric backfill enrolls legacy jobs without negative transition debt", async () => {
+    const { queue } = await makeCtx("metric-backfill");
+    const owner = freshOwner();
+    const ids = [randomUUID(), randomUUID(), randomUUID()];
+    await queue.addJobs(
+      ids.map(id => ({
+        id,
+        data: scrapeData(),
+        options: { ownerId: owner },
+      })),
+      gate(1),
+    );
+    const [active] = await takeAll(queue, 1);
+
+    await getNuqFdbDatabase().doTn(async tn => {
+      tn.clear(queue.ks.metricBackfillDone());
+      tn.clear(queue.ks.metricBackfillCursor());
+      for (const id of ids) tn.clear(queue.ks.jobMetricTracked(id));
+      for (const status of ["queued", "active", "pending"]) {
+        const range = queue.ks.metricStatusRange(status);
+        tn.clearRange(range.begin, range.end);
+      }
+    });
+    await expect(queue.getMetrics()).rejects.toThrow(
+      "NuQ FDB metrics are initializing",
+    );
+
+    // This legacy transition happens before enrollment. It must not subtract
+    // from empty counters; the backfill observes the post-transition states.
+    await queue.jobFinish(active.id, active.lock!, null);
+
+    let initialized = false;
+    for (let page = 0; page < 100 && !initialized; page++) {
+      initialized = await queue.backfillMetricCounts(5);
+    }
+    expect(initialized).toBe(true);
+    const metrics = await queue.getMetrics();
+    expect(metrics).toContain(
+      `nuq_fdb_queue_t_${RUN}_metric_backfill_job_count{status="queued"} 1`,
+    );
+    expect(metrics).toContain(
+      `nuq_fdb_queue_t_${RUN}_metric_backfill_job_count{status="active"} 0`,
+    );
+    expect(metrics).toContain(
+      `nuq_fdb_queue_t_${RUN}_metric_backfill_job_count{status="backlog"} 1`,
+    );
+  });
+
   test("promotion respects priority order", async () => {
     const { queue } = await makeCtx("priority");
     const owner = freshOwner();

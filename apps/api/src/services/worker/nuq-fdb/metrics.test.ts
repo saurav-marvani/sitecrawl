@@ -29,8 +29,12 @@ describe("NuQ FDB metrics", () => {
   test("queue output has an exact fixed-width read footprint", async () => {
     const queue = new NuQFdbQueue("scrape", { hasGroups: false });
     let queueCardinality = 1;
+    let initialized = true;
     const get = vi.fn(async (key: Buffer) => {
       const [, , family, status, shard] = queue.ks.unpack(key);
+      if (family === "mn-backfill" && status === "done") {
+        return initialized ? Buffer.alloc(0) : undefined;
+      }
       if (family !== "mn" || shard !== 0) return undefined;
       if (status === "queued") return encodeI64(2);
       if (status === "active") return encodeI64(3);
@@ -53,7 +57,7 @@ describe("NuQ FDB metrics", () => {
     });
 
     expect(await queue.getMetrics()).toBe(SCRAPE_METRICS);
-    expect(get).toHaveBeenCalledTimes(3 * METRIC_SHARDS);
+    expect(get).toHaveBeenCalledTimes(3 * METRIC_SHARDS + 1);
     expect(getRangeAll).not.toHaveBeenCalled();
 
     get.mockClear();
@@ -61,7 +65,15 @@ describe("NuQ FDB metrics", () => {
     queueCardinality = 1_000_000;
 
     expect(await queue.getMetrics()).toBe(SCRAPE_METRICS);
-    expect(get).toHaveBeenCalledTimes(3 * METRIC_SHARDS);
+    expect(get).toHaveBeenCalledTimes(3 * METRIC_SHARDS + 1);
+    expect(getRangeAll).not.toHaveBeenCalled();
+
+    get.mockClear();
+    initialized = false;
+    await expect(queue.getMetrics()).rejects.toThrow(
+      "NuQ FDB metrics are initializing",
+    );
+    expect(get).toHaveBeenCalledTimes(3 * METRIC_SHARDS + 1);
     expect(getRangeAll).not.toHaveBeenCalled();
   });
 

@@ -56,13 +56,17 @@ export function setTeamActive(
   else tn.set(ks.teamActiveIndex(teamId), EMPTY);
 }
 
-export function bumpQueueStatus(
+export async function bumpQueueStatus(
   tn: Transaction,
   ks: NuqFdbKeyspace,
   id: string,
   status: "pending" | "queued" | "active",
   delta: 1 | -1,
-): void {
+): Promise<void> {
+  // Counters were introduced after the queue keyspace. Legacy jobs are
+  // enrolled by the durable sweeper backfill; until then their transitions
+  // must not create negative counter debt.
+  if (!(await tn.get(ks.jobMetricTracked(id)))) return;
   const shard = fnv1a(id) % METRIC_SHARDS;
   tn.add(ks.metricCount(status, shard), delta === 1 ? ONE : MINUS_ONE);
 }
@@ -179,16 +183,16 @@ export function clearBacklogTimeout(
 
 // Moves a pending entry into a ready shard, with group counter upkeep.
 // Callers are responsible for slot accounting.
-export function promoteEntryToReady(
+export async function promoteEntryToReady(
   tn: Transaction,
   ks: NuqFdbKeyspace,
   e: QueueEntry,
   txc: TxContext,
-): void {
+): Promise<void> {
   pushReady(tn, ks, e, txc);
   setStatusQueued(tn, ks, e.i);
-  bumpQueueStatus(tn, ks, e.i, "pending", -1);
-  bumpQueueStatus(tn, ks, e.i, "queued", 1);
+  await bumpQueueStatus(tn, ks, e.i, "pending", -1);
+  await bumpQueueStatus(tn, ks, e.i, "queued", 1);
   if (e.g && e.f & F_COUNTABLE) {
     tn.add(ks.groupStatusCount(e.g, "pending"), MINUS_ONE);
     tn.add(ks.groupStatusCount(e.g, "queued"), ONE);
@@ -411,7 +415,7 @@ export async function releaseSlotsAndPromote(
         keyHandedOff = true;
         // the key head now owns the freed key slot; it still needs a team slot
         if (teamSlotFree()) {
-          promoteEntryToReady(tn, ks, keyHead, txc);
+          await promoteEntryToReady(tn, ks, keyHead, txc);
           teamHead = "consumed";
         } else if (!held.team) {
           await admitThroughTeamGate(tn, ks, keyHead, txc);
@@ -474,7 +478,7 @@ export async function releaseSlotsAndPromote(
         setStatusPending(tn, ks, j2.i, loc);
       } else if (teamSlotFree()) {
         // the freed team slot goes directly to the crawl-promoted job
-        promoteEntryToReady(tn, ks, j2, txc);
+        await promoteEntryToReady(tn, ks, j2, txc);
         teamHead = "consumed";
       } else if (!held.team) {
         // no team slot was freed here (job removal/cancellation paths), so the
@@ -496,7 +500,7 @@ export async function releaseSlotsAndPromote(
     if (teamHead === "consumed") {
       // slot handed to the key head or crawlPromoted above
     } else if (teamHead !== null) {
-      promoteEntryToReady(tn, ks, teamHead, txc);
+      await promoteEntryToReady(tn, ks, teamHead, txc);
     } else {
       setTeamActive(tn, ks, tid, active - 1);
     }
@@ -518,7 +522,7 @@ export async function admitThroughTeamGate(
   const active = decodeI64(await tn.get(ks.teamActive(e.o)));
   if (active < limit) {
     bumpTeamActive(tn, ks, e.o, 1);
-    promoteEntryToReady(tn, ks, e, txc);
+    await promoteEntryToReady(tn, ks, e, txc);
   } else {
     const loc = appendTeamPending(tn, ks, e);
     setStatusPending(tn, ks, e.i, loc);

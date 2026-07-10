@@ -162,8 +162,14 @@ export class NuqFdbKeyspace {
   }
 
   // === Job records
+  jobRootRange() {
+    return this.packRange(["j"]);
+  }
   jobMeta(id: string): Buffer {
     return this.pack(["j", id, "m"]);
+  }
+  jobMetricTracked(id: string): Buffer {
+    return this.pack(["j", id, "mt"]);
   }
   jobStatus(id: string): Buffer {
     return this.pack(["j", id, "s"]);
@@ -366,6 +372,12 @@ export class NuqFdbKeyspace {
   }
   metricStatusRange(status: string) {
     return this.packRange(["mn", status]);
+  }
+  metricBackfillCursor(): Buffer {
+    return this.pack(["mn-backfill", "cursor"]);
+  }
+  metricBackfillDone(): Buffer {
+    return this.pack(["mn-backfill", "done"]);
   }
 
   // === Time-ordered indexes (sweeper-owned)
