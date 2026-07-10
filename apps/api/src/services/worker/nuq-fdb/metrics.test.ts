@@ -101,7 +101,10 @@ describe("NuQ FDB metrics", () => {
     await expect(queue.getMetrics()).rejects.toThrow(
       "NuQ FDB metrics are initializing",
     );
-    expect(get).toHaveBeenCalledTimes(1);
+    await expect(queue.getWorkerLoadCount()).rejects.toThrow(
+      "NuQ FDB metrics are initializing",
+    );
+    expect(get).toHaveBeenCalledTimes(2);
   });
 
   test("negative fixed counters surface corruption instead of being clamped", async () => {
@@ -137,20 +140,20 @@ describe("NuQ FDB metrics", () => {
     );
   });
 
-  test("release A preserves only legacy worker load while fixed counters build", async () => {
+  test("release A exposes only readiness while fixed counters build", async () => {
     vi.spyOn(scrapeQueueFdb, "getMetrics").mockRejectedValue(
       new NuqFdbMetricsInitializingError("initializing"),
     );
     vi.spyOn(crawlFinishedQueueFdb, "getMetrics").mockResolvedValue(
       CRAWL_FINISHED_METRICS,
     );
-    vi.spyOn(scrapeQueueFdb, "getWorkerLoadCount").mockResolvedValue(5);
-    vi.spyOn(scrapeQueueFdb, "getLegacyWorkerLoadCount").mockResolvedValue(5);
+    vi.spyOn(scrapeQueueFdb, "getWorkerLoadCount").mockRejectedValue(
+      new NuqFdbMetricsInitializingError("initializing"),
+    );
 
     const output = await nuqFdbGetMetrics();
-    expect(output).toBe(
-      `${READINESS}firecrawl_nuq_fdb_metrics_ready 0\n${WORKER_LOAD}`,
-    );
+    expect(output).toBe(`${READINESS}firecrawl_nuq_fdb_metrics_ready 0\n`);
+    expect(output).not.toContain("firecrawl_nuq_fdb_pending_jobs");
     expect(output).not.toContain("nuq_fdb_queue_scrape_job_count");
     expect(output).not.toContain("nuq_fdb_queue_crawl_finished_job_count");
   });

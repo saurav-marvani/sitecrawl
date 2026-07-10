@@ -2134,36 +2134,9 @@ export class NuQFdbQueue<JobData = any, JobReturnValue = any> {
     });
   }
 
-  public async getLegacyWorkerLoadCount(): Promise<number> {
-    const ks = this.ks;
-    return await this.db.doTn(async tn => {
-      const [readyRows, activeRows] = await Promise.all([
-        tn
-          .snapshot()
-          .getRangeAll(
-            ks.readyShardCountRange().begin,
-            ks.readyShardCountRange().end,
-          ),
-        tn.snapshot().getRangeAll(ks.leaseRange().begin, ks.leaseRange().end),
-      ]);
-      const queued = readyRows.reduce(
-        (sum, [, value]) => sum + Math.max(0, decodeI64(value as Buffer)),
-        0,
-      );
-      return queued + activeRows.length;
-    });
-  }
-
   public async getWorkerLoadCount(): Promise<number> {
-    try {
-      const counts = await this.getMetricCounts();
-      return counts.queued + counts.active;
-    } catch (error) {
-      if (error instanceof NuqFdbMetricsInitializingError) {
-        return await this.getLegacyWorkerLoadCount();
-      }
-      throw error;
-    }
+    const counts = await this.getMetricCounts();
+    return counts.queued + counts.active;
   }
 
   private async getMetricCounts(): Promise<Record<NuQJobStatusCompat, number>> {

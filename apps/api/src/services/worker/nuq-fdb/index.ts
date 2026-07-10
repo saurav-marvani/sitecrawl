@@ -68,13 +68,11 @@ firecrawl_nuq_fdb_pending_jobs ${workerLoad}
 ${scrapeQueueMetrics}${crawlFinishedQueueMetrics}${workerLoadFamily(workerLoad)}`;
   } catch (error) {
     if (error instanceof NuqFdbMetricsInitializingError) {
-      // Release A must preserve the established autoscaling family while the
-      // fixed generation is absent/building. Do not expose partial new
-      // families; the legacy fixed-shard/lease fallback is removed only at
-      // READY.
-      const workerLoad = await scrapeQueueFdb.getLegacyWorkerLoadCount();
+      // Release A exposes only readiness. Existing HPA metrics remain absent
+      // until the fixed-width generation is exact and READY; rollout holds the
+      // current replica floor and freezes new migration cutovers meanwhile.
       return `${readiness}firecrawl_nuq_fdb_metrics_ready 0
-${workerLoadFamily(workerLoad)}`;
+`;
     }
     throw error;
   }
