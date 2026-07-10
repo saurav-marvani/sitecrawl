@@ -166,6 +166,47 @@ describeIf("NuQ FDB core", () => {
     expect((await group.getGroup(gid))?.status).toBe("completed");
   });
 
+  test("structurally distinct ID lists cannot share an ingest manifest", async () => {
+    let stopFirst = true;
+    const { queue } = await makeCtx("ingest-identity-encoding", {
+      testHooks: {
+        afterManifest: async () => {
+          if (!stopFirst) return;
+          stopFirst = false;
+          throw new Error("stop first ingest after manifest");
+        },
+      },
+    });
+    const owner = freshOwner();
+    const inputs = (ids: string[]) =>
+      ids.map(id => ({
+        id,
+        data: scrapeData(),
+        options: { ownerId: owner },
+      }));
+    const firstIds = ["a\0b", "c"];
+    const secondIds = ["a", "b\0c"];
+
+    await expect(queue.addJobs(inputs(firstIds), UNLIMITED)).rejects.toThrow(
+      "stop first ingest after manifest",
+    );
+    await expect(queue.addJobs(inputs(secondIds), UNLIMITED)).resolves.toEqual(
+      expect.arrayContaining(
+        secondIds.map(id => expect.objectContaining({ id })),
+      ),
+    );
+    await expect(queue.addJobs(inputs(firstIds), UNLIMITED)).resolves.toEqual(
+      expect.arrayContaining(
+        firstIds.map(id => expect.objectContaining({ id })),
+      ),
+    );
+
+    const taken = await takeAll(queue, 4);
+    expect(new Set(taken.map(job => job.id))).toEqual(
+      new Set([...firstIds, ...secondIds]),
+    );
+  });
+
   test("dequeue recovers the original claim after simulated commit_unknown_result", async () => {
     let inject = true;
     const { queue } = await makeCtx("claim-unknown", {

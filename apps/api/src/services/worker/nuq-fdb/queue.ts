@@ -298,11 +298,13 @@ export class NuQFdbQueue<JobData = any, JobReturnValue = any> {
     // fields (deadlines, trace context, changing limits). The first caller's
     // gate and per-job plan are persisted; retries attach to that plan.
     const op = createHash("sha256")
-      .update(this.queueName)
-      .update("\0")
-      .update(ownerId ?? "")
-      .update("\0")
-      .update(uniqueInputs.map(job => job.id).join("\0"))
+      .update(
+        JSON.stringify([
+          this.queueName,
+          ownerId,
+          uniqueInputs.map(job => job.id),
+        ]),
+      )
       .digest("hex");
     await this.initIngest(op, ownerId, gate);
 
