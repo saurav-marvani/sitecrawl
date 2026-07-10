@@ -263,9 +263,6 @@ export class NuqFdbKeyspace {
   teamRange() {
     return this.packRange(["t"]);
   }
-  teamLedgerRange(tid: string) {
-    return this.packRange(["t", tid]);
-  }
   teamActive(tid: string): Buffer {
     return this.pack(["t", tid, "active"]);
   }
@@ -321,9 +318,6 @@ export class NuqFdbKeyspace {
   }
   keyGateRange() {
     return this.packRange(["k"]);
-  }
-  keyRange(kid: string) {
-    return this.packRange(["k", kid]);
   }
   keyPendingCount(kid: string): Buffer {
     return this.pack(["k", kid, "qn"]);

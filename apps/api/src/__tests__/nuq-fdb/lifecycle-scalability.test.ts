@@ -401,6 +401,53 @@ describeIf("NuQ FDB lifecycle scalability", () => {
     expect(await queue.getJob(secondJob)).toBeNull();
   }, 30_000);
 
+  test("partition protocol fences old singleton sweepers during rollout", async () => {
+    const { queue, finishedQueue } = await makeCtx("legacy-fence");
+    const sweeper = new NuqFdbSweeper([queue, finishedQueue]);
+    const id = randomUUID();
+    await getNuqFdbDatabase().doTn(async tn => {
+      tn.set(
+        queue.ks.jobMeta(id),
+        encodeJson({ c: 0, p: 0, o: "", f: 0, dc: 0 } satisfies JobMeta),
+      );
+      tn.set(
+        queue.ks.jobStatus(id),
+        encodeJson({ s: "cancelled", st: 0 } satisfies JobStatusRecord),
+      );
+      tn.set(queue.ks.jobExpiry(timeBucket(id), Date.now() - 1, id), EMPTY);
+      tn.set(
+        queue.ks.legacySweeperLock(),
+        encodeJson({ w: "old-owner", x: Date.now() + 60_000 }),
+      );
+    });
+
+    await sweeper.sweepOnce();
+    expect(await queue.hasJob(id)).toBe(true);
+    await getNuqFdbDatabase().doTn(async tn => {
+      tn.set(
+        queue.ks.legacySweeperLock(),
+        encodeJson({ w: "old-owner", x: Date.now() - 1 }),
+      );
+    });
+    await sweeper.sweepOnce();
+    expect(await queue.hasJob(id)).toBe(false);
+
+    const oldCouldAcquire = await getNuqFdbDatabase().doTn(async tn => {
+      const current = decodeJson<{ w: string; x: number }>(
+        await tn.get(queue.ks.legacySweeperLock()),
+      );
+      if (current && current.x > Date.now() && current.w !== "old-candidate") {
+        return false;
+      }
+      tn.set(
+        queue.ks.legacySweeperLock(),
+        encodeJson({ w: "old-candidate", x: Date.now() + 15_000 }),
+      );
+      return true;
+    });
+    expect(oldCouldAcquire).toBe(false);
+  }, 30_000);
+
   test("partition leases fail over and multiple sweepers drain disjoint buckets", async () => {
     const { queue, finishedQueue } = await makeCtx("partitions");
     const db = getNuqFdbDatabase();

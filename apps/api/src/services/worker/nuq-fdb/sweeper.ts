@@ -71,6 +71,16 @@ type OwnershipRecord = {
   x: number;
 };
 
+type LegacyOwnershipRecord = {
+  w: string;
+  x: number;
+  p?: 2; // partitioned protocol marker; old binaries ignore this field
+};
+
+const PARTITIONED_LEGACY_OWNER = "partitioned-v2";
+const LEGACY_COMPAT_TTL_MS = 60_000;
+const LEGACY_COMPAT_RENEW_AHEAD_MS = 30_000;
+
 type PartitionClaim = {
   ks: NuqFdbKeyspace;
   phase: string;
@@ -157,10 +167,26 @@ export class NuqFdbSweeper {
     return await this.db.doTn(async tn => {
       // During rolling deployment, defer to the old all-or-nothing owner until
       // its final lease expires; old and new protocols must not overlap.
-      const legacy = decodeJson<{ x: number }>(
-        await tn.get(this.queues[0].ks.legacySweeperLock()),
-      );
-      if (legacy && legacy.x > now) return null;
+      const legacyKey = this.queues[0].ks.legacySweeperLock();
+      const legacy = decodeJson<LegacyOwnershipRecord>(await tn.get(legacyKey));
+      if (legacy && legacy.x > now && legacy.p !== 2) return null;
+      // A shared v2 marker blocks old singleton sweepers while allowing all
+      // partitioned replicas to claim disjoint work during rolling deploys.
+      // Renew it infrequently to avoid turning compatibility into a hot write.
+      if (
+        !legacy ||
+        legacy.p !== 2 ||
+        legacy.x <= now + LEGACY_COMPAT_RENEW_AHEAD_MS
+      ) {
+        tn.set(
+          legacyKey,
+          encodeJson({
+            w: PARTITIONED_LEGACY_OWNER,
+            p: 2,
+            x: now + LEGACY_COMPAT_TTL_MS,
+          } satisfies LegacyOwnershipRecord),
+        );
+      }
       const key = ks.sweeperPartition(phase, partition);
       const current = decodeJson<OwnershipRecord>(await tn.get(key));
       if (current && current.x > now && current.w !== this.sweeperId) {
@@ -182,16 +208,31 @@ export class NuqFdbSweeper {
     await this.db.doTn(async tn => {
       const key = claim.ks.sweeperPartition(claim.phase, claim.partition);
       const current = decodeJson<OwnershipRecord>(await tn.get(key));
+      const legacyKey = this.queues[0].ks.legacySweeperLock();
+      const legacy = decodeJson<LegacyOwnershipRecord>(await tn.get(legacyKey));
       const now = Date.now();
       if (
         !current ||
         current.w !== this.sweeperId ||
         current.g !== claim.generation ||
-        current.x <= now
+        current.x <= now ||
+        !legacy ||
+        legacy.p !== 2
       ) {
         throw new OwnershipLostError();
       }
-      tn.set(key, encodeJson({ ...current, x: now + this.lockTtlMs }));
+      const expiresAt = now + this.lockTtlMs;
+      tn.set(key, encodeJson({ ...current, x: expiresAt }));
+      if (legacy.x <= now + LEGACY_COMPAT_RENEW_AHEAD_MS) {
+        tn.set(
+          legacyKey,
+          encodeJson({
+            w: PARTITIONED_LEGACY_OWNER,
+            p: 2,
+            x: now + LEGACY_COMPAT_TTL_MS,
+          } satisfies LegacyOwnershipRecord),
+        );
+      }
     });
   }
 
@@ -202,11 +243,17 @@ export class NuqFdbSweeper {
     const current = decodeJson<OwnershipRecord>(
       await tn.get(claim.ks.sweeperPartition(claim.phase, claim.partition)),
     );
+    const legacy = decodeJson<LegacyOwnershipRecord>(
+      await tn.get(this.queues[0].ks.legacySweeperLock()),
+    );
     if (
       !current ||
       current.w !== this.sweeperId ||
       current.g !== claim.generation ||
-      current.x <= Date.now()
+      current.x <= Date.now() ||
+      !legacy ||
+      legacy.p !== 2 ||
+      legacy.x <= Date.now()
     ) {
       throw new OwnershipLostError();
     }
