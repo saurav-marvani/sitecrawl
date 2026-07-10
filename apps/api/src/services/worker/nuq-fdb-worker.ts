@@ -11,7 +11,10 @@ import {
   nuqFdbSweeperGetMetrics,
   scrapeQueueFdb,
 } from "./nuq-fdb";
-import { startCrawlFinishedLoop } from "./nuq-fdb-worker-runtime";
+import {
+  isLegacyFdbWorkerLive,
+  startCrawlFinishedLoop,
+} from "./nuq-fdb-worker-runtime";
 import { runNuqWorker } from "./nuq-worker-runner";
 import type { NuQJob } from "./nuq";
 
@@ -55,9 +58,7 @@ async function processFinishCrawlJobInternal(_job: NuQJob) {
     serviceName: "nuq-fdb-worker",
     queue: scrapeQueueFdb as any,
     healthCheck: () => nuqFdbHealthCheck(),
-    livenessCheck: () =>
-      (crawlFinishedLoop?.isHealthy() ?? false) &&
-      getNuqFdbSweeper().isHealthy(),
+    livenessCheck: () => isLegacyFdbWorkerLive(crawlFinishedLoop),
     // These are process-local metrics. Queue-wide FDB ranges are deliberately
     // not scanned from every worker's Prometheus scrape callback.
     metrics: () =>
@@ -90,10 +91,7 @@ async function processFinishCrawlJobInternal(_job: NuQJob) {
       getNuqFdbSweeper().stop();
     },
     drain: async () => {
-      await Promise.all([
-        crawlFinishedLoop?.done,
-        getNuqFdbSweeper().done,
-      ]);
+      await Promise.all([crawlFinishedLoop?.done, getNuqFdbSweeper().done]);
     },
     onShutdownDeadline: () => {
       crawlFinishedLoop?.forceStop();
