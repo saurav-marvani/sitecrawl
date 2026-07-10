@@ -62,21 +62,36 @@ HELM_NO_PLUGINS=1 helm upgrade firecrawl . \
 
 A safe migration is:
 
-1. Deploy `mixed` and verify the three FDB deployments are healthy.
-2. Enable FDB routing gradually for selected teams while both consumer sets
+1. Deploy release A in `mixed` mode with
+   `NUQ_FDB_METRICS_V2_ACTIVATE=false` (the default). Freeze new FDB admission
+   and migration expansion, retain the current FDB replica floor, and verify
+   the three FDB deployments are healthy.
+2. Drain every pre-compatible API, queue writer, group completer, and sweeper.
+   Before activation, maintenance `/metrics` intentionally exposes only
+   `firecrawl_nuq_fdb_metrics_ready 0`; queue/HPA series are absent so scaling
+   holds its existing replica count.
+3. Deploy release B with
+   `--set config.extra.NUQ_FDB_METRICS_V2_ACTIVATE=true`. Maintenance performs
+   bounded generation backfill. Keep admission expansion and HPA changes frozen
+   until `/metrics` reports `firecrawl_nuq_fdb_metrics_ready 1` and includes
+   both `nuq_fdb_queue_scrape_job_count` and
+   `nuq_fdb_queue_crawl_finished_job_count`.
+4. Enable FDB routing gradually for selected teams while both consumer sets
    remain available. Existing crawls stay pinned to their original backend.
-3. Stop new PG routing and wait for PG active, delayed, and crawl-finished work
+5. Stop new PG routing and wait for PG active, delayed, and crawl-finished work
    to drain before switching to `fdb`. Persistent PG queue volumes are retained
    across this switch as a rollback safeguard and must be deleted manually only
    after they are no longer needed.
-4. Keep `nuqFdb.maintenanceWorker.replicaCount` and
+6. Keep `nuqFdb.maintenanceWorker.replicaCount` and
    `nuqFdb.crawlFinishedWorker.replicaCount` at one or more. The chart rejects
    zero for these control loops. `nuqFdb.scrapeWorker.replicaCount=0` is safe
    during a deliberate scrape-consumer drain because maintenance and crawl
    completion remain independently available.
 
-To roll back routing, return to `mixed` first so both backends have consumers;
-do not switch directly to `pg` while FDB-pinned work remains.
+To roll back routing, first disable activation and let the compatible release
+invalidate metric readiness, then return to `mixed` before deploying older
+code. Never run a pre-compatible writer against an active metric generation,
+and do not switch directly to `pg` while FDB-pinned work remains.
 
 ## Deploy
 

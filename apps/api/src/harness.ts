@@ -940,6 +940,11 @@ async function startServices(command?: string[]): Promise<Services> {
         NUQ_REDUCE_NOISE: "true",
         NUQ_POD_NAME: `nuq-fdb-${mode}-0`,
         NUQ_FDB_WORKER_MODE: mode,
+        // Harness FDB namespaces have no pre-compat writers. Production uses
+        // the two-release activation procedure documented in the Helm chart.
+        ...(mode === "maintenance"
+          ? { NUQ_FDB_METRICS_V2_ACTIVATE: "true" }
+          : {}),
       },
     );
   const nuqFdbMaintenanceWorker = topology.fdbMaintenance

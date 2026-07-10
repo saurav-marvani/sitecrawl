@@ -48,6 +48,16 @@ class TopologySmokeTest(unittest.TestCase):
         self.assertIn(executable, container["args"])
         env = {item["name"]: item.get("value") for item in container["env"]}
         self.assertEqual(env["NUQ_FDB_WORKER_MODE"], mode)
+        self.assertEqual(env["NUQ_WORKER_PORT"], "3005")
+        self.assertEqual(container["ports"], [{"containerPort": 3005}])
+        self.assertEqual(
+            container["livenessProbe"]["httpGet"],
+            {"path": "/live", "port": 3005},
+        )
+        self.assertEqual(
+            container["readinessProbe"]["httpGet"],
+            {"path": "/ready", "port": 3005},
+        )
 
     def assert_fdb_mount(self, deployment: dict) -> None:
         pod_spec = deployment["spec"]["template"]["spec"]

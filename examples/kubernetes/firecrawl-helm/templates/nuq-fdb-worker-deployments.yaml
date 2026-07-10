@@ -4,12 +4,10 @@
   (dict "role" "maintenance" "settings" .Values.nuqFdb.maintenanceWorker "heapMb" 1024 "graceSeconds" 60)
   (dict "role" "crawl-finished" "settings" .Values.nuqFdb.crawlFinishedWorker "heapMb" 2048 "graceSeconds" 180)
 -}}
-{{- range $index, $spec := $workers }}
-{{- if gt $index 0 }}
+{{- range $spec := $workers }}
+{{- $role := $spec.role }}
+{{- $worker := $spec.settings }}
 ---
-{{- end }}
-{{- $role := $spec.role -}}
-{{- $worker := $spec.settings -}}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -66,7 +64,7 @@ spec:
           {{- end }}
           livenessProbe:
             httpGet:
-              path: /health
+              path: /live
               port: {{ $worker.port | int }}
             initialDelaySeconds: 10
             periodSeconds: 10
@@ -74,7 +72,7 @@ spec:
             failureThreshold: 3
           readinessProbe:
             httpGet:
-              path: /health
+              path: /ready
               port: {{ $worker.port | int }}
             initialDelaySeconds: 10
             periodSeconds: 10

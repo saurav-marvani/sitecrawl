@@ -61,7 +61,7 @@ nuqFdb:
     mountPath: /etc/foundationdb
   scrapeWorker:
     replicaCount: 5
-    port: 3014
+    port: 3005
     resources:
       requests:
         memory: "3G"
@@ -72,8 +72,8 @@ nuqFdb:
   # Keep these fixed control deployments at one or more replicas even when
   # scrape consumers are drained to zero.
   maintenanceWorker:
-    replicaCount: 1
-    port: 3015
+    replicaCount: 2
+    port: 3005
     resources:
       requests:
         memory: "512Mi"
@@ -82,8 +82,8 @@ nuqFdb:
         memory: "1Gi"
         cpu: "500m"
   crawlFinishedWorker:
-    replicaCount: 1
-    port: 3016
+    replicaCount: 2
+    port: 3005
     resources:
       requests:
         memory: "1G"
