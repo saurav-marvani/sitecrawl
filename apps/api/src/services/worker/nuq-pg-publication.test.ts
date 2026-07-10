@@ -25,7 +25,12 @@ test("unregistered PG publication boundary fails closed", async () => {
 test("injectable PG publication boundary forwards prepare and complete", async () => {
   const prepare = vi.fn(async () => {});
   const complete = vi.fn(async () => {});
-  setNuQPgPublicationAdapter({ prepare, complete, retire: vi.fn() });
+  setNuQPgPublicationAdapter({
+    prepare,
+    validateUnderPublicationLock: vi.fn(),
+    complete,
+    retire: vi.fn(),
+  });
 
   const prepared = await prepareNuQPgPublication([publication]);
   setNuQPgPublicationAdapter(null);

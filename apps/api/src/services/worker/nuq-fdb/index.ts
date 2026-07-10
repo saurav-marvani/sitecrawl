@@ -8,7 +8,9 @@ import {
 import { NuQFdbJobGroup } from "./groups";
 import { NuqFdbSweeper } from "./sweeper";
 import { NuqFdbExternalSlots } from "./slots";
+import { NuqFdbPgJobRemovals } from "./pg-removals";
 import { isFdbConfigured, nuqFdbHealthCheck, withFdbTimeout } from "./client";
+import { nuqFdbMigrationStore } from "./migration-store";
 
 export {
   NuQFdbQueue,
@@ -26,6 +28,11 @@ export { NuQFdbJobGroup } from "./groups";
 export type { NuQFdbJobGroupInstance, NuQFdbGroupStatus } from "./groups";
 export { NuqFdbSweeper } from "./sweeper";
 export { NuqFdbExternalSlots, externalSlotMigrationObjectId } from "./slots";
+export {
+  NuqFdbPgJobRemovals,
+  NuqFdbPgJobRemovalConflictError,
+} from "./pg-removals";
+export type { DurablePgJobRemoval } from "./pg-removals";
 export { isFdbConfigured, nuqFdbHealthCheck, withFdbTimeout } from "./client";
 export {
   MIGRATION_RESIDUE_COUNTERS,
@@ -80,6 +87,7 @@ export const crawlGroupFdb = new NuQFdbJobGroup(
 );
 
 export const externalSlotsFdb = new NuqFdbExternalSlots(scrapeQueueFdb.ks);
+export const pgJobRemovalsFdb = new NuqFdbPgJobRemovals(nuqFdbMigrationStore);
 
 export async function nuqFdbGetMetrics(): Promise<string> {
   const readiness = `# HELP firecrawl_nuq_fdb_metrics_ready Whether maintained FDB queue metrics are fully initialized

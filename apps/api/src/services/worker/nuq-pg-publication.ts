@@ -17,6 +17,7 @@ export type NuQPgPublicationOutcome = "published" | "promoted" | "compensated";
  */
 export interface NuQPgPublicationAdapter {
   prepare(publications: readonly NuQPgPublication[]): Promise<void>;
+  validateUnderPublicationLock(jobIds: readonly string[]): Promise<void>;
   complete(
     publications: readonly NuQPgPublication[],
     outcome: NuQPgPublicationOutcome,
@@ -43,6 +44,9 @@ const failClosedAdapter: NuQPgPublicationAdapter = {
   async prepare() {
     throw new NuQPgPublicationAdapterUnavailableError();
   },
+  async validateUnderPublicationLock() {
+    throw new NuQPgPublicationAdapterUnavailableError();
+  },
   async complete() {
     throw new NuQPgPublicationAdapterUnavailableError();
   },
@@ -53,6 +57,7 @@ const failClosedAdapter: NuQPgPublicationAdapter = {
 
 export const passthroughNuQPgPublicationAdapter: NuQPgPublicationAdapter = {
   async prepare() {},
+  async validateUnderPublicationLock() {},
   async complete() {},
   async retire() {},
 };
@@ -68,6 +73,12 @@ export function setNuQPgPublicationAdapter(
   next: NuQPgPublicationAdapter | null,
 ): void {
   adapter = next ?? failClosedAdapter;
+}
+
+export async function validateNuQPgPublicationUnderLock(
+  jobIds: readonly string[],
+): Promise<void> {
+  if (jobIds.length > 0) await adapter.validateUnderPublicationLock(jobIds);
 }
 
 export async function prepareNuQPgPublication(

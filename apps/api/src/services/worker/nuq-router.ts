@@ -32,12 +32,14 @@ import {
   crawlGroupFdb,
   externalSlotsFdb,
   externalSlotMigrationObjectId,
+  pgJobRemovalsFdb,
   isFdbConfigured,
   nuqFdbHealthCheck,
   withFdbTimeout,
   NuQFdbQueue,
   NuQFdbJob,
   nuqFdbMigrationStore,
+  type DurablePgJobRemoval,
   type MigrationObjectKind,
   type MigrationObjectPin,
 } from "./nuq-fdb";
@@ -79,7 +81,9 @@ export function fdbQueueEnabled(): boolean {
 // configured, publication fails closed unless its durable pin/intent commits.
 setNuQPgPublicationAdapter(
   fdbQueueEnabled()
-    ? new DurableNuQPgPublicationAdapter(nuqFdbMigrationStore)
+    ? new DurableNuQPgPublicationAdapter(nuqFdbMigrationStore, jobIds =>
+        pgJobRemovalsFdb.assertPublishable(jobIds),
+      )
     : passthroughNuQPgPublicationAdapter,
 );
 
@@ -771,15 +775,24 @@ async function acquireExternalSlot(
   const backend = pin?.backend ?? (await authoritativeTeamBackend(teamId));
   if (backend === "fdb") {
     await fdbMutation(() => externalSlotsFdb.acquire(teamId, holderId, ttlMs));
+    await activateRoutingPin(
+      pin,
+      { capacity_external_holders: 1 },
+      "external-holder-active",
+    );
   } else {
-    await pushConcurrencyLimitActiveJob(teamId, holderId, ttlMs);
+    const now = Date.now();
+    if (pin) {
+      // Publish the durable deadline before crossing the Redis boundary. A
+      // crash or ambiguous Redis result can conservatively overcount only
+      // until this exact generation expires; it cannot strand a prepared pin.
+      await fdbMutation(() =>
+        externalSlotsFdb.renewPg(teamId, holderId, now + ttlMs),
+      );
+    }
+    await pushConcurrencyLimitActiveJob(teamId, holderId, ttlMs, now);
     await syncFdbLimitToPgOccupancy(teamId);
   }
-  await activateRoutingPin(
-    pin,
-    { capacity_external_holders: 1 },
-    "external-holder-active",
-  );
 }
 
 export async function reserveExternalSlot(
@@ -816,11 +829,14 @@ export async function mirrorExternalSlotRelease(
     const backend = pin?.backend ?? (fdbForced() ? "fdb" : "pg");
     if (backend === "fdb") {
       await fdbMutation(() => externalSlotsFdb.release(teamId, holderId));
+      await completeRoutingPin(pin, "external-holder-terminal");
     } else {
       await removeConcurrencyLimitActiveJob(teamId, holderId);
       await syncFdbLimitToPgOccupancy(teamId);
+      if (pin) {
+        await fdbMutation(() => externalSlotsFdb.releasePg(teamId, holderId));
+      }
     }
-    await completeRoutingPin(pin, "external-holder-terminal");
   });
 }
 
@@ -1043,6 +1059,23 @@ export async function fdbEnqueueScrapeJobs(
 // === Routed scrape queue
 
 const pgRemoveResidueKey = (id: string) => `nuq:pg_remove_residue:${id}`;
+
+function durablePgRemovalDescriptor(
+  removed: Pick<NuQRemovedJobResidue, "id" | "ownerId" | "groupId">,
+): DurablePgJobRemoval {
+  return {
+    schemaVersion: 1,
+    id: removed.id,
+    ...(removed.ownerId ? { ownerId: removed.ownerId } : {}),
+    ...(removed.groupId ? { groupId: removed.groupId } : {}),
+  };
+}
+
+function redisRemovalDescriptor(
+  descriptor: DurablePgJobRemoval,
+): NuQRemovedJobResidue {
+  return { ...descriptor, data: {} };
+}
 
 async function cleanPgRedisJobResidue(
   id: string,
@@ -1284,23 +1317,57 @@ class RoutedScrapeQueue {
   }
 
   public async removeJob(id: string, logger: Logger = _logger): Promise<void> {
+    const redis = getRedisConnection();
+    // A PG delete can commit before Redis cleanup. Consult its durable cleanup
+    // descriptor and PG pin before the generic resolver, which correctly
+    // rejects a missing object with a live pin but cannot finish this saga.
+    const [durableDescriptor, priorDescriptor, initialPin] = await Promise.all([
+      fdbQueueEnabled() ? pgJobRemovalsFdb.inspect(id) : Promise.resolve(null),
+      redis.get(pgRemoveResidueKey(id)),
+      inspectRoutingPin("scrape_job", id),
+    ]);
+    const recoverLegacyDeletedJob =
+      durableDescriptor === null &&
+      priorDescriptor !== null &&
+      initialPin?.backend === "pg" &&
+      !(await pgHasScrapeJob(id));
+    if (
+      (durableDescriptor !== null || recoverLegacyDeletedJob) &&
+      initialPin?.backend === "pg"
+    ) {
+      const queuedPayload = await redis.get(`cq-job:${id}`);
+      let descriptor = durableDescriptor
+        ? redisRemovalDescriptor(durableDescriptor)
+        : null;
+      if (!descriptor && priorDescriptor) {
+        try {
+          descriptor = JSON.parse(priorDescriptor) as NuQRemovedJobResidue;
+        } catch {
+          // Corrupt legacy Redis descriptors still route to idempotent cleanup.
+        }
+      }
+      const removed = await scrapeQueuePg.removeJobResidue(id, logger);
+      await cleanPgRedisJobResidue(id, removed ?? descriptor, queuedPayload);
+      await completeRoutingPin(initialPin, "job-remove");
+      if (durableDescriptor) {
+        await fdbMutation(() => pgJobRemovalsFdb.complete(id));
+      }
+      return;
+    }
+
     const backend = await getJobQueueBackend(id);
     if (!backend) return;
-    const pin = await inspectRoutingPin("scrape_job", id);
+    const pin = initialPin ?? (await inspectRoutingPin("scrape_job", id));
     if (backend === "fdb") {
       await fdbMutation(() => scrapeQueueFdb.removeJob(id, logger));
       await completeRoutingPin(pin, "job-remove");
       return;
     }
-    const redis = getRedisConnection();
-    const [queuedPayload, priorDescriptor, active, backlog] = await Promise.all(
-      [
-        redis.get(`cq-job:${id}`),
-        redis.get(pgRemoveResidueKey(id)),
-        scrapeQueuePg.getJob(id, logger),
-        scrapeQueuePg.getJobsFromBacklog([id], logger),
-      ],
-    );
+    const [queuedPayload, active, backlog] = await Promise.all([
+      redis.get(`cq-job:${id}`),
+      scrapeQueuePg.getJob(id, logger),
+      scrapeQueuePg.getJobsFromBacklog([id], logger),
+    ]);
     const existing = active ?? backlog[0] ?? null;
     if (existing) {
       // Persist the routing metadata before deleting PG. A retry after process
@@ -1313,19 +1380,26 @@ class RoutedScrapeQueue {
           groupId: existing.groupId,
           data: {},
         }),
-        "EX",
-        24 * 60 * 60,
       );
     }
-    const removed = await scrapeQueuePg.removeJobResidue(id, logger);
+    const removed = await scrapeQueuePg.removeJobResidue(
+      id,
+      logger,
+      pin
+        ? async rows => {
+            const row = rows[0];
+            if (!row) {
+              throw new Error(
+                `PG removal lost job ${id} before durable fencing`,
+              );
+            }
+            await fdbMutation(() =>
+              pgJobRemovalsFdb.begin(durablePgRemovalDescriptor(row)),
+            );
+          }
+        : undefined,
+    );
     let descriptor = removed;
-    if (!descriptor && priorDescriptor) {
-      try {
-        descriptor = JSON.parse(priorDescriptor) as NuQRemovedJobResidue;
-      } catch {
-        // Corrupt descriptor is deleted by the cleanup pipeline.
-      }
-    }
     if (!descriptor && existing) {
       descriptor = {
         id,
@@ -1336,6 +1410,7 @@ class RoutedScrapeQueue {
     }
     await cleanPgRedisJobResidue(id, descriptor, queuedPayload);
     await completeRoutingPin(pin, "job-remove");
+    if (pin) await fdbMutation(() => pgJobRemovalsFdb.complete(id));
   }
 
   public async removeJobs(
@@ -1518,22 +1593,39 @@ class RoutedCrawlGroup {
         opts.backend,
       );
     }
-    const group =
-      backend === "fdb"
-        ? ((await fdbMutation(() =>
-            crawlGroupFdb.addGroup(
-              id,
-              ownerId,
-              ttl,
-              {
-                maxConcurrency: opts?.maxConcurrency,
-                delaySeconds: opts?.delaySeconds,
-              },
-              logger,
-            ),
-          )) as NuQJobGroupInstance)
-        : await crawlGroupPg.addGroup(id, ownerId, ttl, logger);
-    await activateRoutingPin(pin, { control_groups: 1 }, "group-active");
+    let group: NuQJobGroupInstance;
+    try {
+      group =
+        backend === "fdb"
+          ? ((await fdbMutation(() =>
+              crawlGroupFdb.addGroup(
+                id,
+                ownerId,
+                ttl,
+                {
+                  maxConcurrency: opts?.maxConcurrency,
+                  delaySeconds: opts?.delaySeconds,
+                },
+                logger,
+              ),
+            )) as NuQJobGroupInstance)
+          : await crawlGroupPg.addGroup(id, ownerId, ttl, logger);
+    } catch (error) {
+      if (backend === "pg" && pin?.lifecycle === "prepared") {
+        // The advisory publication lock waits out an earlier ambiguous commit.
+        // Compensate only when that serialized observation proves no PG row.
+        const existing = await crawlGroupPg.resolveGroupPublication(id);
+        if (!existing) {
+          await completeRoutingPin(pin, "group-publication-compensated");
+        }
+      }
+      throw error;
+    }
+    if (group.status === "active") {
+      await activateRoutingPin(pin, { control_groups: 1 }, "group-active");
+    } else {
+      await completeRoutingPin(pin, "group-publication-terminal");
+    }
     void markBackend(groupBackendKey(id), backend).catch(error =>
       _logger.warn("Failed to cache group backend", {
         module: "nuq-router",

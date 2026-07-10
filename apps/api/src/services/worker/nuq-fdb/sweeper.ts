@@ -566,14 +566,16 @@ export class NuqFdbSweeper {
           partition: bucket,
           run: async claim => {
             await this.renewClaim(claim);
-            await slots.sweepExpiredBucket(
-              now,
-              bucket,
-              this.guard(claim),
-              due =>
-                this.observeDue(claim, "external_expiry", due, key =>
-                  Number(claim.ks.unpack(key)[4]),
-                ),
+            const guard = this.guard(claim);
+            const observedDue: [Buffer, Buffer][] = [];
+            await slots.sweepExpiredBucket(now, bucket, guard, due =>
+              observedDue.push(...due),
+            );
+            await slots.sweepExpiredPgBucket(now, bucket, guard, due =>
+              observedDue.push(...due),
+            );
+            this.observeDue(claim, "external_expiry", observedDue, key =>
+              Number(claim.ks.unpack(key)[4]),
             );
           },
         });

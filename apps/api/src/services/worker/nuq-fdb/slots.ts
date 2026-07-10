@@ -32,6 +32,13 @@ export type ExternalSlotRecord = {
   mg?: number; // never-reused migration generation
 };
 
+type PgExternalSlotExpiryRecord = {
+  e: number;
+  g: string;
+  t: string;
+  h: string;
+};
+
 export type ExternalSlotSweepGuard = (tn: Transaction) => Promise<void>;
 export type ExternalSlotSweepObserver = (
   due: readonly [Buffer, Buffer][],
@@ -78,10 +85,38 @@ export class NuqFdbExternalSlots {
     return this.ks.pack(["xsexp", bucket, expMs, holderId]);
   }
 
+  private pgExpiryRecordKey(teamId: string, holderId: string): Buffer {
+    return this.ks.pack(["pgxs", teamId, holderId]);
+  }
+
+  private pgExpiryKey(
+    bucket: number,
+    expMs: number,
+    teamId: string,
+    holderId: string,
+    generation: string,
+  ): Buffer {
+    return this.ks.pack([
+      "pgxsexp",
+      bucket,
+      expMs,
+      teamId,
+      holderId,
+      generation,
+    ]);
+  }
+
   public expiryScanRange(bucket: number, untilMs: number) {
     return {
       begin: this.ks.pack(["xsexp", bucket]),
       end: this.ks.pack(["xsexp", bucket, untilMs]),
+    };
+  }
+
+  public pgExpiryScanRange(bucket: number, untilMs: number) {
+    return {
+      begin: this.ks.pack(["pgxsexp", bucket]),
+      end: this.ks.pack(["pgxsexp", bucket, untilMs]),
     };
   }
 
@@ -158,6 +193,112 @@ export class NuqFdbExternalSlots {
         ),
         Buffer.alloc(0),
       );
+    });
+  }
+
+  // PG holders live in Redis, but their migration residue cannot depend on a
+  // volatile Redis TTL. Publish the exact renewal generation into FDB and
+  // activate the pin atomically with that expiry record.
+  public async renewPg(
+    teamId: string,
+    holderId: string,
+    expiresAt: number,
+  ): Promise<void> {
+    const owner = normalizeOwnerId(teamId);
+    if (owner === null) return;
+    if (!Number.isSafeInteger(expiresAt)) {
+      throw new TypeError("external holder expiry must be a safe integer");
+    }
+    const generation = randomUUID();
+    const objectId = externalSlotMigrationObjectId(owner, holderId);
+    await this.db.doTn(async tn => {
+      const pin = await nuqFdbMigrationStore.validatePinnedObjectInTxn(tn, {
+        teamId: owner,
+        kind: "external_holder",
+        objectId,
+        backend: "pg",
+      });
+      const prior = decodeJson<PgExternalSlotExpiryRecord>(
+        await tn.get(this.pgExpiryRecordKey(owner, holderId)),
+      );
+      if (prior) {
+        tn.clear(
+          this.pgExpiryKey(
+            timeBucket(`${owner}/${holderId}`),
+            prior.e,
+            owner,
+            holderId,
+            prior.g,
+          ),
+        );
+      }
+      if (pin.lifecycle === "prepared") {
+        await nuqFdbMigrationStore.transitionObjectResidueInTxn(tn, {
+          teamId: owner,
+          kind: "external_holder",
+          objectId,
+          operationId: `nuq-router/v1/external-holder-active/${objectId}`,
+          fromLifecycle: "prepared",
+          toLifecycle: "active",
+          residue: { capacity_external_holders: 1 },
+        });
+      }
+      const record: PgExternalSlotExpiryRecord = {
+        e: expiresAt,
+        g: generation,
+        t: owner,
+        h: holderId,
+      };
+      tn.set(this.pgExpiryRecordKey(owner, holderId), encodeJson(record));
+      tn.set(
+        this.pgExpiryKey(
+          timeBucket(`${owner}/${holderId}`),
+          expiresAt,
+          owner,
+          holderId,
+          generation,
+        ),
+        Buffer.alloc(0),
+      );
+    });
+  }
+
+  public async releasePg(teamId: string, holderId: string): Promise<void> {
+    const owner = normalizeOwnerId(teamId);
+    if (owner === null) return;
+    const objectId = externalSlotMigrationObjectId(owner, holderId);
+    await this.db.doTn(async tn => {
+      const prior = decodeJson<PgExternalSlotExpiryRecord>(
+        await tn.get(this.pgExpiryRecordKey(owner, holderId)),
+      );
+      if (prior) {
+        tn.clear(
+          this.pgExpiryKey(
+            timeBucket(`${owner}/${holderId}`),
+            prior.e,
+            owner,
+            holderId,
+            prior.g,
+          ),
+        );
+        tn.clear(this.pgExpiryRecordKey(owner, holderId));
+      }
+      const pin = await nuqFdbMigrationStore.inspectPinInTxn(
+        tn,
+        "external_holder",
+        objectId,
+      );
+      if (!pin || pin.lifecycle === "terminal") return;
+      if (pin.teamId !== owner || pin.backend !== "pg") {
+        throw new Error(`PG external holder pin mismatch for ${objectId}`);
+      }
+      await nuqFdbMigrationStore.completePinnedObjectInTxn(tn, {
+        teamId: owner,
+        kind: "external_holder",
+        objectId,
+        operationId: `nuq-router/v1/external-holder-terminal/${objectId}`,
+        fromLifecycle: pin.lifecycle,
+      });
     });
   }
 
@@ -278,9 +419,86 @@ export class NuqFdbExternalSlots {
     return processed;
   }
 
+  public async sweepExpiredPgBucket(
+    now: number,
+    bucket: number,
+    guard?: ExternalSlotSweepGuard,
+    observeDue?: ExternalSlotSweepObserver,
+  ): Promise<number> {
+    const startedAt = Date.now();
+    let processed = 0;
+    while (Date.now() - startedAt < EXTERNAL_SWEEP_BUDGET_MS) {
+      const range = this.pgExpiryScanRange(bucket, now);
+      const due = (await this.db.doTn(async tn => {
+        if (guard) await guard(tn);
+        return await tn.snapshot().getRangeAll(range.begin, range.end, {
+          limit: EXTERNAL_SWEEP_BATCH,
+        });
+      })) as [Buffer, Buffer][];
+      observeDue?.(due);
+      if (due.length === 0) break;
+      for (const [key] of due) {
+        const parts = this.ks.unpack(key);
+        const expiresAt = Number(parts[4]);
+        const owner = String(parts[5]);
+        const holderId = String(parts[6]);
+        const generation = String(parts[7]);
+        await this.db.doTn(async tn => {
+          if (guard) await guard(tn);
+          const recordKey = this.pgExpiryRecordKey(owner, holderId);
+          const current = decodeJson<PgExternalSlotExpiryRecord>(
+            await tn.get(recordKey),
+          );
+          if (
+            !current ||
+            current.e !== expiresAt ||
+            current.g !== generation ||
+            current.t !== owner ||
+            current.h !== holderId ||
+            current.e > now
+          ) {
+            tn.clear(key);
+            return;
+          }
+          const objectId = externalSlotMigrationObjectId(owner, holderId);
+          const pin = await nuqFdbMigrationStore.inspectPinInTxn(
+            tn,
+            "external_holder",
+            objectId,
+          );
+          if (!pin) {
+            throw new Error(`Missing PG external holder pin ${objectId}`);
+          }
+          if (pin.teamId !== owner || pin.backend !== "pg") {
+            throw new Error(`PG external holder pin mismatch for ${objectId}`);
+          }
+          if (pin.lifecycle === "active") {
+            await nuqFdbMigrationStore.completePinnedObjectInTxn(tn, {
+              teamId: owner,
+              kind: "external_holder",
+              objectId,
+              operationId: `nuq-router/v1/external-holder-expiry/${generation}`,
+              fromLifecycle: "active",
+            });
+          } else if (pin.lifecycle !== "terminal") {
+            throw new Error(
+              `PG external holder expiry found ${pin.lifecycle} pin ${objectId}`,
+            );
+          }
+          tn.clear(recordKey);
+          tn.clear(key);
+        });
+        processed++;
+      }
+      if (due.length < EXTERNAL_SWEEP_BATCH) break;
+    }
+    return processed;
+  }
+
   public async sweepExpired(now: number, buckets: number): Promise<void> {
     for (let bucket = 0; bucket < buckets; bucket++) {
       await this.sweepExpiredBucket(now, bucket);
+      await this.sweepExpiredPgBucket(now, bucket);
     }
   }
 }

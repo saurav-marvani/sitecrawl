@@ -359,7 +359,18 @@ function publicationOperationId(
  * The stable per-job operation IDs make complete retries exact-once.
  */
 export class DurableNuQPgPublicationAdapter implements NuQPgPublicationAdapter {
-  constructor(private readonly store: NuQMigrationStorePort) {}
+  constructor(
+    private readonly store: NuQMigrationStorePort,
+    private readonly validatePublicationUnderLock: (
+      jobIds: readonly string[],
+    ) => Promise<void> = async () => {},
+  ) {}
+
+  public async validateUnderPublicationLock(
+    jobIds: readonly string[],
+  ): Promise<void> {
+    await this.validatePublicationUnderLock(jobIds);
+  }
 
   public async prepare(
     publications: readonly NuQPgPublication[],

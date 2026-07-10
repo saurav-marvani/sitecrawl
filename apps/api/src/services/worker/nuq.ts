@@ -7,7 +7,10 @@ import amqp from "amqplib";
 import { normalizeOwnerId } from "../../lib/owner-id";
 import { config } from "../../config";
 import { nuqRedis } from "./redis";
-import { retireNuQPgObject } from "./nuq-pg-publication";
+import {
+  retireNuQPgObject,
+  validateNuQPgPublicationUnderLock,
+} from "./nuq-pg-publication";
 
 // === Basics
 
@@ -58,6 +61,16 @@ export class NuQPublicationConflictError extends Error {
   ) {
     super(`NuQ publication conflict for ${jobId}: ${reason}`);
     this.name = "NuQPublicationConflictError";
+  }
+}
+
+export class NuQGroupPublicationConflictError extends Error {
+  constructor(
+    public readonly groupId: string,
+    reason: string,
+  ) {
+    super(`NuQ group publication conflict for ${groupId}: ${reason}`);
+    this.name = "NuQGroupPublicationConflictError";
   }
 }
 
@@ -662,6 +675,9 @@ class NuQ<JobData = any, JobReturnValue = any> {
         `SELECT pg_advisory_xact_lock(hashtextextended(id, 0)) FROM unnest($1::text[]) AS ids(id) ORDER BY id;`,
         [ids],
       );
+      if (this.queueName === "nuq.queue_scrape") {
+        await validateNuQPgPublicationUnderLock(ids);
+      }
 
       const readRows = async () => {
         const active = (
@@ -1020,8 +1036,11 @@ class NuQ<JobData = any, JobReturnValue = any> {
   public async removeJobResidue(
     id: string,
     _logger: Logger = logger,
+    beforeCommit?: (removed: readonly NuQRemovedJobResidue[]) => Promise<void>,
   ): Promise<NuQRemovedJobResidue | null> {
-    return (await this.removeJobsResidue([id], _logger))[0] ?? null;
+    return (
+      (await this.removeJobsResidue([id], _logger, beforeCommit))[0] ?? null
+    );
   }
 
   public async removeJob(
@@ -1034,6 +1053,7 @@ class NuQ<JobData = any, JobReturnValue = any> {
   public async removeJobsResidue(
     ids: string[],
     _logger: Logger = logger,
+    beforeCommit?: (removed: readonly NuQRemovedJobResidue[]) => Promise<void>,
   ): Promise<NuQRemovedJobResidue[]> {
     if (ids.length === 0) return [];
     ids = [...new Set(ids.map(canonicalUuid))];
@@ -1060,8 +1080,6 @@ class NuQ<JobData = any, JobReturnValue = any> {
             )
           ).rows
         : [];
-      await client.query("COMMIT");
-
       const removed = new Map<string, NuQRemovedJobResidue>();
       for (const row of [...active, ...backlog]) {
         // A corrupt duplicate can exist because the two tables have separate
@@ -1076,9 +1094,15 @@ class NuQ<JobData = any, JobReturnValue = any> {
           });
         }
       }
-      return ids
+      const result = ids
         .map(id => removed.get(id))
         .filter((row): row is NuQRemovedJobResidue => row !== undefined);
+      // The callback runs after DELETE but before COMMIT while the stable-ID
+      // advisory locks are still held. Cross-store deletion intent therefore
+      // becomes durable before publishers can observe the row as absent.
+      if (beforeCommit) await beforeCommit(result);
+      await client.query("COMMIT");
+      return result;
     } catch (error) {
       await client.query("ROLLBACK").catch(() => {});
       throw error;
@@ -1805,9 +1829,58 @@ class NuQJobGroup {
       status: row.status,
       createdAt: new Date(row.created_at),
       ownerId: row.owner_id,
-      ttl: row.ttl,
+      ttl: Number(row.ttl),
       expiresAt: row.expires_at ? new Date(row.expires_at) : undefined,
     };
+  }
+
+  private assertPublicationCompatible(
+    row: any,
+    id: string,
+    ownerId: string,
+    ttl: number,
+  ): void {
+    if ((row.owner_id ?? null) !== normalizeOwnerId(ownerId)?.toLowerCase()) {
+      throw new NuQGroupPublicationConflictError(id, "owner differs");
+    }
+    if (Number(row.ttl) !== ttl) {
+      throw new NuQGroupPublicationConflictError(id, "ttl differs");
+    }
+  }
+
+  private async readPublicationWithLock(
+    client: PoolClient,
+    id: string,
+  ): Promise<any | null> {
+    await client.query(
+      "SELECT pg_advisory_xact_lock(hashtextextended($1::text, 0));",
+      [canonicalUuid(id)],
+    );
+    return (
+      (
+        await client.query(
+          `SELECT ${this.groupReturning.join(", ")} FROM ${this.groupName} WHERE id = $1 FOR UPDATE;`,
+          [canonicalUuid(id)],
+        )
+      ).rows[0] ?? null
+    );
+  }
+
+  public async resolveGroupPublication(
+    id: string,
+  ): Promise<NuQJobGroupInstance | null> {
+    const client = await nuqPool.connect();
+    try {
+      await client.query("BEGIN");
+      const row = await this.readPublicationWithLock(client, id);
+      await client.query("COMMIT");
+      return this.rowToGroup(row);
+    } catch (error) {
+      await client.query("ROLLBACK").catch(() => {});
+      throw error;
+    } finally {
+      client.release();
+    }
   }
 
   public async addGroup(
@@ -1817,29 +1890,50 @@ class NuQJobGroup {
     _logger: Logger = logger,
   ): Promise<NuQJobGroupInstance> {
     return withSpan("nuq.addGroup", async span => {
+      const stableId = canonicalUuid(id);
+      const stableTtl = ttl ?? 86400000;
       setSpanAttributes(span, {
         "nuq.group_name": this.groupName,
-        "nuq.group_id": id,
-        "nuq.ttl": ttl ?? 86400000,
+        "nuq.group_id": stableId,
+        "nuq.ttl": stableTtl,
       });
 
       const start = Date.now();
+      const client = await nuqPool.connect();
       try {
-        const result = this.rowToGroup(
-          (
-            await nuqPool.query(
-              `INSERT INTO ${this.groupName} (id, owner_id, ttl) VALUES ($1, $2, $3) RETURNING ${this.groupReturning.join(", ")};`,
-              [id, normalizeOwnerId(ownerId), ttl ?? 86400000],
-            )
-          ).rows[0],
-        )!;
+        await client.query("BEGIN");
+        await client.query(
+          "SELECT pg_advisory_xact_lock(hashtextextended($1::text, 0));",
+          [stableId],
+        );
+        const inserted = await client.query(
+          `INSERT INTO ${this.groupName} (id, owner_id, ttl) VALUES ($1, $2, $3) ON CONFLICT (id) DO NOTHING RETURNING id;`,
+          [stableId, normalizeOwnerId(ownerId), stableTtl],
+        );
+        const row = (
+          await client.query(
+            `SELECT ${this.groupReturning.join(", ")} FROM ${this.groupName} WHERE id = $1 FOR UPDATE;`,
+            [stableId],
+          )
+        ).rows[0];
+        if (!row) {
+          throw new Error(
+            `NuQ group publication did not materialize stable id ${stableId}`,
+          );
+        }
+        this.assertPublicationCompatible(row, stableId, ownerId, stableTtl);
+        await client.query("COMMIT");
+        const result = this.rowToGroup(row)!;
 
         setSpanAttributes(span, {
-          "nuq.group_created": true,
+          "nuq.group_created": inserted.rowCount === 1,
         });
-
         return result;
+      } catch (error) {
+        await client.query("ROLLBACK").catch(() => {});
+        throw error;
       } finally {
+        client.release();
         const duration = Date.now() - start;
         setSpanAttributes(span, {
           "nuq.duration_ms": duration,
@@ -1848,7 +1942,7 @@ class NuQJobGroup {
           module: "nuq/metrics",
           method: "nuqAddGroup",
           duration,
-          groupId: id,
+          groupId: stableId,
         });
       }
     });

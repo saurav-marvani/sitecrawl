@@ -13,19 +13,33 @@ import { getRedisConnection } from "../../services/queue-service";
 import { redisEvictConnection } from "../../services/redis";
 import {
   crawlFinishedQueueFdb,
+  externalSlotMigrationObjectId,
+  externalSlotsFdb,
+  getNuqFdbSweeper,
+  NuqFdbPgJobRemovalConflictError,
   nuqFdbMigrationStore,
+  pgJobRemovalsFdb,
   scrapeQueueFdb,
 } from "../../services/worker/nuq-fdb";
+import { TIME_BUCKETS } from "../../services/worker/nuq-fdb/keyspace";
 import {
   getFdb,
   getNuqFdbDatabase,
 } from "../../services/worker/nuq-fdb/client";
 import {
+  NuQGroupPublicationConflictError,
   NuQPublicationConflictError,
+  crawlGroup as crawlGroupPg,
   nuqShutdown,
   scrapeQueue as scrapeQueuePg,
 } from "../../services/worker/nuq";
-import { scrapeQueue as routedScrapeQueue } from "../../services/worker/nuq-router";
+import {
+  crawlGroup as routedCrawlGroup,
+  isFdbTeam,
+  mirrorExternalSlotAcquire,
+  mirrorExternalSlotRelease,
+  scrapeQueue as routedScrapeQueue,
+} from "../../services/worker/nuq-router";
 
 const describeIf =
   config.FDB_CLUSTER_FILE && config.NUQ_DATABASE_URL ? describe : describe.skip;
@@ -59,6 +73,10 @@ describeIf("NuQ PG publication with durable FDB authority", () => {
   const jobId = randomUUID();
   const conflictTeamId = randomUUID();
   const conflictJobId = randomUUID();
+  const groupTeamId = randomUUID();
+  const ambiguousGroupTeamId = randomUUID();
+  const conflictGroupTeamId = randomUUID();
+  const externalTeamId = randomUUID();
 
   beforeAll(async () => {
     config.NUQ_BACKEND = "pg";
@@ -90,6 +108,10 @@ describeIf("NuQ PG publication with durable FDB authority", () => {
     await Promise.all([
       clearMigrationTeam(teamId),
       clearMigrationTeam(conflictTeamId),
+      clearMigrationTeam(groupTeamId),
+      clearMigrationTeam(ambiguousGroupTeamId),
+      clearMigrationTeam(conflictGroupTeamId),
+      clearMigrationTeam(externalTeamId),
     ]);
     config.NUQ_BACKEND = previousBackend;
     config.NUQ_FDB_METRICS_V2_ACTIVATE = previousMetricsActivation;
@@ -186,10 +208,51 @@ describeIf("NuQ PG publication with durable FDB authority", () => {
       data: { url: "https://example.com/original" },
     });
 
-    await routedScrapeQueue.removeJob(jobId);
+    const concurrencyKey = `concurrency-limiter:${teamId}`;
+    const beginFailure = new Error("injected durable deletion failure");
+    const beginSpy = vi
+      .spyOn(pgJobRemovalsFdb, "begin")
+      .mockRejectedValueOnce(beginFailure);
+    await expect(routedScrapeQueue.removeJob(jobId)).rejects.toBe(beginFailure);
+    beginSpy.mockRestore();
+    await expect(scrapeQueuePg.getJob(jobId)).resolves.toMatchObject({
+      id: jobId,
+    });
+    await expect(pgJobRemovalsFdb.inspect(jobId)).resolves.toBeNull();
+
+    await getRedisConnection().del(concurrencyKey);
+    await getRedisConnection().set(concurrencyKey, "inject-zrem-failure");
+    await expect(routedScrapeQueue.removeJob(jobId)).rejects.toBeInstanceOf(
+      AggregateError,
+    );
     await expect(scrapeQueuePg.getJob(jobId)).resolves.toBeNull();
     await expect(
-      getRedisConnection().zscore(`concurrency-limiter:${teamId}`, jobId),
+      getRedisConnection().get(`nuq:pg_remove_residue:${jobId}`),
+    ).resolves.not.toBeNull();
+    await expect(pgJobRemovalsFdb.inspect(jobId)).resolves.toMatchObject({
+      id: jobId,
+      ownerId: teamId,
+    });
+    await expect(
+      nuqFdbMigrationStore.inspectPin("scrape_job", jobId),
+    ).resolves.toMatchObject({ lifecycle: "active" });
+
+    // Model Redis loss after PG DELETE. The FDB descriptor still fences a
+    // same-ID publisher and gives removal enough metadata to finish cleanup.
+    await getRedisConnection().del(
+      concurrencyKey,
+      `nuq:pg_remove_residue:${jobId}`,
+    );
+    await expect(_addScrapeJobToBullMQ(data, jobId)).rejects.toBeInstanceOf(
+      NuqFdbPgJobRemovalConflictError,
+    );
+    await expect(scrapeQueuePg.getJob(jobId)).resolves.toBeNull();
+    await routedScrapeQueue.removeJob(jobId);
+    await expect(
+      getRedisConnection().get(`nuq:pg_remove_residue:${jobId}`),
+    ).resolves.toBeNull();
+    await expect(
+      getRedisConnection().zscore(concurrencyKey, jobId),
     ).resolves.toBeNull();
     await expect(
       nuqFdbMigrationStore.inspectPin("scrape_job", jobId),
@@ -197,5 +260,167 @@ describeIf("NuQ PG publication with durable FDB authority", () => {
       lifecycle: "terminal",
       residue: { capacity_ready_active: 0, intent_unresolved: 0 },
     });
+    await expect(pgJobRemovalsFdb.inspect(jobId)).resolves.toBeNull();
+  });
+
+  test("PG group stable publication reconciles existing rows and compensates only proven absence", async () => {
+    await isFdbTeam(groupTeamId);
+    const groupId = randomUUID();
+    const first = await routedCrawlGroup.addGroup(
+      groupId,
+      groupTeamId,
+      120_000,
+    );
+    const replay = await routedCrawlGroup.addGroup(
+      groupId,
+      groupTeamId,
+      120_000,
+    );
+    expect(replay).toMatchObject({
+      id: groupId,
+      ownerId: groupTeamId,
+      ttl: 120_000,
+    });
+    expect(replay.createdAt).toEqual(first.createdAt);
+    await expect(
+      routedCrawlGroup.addGroup(groupId, groupTeamId, 120_001),
+    ).rejects.toBeInstanceOf(NuQGroupPublicationConflictError);
+    await expect(
+      nuqFdbMigrationStore.inspectPin("group", groupId),
+    ).resolves.toMatchObject({ lifecycle: "active", backend: "pg" });
+
+    await isFdbTeam(ambiguousGroupTeamId);
+    const ambiguousId = randomUUID();
+    await nuqFdbMigrationStore.preparePinnedObject({
+      teamId: ambiguousGroupTeamId,
+      kind: "group",
+      objectId: ambiguousId,
+      admission: { type: "new-root" },
+      requiredBackend: "pg",
+      residue: { intent_unresolved: 1 },
+    });
+    const published = await crawlGroupPg.addGroup(
+      ambiguousId,
+      ambiguousGroupTeamId,
+      90_000,
+    );
+    const reconciled = await routedCrawlGroup.addGroup(
+      ambiguousId,
+      ambiguousGroupTeamId,
+      90_000,
+    );
+    expect(reconciled.createdAt).toEqual(published.createdAt);
+    await expect(
+      nuqFdbMigrationStore.inspectPin("group", ambiguousId),
+    ).resolves.toMatchObject({
+      lifecycle: "active",
+      residue: { control_groups: 1, intent_unresolved: 0 },
+    });
+
+    await isFdbTeam(conflictGroupTeamId);
+    const absentId = randomUUID();
+    const injected = new Error("injected PG publication failure");
+    const addSpy = vi.spyOn(crawlGroupPg, "addGroup");
+    addSpy.mockRejectedValueOnce(injected);
+    await expect(
+      routedCrawlGroup.addGroup(absentId, conflictGroupTeamId, 30_000),
+    ).rejects.toBe(injected);
+    addSpy.mockRestore();
+    await expect(crawlGroupPg.getGroup(absentId)).resolves.toBeNull();
+    await expect(
+      nuqFdbMigrationStore.inspectPin("group", absentId),
+    ).resolves.toMatchObject({
+      lifecycle: "terminal",
+      residue: { control_groups: 0, intent_unresolved: 0 },
+    });
+
+    const incompatibleId = randomUUID();
+    await crawlGroupPg.addGroup(incompatibleId, randomUUID(), 30_000);
+    await expect(
+      routedCrawlGroup.addGroup(incompatibleId, conflictGroupTeamId, 30_000),
+    ).rejects.toBeInstanceOf(NuQGroupPublicationConflictError);
+    await expect(
+      nuqFdbMigrationStore.inspectPin("group", incompatibleId),
+    ).resolves.toMatchObject({
+      lifecycle: "prepared",
+      residue: { intent_unresolved: 1 },
+    });
+  });
+
+  test("PG external holder expiry remains durable after Redis loss and ignores stale renewal generations", async () => {
+    await isFdbTeam(externalTeamId);
+    const concurrencyKey = `concurrency-limiter:${externalTeamId}`;
+    const failedHolder = randomUUID();
+    const zaddFailure = new Error("injected zadd failure");
+    const zaddSpy = vi
+      .spyOn(getRedisConnection(), "zadd")
+      .mockRejectedValueOnce(zaddFailure);
+    await expect(
+      mirrorExternalSlotAcquire(externalTeamId, failedHolder, -1),
+    ).rejects.toBe(zaddFailure);
+    zaddSpy.mockRestore();
+    await expect(
+      nuqFdbMigrationStore.inspectPin(
+        "external_holder",
+        externalSlotMigrationObjectId(externalTeamId, failedHolder),
+      ),
+    ).resolves.toMatchObject({
+      backend: "pg",
+      lifecycle: "active",
+      residue: { capacity_external_holders: 1 },
+    });
+    await getRedisConnection().del(concurrencyKey);
+    await getNuqFdbSweeper().sweepOnce();
+    await expect(
+      nuqFdbMigrationStore.inspectPin(
+        "external_holder",
+        externalSlotMigrationObjectId(externalTeamId, failedHolder),
+      ),
+    ).resolves.toMatchObject({
+      lifecycle: "terminal",
+      residue: { capacity_external_holders: 0 },
+    });
+
+    const expiredHolder = randomUUID();
+    await mirrorExternalSlotAcquire(externalTeamId, expiredHolder, -1);
+    const expiredObjectId = externalSlotMigrationObjectId(
+      externalTeamId,
+      expiredHolder,
+    );
+    await getRedisConnection().del(concurrencyKey);
+    await getNuqFdbSweeper().sweepOnce();
+    await expect(
+      nuqFdbMigrationStore.inspectPin("external_holder", expiredObjectId),
+    ).resolves.toMatchObject({
+      backend: "pg",
+      lifecycle: "terminal",
+      residue: { capacity_external_holders: 0 },
+    });
+
+    const renewedHolder = randomUUID();
+    await mirrorExternalSlotAcquire(externalTeamId, renewedHolder, -1);
+    let stale: [Buffer, Buffer] | undefined;
+    for (let bucket = 0; bucket < TIME_BUCKETS && !stale; bucket++) {
+      const range = externalSlotsFdb.pgExpiryScanRange(bucket, Date.now());
+      const rows = await getNuqFdbDatabase().doTn(async tn =>
+        tn.snapshot().getRangeAll(range.begin, range.end),
+      );
+      stale = rows[0] as [Buffer, Buffer] | undefined;
+    }
+    expect(stale).toBeDefined();
+    await mirrorExternalSlotAcquire(externalTeamId, renewedHolder, 60_000);
+    await getRedisConnection().del(concurrencyKey);
+    await getNuqFdbDatabase().doTn(async tn => tn.set(stale![0], stale![1]));
+    await getNuqFdbSweeper().sweepOnce();
+    await expect(
+      nuqFdbMigrationStore.inspectPin(
+        "external_holder",
+        externalSlotMigrationObjectId(externalTeamId, renewedHolder),
+      ),
+    ).resolves.toMatchObject({
+      lifecycle: "active",
+      residue: { capacity_external_holders: 1 },
+    });
+    await mirrorExternalSlotRelease(externalTeamId, renewedHolder);
   });
 });
