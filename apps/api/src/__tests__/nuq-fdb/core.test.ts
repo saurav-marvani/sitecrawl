@@ -9,7 +9,8 @@ import {
   getNuqFdbDatabase,
   getFdb,
 } from "../../services/worker/nuq-fdb/client";
-import { encodeI64, encodeJson } from "../../services/worker/nuq-fdb/keyspace";
+import { decodeI64, encodeJson } from "../../services/worker/nuq-fdb/keyspace";
+import { newTxContext, uvSuffix } from "../../services/worker/nuq-fdb/ops";
 
 // These tests exercise the FDB queue core directly against a real FoundationDB
 // cluster (no API server needed). They are skipped when FDB is not configured.
@@ -32,7 +33,10 @@ type Ctx = {
 
 // Each test gets its own queue keyspace so leaked jobs (some tests leave them
 // behind on purpose) can never bleed into other tests' takes.
-async function makeCtx(name: string): Promise<Ctx> {
+async function makeCtx(
+  name: string,
+  overrides: Partial<ConstructorParameters<typeof NuQFdbQueue>[1]> = {},
+): Promise<Ctx> {
   const scrapeName = `t-${RUN}-${name}`;
   const finishedName = `t-${RUN}-${name}-fin`;
   createdQueueNames.push(scrapeName, finishedName);
@@ -40,6 +44,7 @@ async function makeCtx(name: string): Promise<Ctx> {
     hasGroups: true,
     finishedQueueName: finishedName,
     leaseMs: TEST_LEASE_MS,
+    ...overrides,
   });
   const finishedQueue = new NuQFdbQueue(finishedName, { hasGroups: false });
   const group = new NuQFdbJobGroup(queue.ks, queue.groupOps!);
@@ -124,6 +129,198 @@ describeIf("NuQ FDB core", () => {
     expect(await queue.jobFail(id, job.lock!, "nope")).toBe(false);
   });
 
+  test("duplicate IDs are idempotent within and across enqueue calls", async () => {
+    const { queue, group } = await makeCtx("enqueue-idempotent");
+    const owner = freshOwner();
+    const gid = randomUUID();
+    const id = randomUUID();
+    await group.addGroup(gid, owner, undefined, { maxConcurrency: 1 });
+    const input = {
+      id,
+      data: scrapeData(),
+      options: { ownerId: owner, groupId: gid },
+    };
+    const strictGate = {
+      teamLimit: 1,
+      queueCap: 10,
+      key: { id: randomUUID(), limit: 1 },
+    };
+
+    const first = await queue.addJobs([input, input, input], strictGate);
+    expect(first).toHaveLength(3);
+    expect(first.every(job => job.id === id)).toBe(true);
+    await queue.addJob(
+      id,
+      scrapeData({ ignored: true }),
+      { ownerId: owner, groupId: gid },
+      strictGate,
+    );
+    expect(await queue.getTeamActiveCount(owner)).toBe(1);
+    expect((await queue.getGroupNumericStats(gid)).queued).toBe(1);
+
+    const taken = await takeAll(queue, 10);
+    expect(taken.map(job => job.id)).toEqual([id]);
+    await queue.jobFinish(id, taken[0].lock!, null);
+    expect(await queue.getWorkerLoadCount()).toBe(0);
+    expect(await queue.getTeamActiveCount(owner)).toBe(0);
+    expect((await group.getGroup(gid))?.status).toBe("completed");
+  });
+
+  test("dequeue recovers the original claim after simulated commit_unknown_result", async () => {
+    let inject = true;
+    const { queue } = await makeCtx("claim-unknown", {
+      testHooks: {
+        simulateClaimCommitUnknown: () => {
+          if (!inject) return false;
+          inject = false;
+          return true;
+        },
+      },
+    });
+    const id = randomUUID();
+    await queue.addJob(id, scrapeData(), { ownerId: freshOwner() }, UNLIMITED);
+
+    const job = await queue.getJobToProcess();
+    expect(job?.id).toBe(id);
+    expect(await queue.getJobToProcess()).toBeNull();
+    expect(await queue.jobFinish(id, job!.lock!, null)).toBe(true);
+  });
+
+  test("a failed >250-job stage stays invisible and resumes without duplicates", async () => {
+    let failAfterFirstBatch = true;
+    const { queue, finishedQueue, group, sweeper } = await makeCtx(
+      "bulk-resume",
+      {
+        testHooks: {
+          afterStageBatch: async batch => {
+            if (batch === 1 && failAfterFirstBatch) {
+              failAfterFirstBatch = false;
+              throw new Error("injected later stage failure");
+            }
+          },
+        },
+      },
+    );
+    const owner = freshOwner();
+    const gid = randomUUID();
+    await group.addGroup(gid, owner);
+    const inputs = Array.from({ length: 251 }, () => ({
+      id: randomUUID(),
+      data: scrapeData({ traceContext: "first-attempt" }),
+      options: { ownerId: owner, groupId: gid },
+    }));
+
+    await expect(queue.addJobs(inputs, UNLIMITED)).rejects.toThrow(
+      "injected later stage failure",
+    );
+    const early = await takeAll(queue, 251);
+    expect(early).toEqual([]);
+    expect((await group.getGroup(gid))?.status).toBe("active");
+    expect(await finishedQueue.getJobToProcess()).toBeNull();
+
+    const resumed = await queue.addJobs(
+      inputs.map(input => ({
+        ...input,
+        data: { ...input.data, traceContext: "regenerated-retry-trace" },
+        options: {
+          ...input.options,
+          timesOutAt: new Date(Date.now() + 60_000),
+        },
+      })),
+      gate(1),
+    );
+    expect(resumed).toHaveLength(251);
+    expect(resumed.every(job => job.status === "queued")).toBe(true);
+    const later = await takeAll(queue, 251);
+    const seen = new Set(later.map(job => job.id));
+    expect(seen.size).toBe(251);
+    await Promise.all(
+      later.map(job => queue.jobFinish(job.id, job.lock!, null)),
+    );
+    await sweeper.sweepOnce();
+    expect((await group.getGroup(gid))?.status).toBe("completed");
+    expect(await finishedQueue.getJobToProcess()).not.toBeNull();
+  }, 60_000);
+
+  test("a concurrent retry cannot recreate a manifest after publication", async () => {
+    let manifestCalls = 0;
+    let publishCalls = 0;
+    let signalPublished!: () => void;
+    let releasePublisher!: () => void;
+    const published = new Promise<void>(resolve => (signalPublished = resolve));
+    const holdPublisher = new Promise<void>(
+      resolve => (releasePublisher = resolve),
+    );
+    const { queue } = await makeCtx("manifest-publish-race", {
+      testHooks: {
+        afterManifest: async () => {
+          manifestCalls++;
+          if (manifestCalls === 2)
+            throw new Error("retry stopped after manifest");
+        },
+        afterPublishBatch: async () => {
+          publishCalls++;
+          if (publishCalls === 1) {
+            signalPublished();
+            await holdPublisher;
+          }
+        },
+      },
+    });
+    const owner = freshOwner();
+    const inputs = Array.from({ length: 251 }, () => ({
+      id: randomUUID(),
+      data: scrapeData(),
+      options: { ownerId: owner },
+    }));
+
+    const first = queue.addJobs(inputs, UNLIMITED);
+    await published;
+    await expect(queue.addJobs(inputs, UNLIMITED)).rejects.toThrow(
+      "retry stopped after manifest",
+    );
+    releasePublisher();
+    await expect(first).resolves.toHaveLength(251);
+  }, 30_000);
+
+  test("a later oversized job fails before any bulk enqueue reservation", async () => {
+    const { queue } = await makeCtx("bulk-preflight");
+    const owner = freshOwner();
+    const firstId = randomUUID();
+    const inputs = Array.from({ length: 250 }, (_, i) => ({
+      id: i === 0 ? firstId : randomUUID(),
+      data: scrapeData(),
+      options: { ownerId: owner },
+    }));
+    inputs.push({
+      id: randomUUID(),
+      data: scrapeData({ blob: "x".repeat(9 * 1024 * 1024) }),
+      options: { ownerId: owner },
+    });
+
+    await expect(queue.addJobs(inputs, UNLIMITED)).rejects.toThrow(
+      /too large to enqueue safely/,
+    );
+    expect(await queue.getJob(firstId)).toBeNull();
+    expect(await queue.getJobToProcess()).toBeNull();
+  });
+
+  test("a 2,000-job ingest stages and publishes in bounded transactions", async () => {
+    const { queue } = await makeCtx("bulk-publication-bounded");
+    const owner = freshOwner();
+    const ids = Array.from({ length: 2_000 }, () => randomUUID());
+    const jobs = await queue.addJobs(
+      ids.map(id => ({
+        id,
+        data: scrapeData(),
+        options: { ownerId: owner },
+      })),
+      UNLIMITED,
+    );
+    expect(jobs).toHaveLength(2_000);
+    expect(new Set(jobs.map(job => job.id)).size).toBe(2_000);
+  }, 60_000);
+
   test("team concurrency gate: limit 2 admits 2, backlogs the rest, promotes on finish", async () => {
     const { queue } = await makeCtx("teamgate");
     const owner = freshOwner();
@@ -184,15 +381,24 @@ describeIf("NuQ FDB core", () => {
     for (const j of rest) await queue.jobFinish(j.id, j.lock!, null);
     expect(await queue.getTeamActiveCount(owner)).toBe(0);
     expect(await queue.getTeamPendingCount(owner)).toBe(0);
+    expect((await queue.getTeamActiveCounts()).has(owner)).toBe(false);
+    await getNuqFdbDatabase().doTn(async tn => {
+      expect(await tn.get(queue.ks.teamActiveIndex(owner))).toBeFalsy();
+    });
   });
 
   test("metrics count pending teams even without active index entries", async () => {
     const { queue } = await makeCtx("pending-metrics");
     const owner = freshOwner();
 
-    await getNuqFdbDatabase().doTn(async tn => {
-      tn.set(queue.ks.teamPendingCount(owner), encodeI64(4));
-    });
+    await queue.addJobs(
+      Array.from({ length: 4 }, () => ({
+        id: randomUUID(),
+        data: scrapeData(),
+        options: { ownerId: owner },
+      })),
+      gate(0),
+    );
 
     const metrics = await queue.getMetrics();
     expect(metrics).toContain(
@@ -282,6 +488,28 @@ describeIf("NuQ FDB core", () => {
         gate(1, 2),
       ),
     ).rejects.toThrow(/queue limit reached/i);
+  });
+
+  test("a late queue-cap rejection releases partial ingest reservations", async () => {
+    const { queue } = await makeCtx("qfull-bulk-abort");
+    const owner = freshOwner();
+    const ids = Array.from({ length: 300 }, () => randomUUID());
+    await expect(
+      queue.addJobs(
+        ids.map(id => ({
+          id,
+          data: scrapeData(),
+          options: { ownerId: owner },
+        })),
+        gate(0, 250),
+      ),
+    ).rejects.toThrow(/queue limit reached/i);
+    await getNuqFdbDatabase().doTn(async tn => {
+      expect(decodeI64(await tn.get(queue.ks.teamIngestReserved(owner)))).toBe(
+        0,
+      );
+    });
+    expect(await queue.getJobs(ids)).toEqual([]);
   });
 
   test("group lifecycle: numeric stats, finish detection, crawl_finished emission", async () => {
@@ -458,6 +686,55 @@ describeIf("NuQ FDB core", () => {
     expect(await queue.jobFinish(id, job.lock!, null)).toBe(true);
   }, 30_000);
 
+  test("renewLock conflicts cleanly with a concurrent finish", async () => {
+    const { queue, sweeper } = await makeCtx("renew-finish-race");
+    for (let i = 0; i < 20; i++) {
+      const id = randomUUID();
+      await queue.addJob(
+        id,
+        scrapeData(),
+        { ownerId: freshOwner() },
+        UNLIMITED,
+      );
+      const job = await queue.getJobToProcess();
+      const [renewed, finished] = await Promise.all([
+        queue.renewLock(id, job!.lock!),
+        queue.jobFinish(id, job!.lock!, null),
+      ]);
+      expect(finished).toBe(true);
+      expect(typeof renewed).toBe("boolean");
+      await sweeper.sweepOnce();
+      expect((await queue.getJob(id))?.status).toBe("completed");
+    }
+  }, 30_000);
+
+  test("renewLock cannot resurrect a concurrently reaped lease", async () => {
+    const { queue, sweeper } = await makeCtx("renew-reap-race", {
+      leaseMs: 100,
+    });
+    const id = randomUUID();
+    await queue.addJob(id, scrapeData(), { ownerId: freshOwner() }, UNLIMITED);
+    const original = await queue.getJobToProcess();
+    await new Promise(resolve => setTimeout(resolve, 150));
+
+    const [renewed] = await Promise.all([
+      queue.renewLock(id, original!.lock!),
+      sweeper.sweepOnce(),
+    ]);
+    const after = await queue.getJob(id);
+    expect(["active", "queued"]).toContain(after?.status);
+    if (after?.status === "active") {
+      expect(renewed).toBe(true);
+      expect(await queue.jobFinish(id, original!.lock!, null)).toBe(true);
+    } else {
+      expect(renewed).toBe(false);
+      expect(await queue.jobFinish(id, original!.lock!, null)).toBe(false);
+      const retried = await queue.getJobToProcess();
+      expect(await queue.jobFinish(id, retried!.lock!, null)).toBe(true);
+    }
+    expect((await queue.getJob(id))?.status).toBe("completed");
+  });
+
   test("backlog timeout: pending jobs are silently dropped at their deadline", async () => {
     const { queue, sweeper } = await makeCtx("bto");
     const owner = freshOwner();
@@ -524,7 +801,7 @@ describeIf("NuQ FDB core", () => {
     await finishedQueue.jobFinish(fin!.id, fin!.lock!, null);
   });
 
-  test("group cancellation scans past stale group-index rows before clearing task", async () => {
+  test("group cancellation persists its cursor past 25k stale index rows", async () => {
     const { queue, group, sweeper } = await makeCtx("cancel-stale-index");
     const db = getNuqFdbDatabase();
     const owner = freshOwner();
@@ -533,7 +810,7 @@ describeIf("NuQ FDB core", () => {
     await group.addGroup(gid, owner);
 
     await db.doTn(async tn => {
-      for (let i = 0; i < 600; i++) {
+      for (let i = 0; i < 25_100; i++) {
         tn.set(
           queue.ks.groupJob(gid, `0000-stale-${String(i).padStart(4, "0")}`),
           encodeJson({ m: 1, s: "pending" }),
@@ -555,13 +832,18 @@ describeIf("NuQ FDB core", () => {
 
     expect(await group.cancelGroup(gid)).toBe(true);
     await sweeper.sweepOnce();
+    expect(await queue.getTeamPendingCount(owner)).toBe(1);
+    await getNuqFdbDatabase().doTn(async tn => {
+      expect(await tn.get(queue.ks.taskGroupCancel(gid))).toBeTruthy();
+    });
+    await sweeper.sweepOnce();
 
     expect(await queue.getJob(pendingId)).toBeNull();
     expect(await queue.getTeamPendingCount(owner)).toBe(0);
     await db.doTn(async tn => {
       expect(await tn.get(queue.ks.taskGroupCancel(gid))).toBeFalsy();
     });
-  });
+  }, 60_000);
 
   test("waitForJob resolves on completion and rejects on failure", async () => {
     const { queue } = await makeCtx("wait");
@@ -608,6 +890,35 @@ describeIf("NuQ FDB core", () => {
     expect(j?.returnvalue?.blob?.length).toBe(300 * 1024);
   });
 
+  test("self-host values and UTF-8 failure reasons stay within FDB bounds", async () => {
+    if (!expectInlineReturnvalue) return;
+    const { queue } = await makeCtx("value-bounds");
+    const owner = freshOwner();
+
+    const completedId = randomUUID();
+    await queue.addJob(
+      completedId,
+      scrapeData(),
+      { ownerId: owner },
+      UNLIMITED,
+    );
+    const completed = await queue.getJobToProcess();
+    expect(
+      await queue.jobFinish(completedId, completed!.lock!, {
+        blob: "x".repeat(9 * 1024 * 1024),
+      }),
+    ).toBe(true);
+    expect((await queue.getJob(completedId))?.returnvalue).toBeNull();
+
+    const failedId = randomUUID();
+    await queue.addJob(failedId, scrapeData(), { ownerId: owner }, UNLIMITED);
+    const failed = await queue.getJobToProcess();
+    await queue.jobFail(failedId, failed!.lock!, "🔥".repeat(100_000));
+    const reason = (await queue.getJob(failedId))?.failedReason ?? "";
+    expect(Buffer.byteLength(reason, "utf8")).toBeLessThanOrEqual(90 * 1024);
+    expect(reason.endsWith("�")).toBe(false);
+  }, 30_000);
+
   test("getCrawlJobsForListing paginates completed jobs in finish order", async () => {
     const { queue, group } = await makeCtx("listing");
     const owner = freshOwner();
@@ -637,6 +948,42 @@ describeIf("NuQ FDB core", () => {
     expect(page2.map(j => j.id)).toEqual(finishOrder.slice(3));
   });
 
+  test("crawl listing handles deep offsets in bounded transactions", async () => {
+    const { queue } = await makeCtx("listing-deep");
+    const db = getNuqFdbDatabase();
+    const owner = freshOwner();
+    const gid = randomUUID();
+    const ids = Array.from(
+      { length: 1205 },
+      (_, i) => `deep-${String(i).padStart(4, "0")}`,
+    );
+
+    for (let start = 0; start < ids.length; start += 100) {
+      await db.doTn(async tn => {
+        const txc = newTxContext();
+        for (const id of ids.slice(start, start + 100)) {
+          tn.set(
+            queue.ks.jobMeta(id),
+            encodeJson({ c: Date.now(), p: 0, o: owner, g: gid, f: 0, dc: 1 }),
+          );
+          tn.set(
+            queue.ks.jobStatus(id),
+            encodeJson({ s: "completed", st: 0, fa: Date.now() }),
+          );
+          tn.set(queue.ks.jobData(id, 0), encodeJson(scrapeData()));
+          tn.setVersionstampSuffixedKey(
+            queue.ks.groupDonePrefix(gid),
+            Buffer.from(id),
+            uvSuffix(txc),
+          );
+        }
+      });
+    }
+
+    const page = await queue.getCrawlJobsForListing(gid, 5, 1200);
+    expect(page.map(job => job.id)).toEqual(ids.slice(1200));
+  });
+
   test("getGroupAnyJob returns a single_urls member and checks ownership", async () => {
     const { queue, group } = await makeCtx("anyjob");
     const owner = freshOwner();
@@ -656,6 +1003,35 @@ describeIf("NuQ FDB core", () => {
 
     const [j] = await takeAll(queue, 1);
     await queue.jobFinish(j.id, j.lock!, null);
+  });
+
+  test("getGroupAnyJob scans beyond deep non-countable prefixes", async () => {
+    const { queue, group } = await makeCtx("anyjob-deep");
+    const owner = freshOwner();
+    const gid = randomUUID();
+    const id = "zzzz-countable-member";
+    await group.addGroup(gid, owner);
+    await getNuqFdbDatabase().doTn(async tn => {
+      for (let i = 0; i < 2100; i++) {
+        tn.set(
+          queue.ks.groupJob(
+            gid,
+            `0000-non-countable-${String(i).padStart(4, "0")}`,
+          ),
+          encodeJson({ m: 0, s: "completed" }),
+        );
+      }
+    });
+    await queue.addJob(
+      id,
+      scrapeData(),
+      { ownerId: owner, groupId: gid },
+      gate(10),
+    );
+
+    expect((await queue.getGroupAnyJob(gid, owner))?.id).toBe(id);
+    const job = await queue.getJobToProcess();
+    await queue.jobFinish(job!.id, job!.lock!, null);
   });
 
   // A completed crawl member must retain its input data so the crawl-finish job
@@ -730,6 +1106,29 @@ describeIf("NuQ FDB core", () => {
     await queue.jobFinish(j.id, j.lock!, null);
   });
 
+  test("removeJobs deduplicates and removes mixed ready/backlog jobs in bounded parallel batches", async () => {
+    const { queue, group, sweeper } = await makeCtx("remove-many");
+    const owner = freshOwner();
+    const gid = randomUUID();
+    const ids = Array.from({ length: 40 }, () => randomUUID());
+    await group.addGroup(gid, owner);
+    await queue.addJobs(
+      ids.map(id => ({
+        id,
+        data: scrapeData(),
+        options: { ownerId: owner, groupId: gid },
+      })),
+      gate(10),
+    );
+
+    await queue.removeJobs([...ids, ...ids.slice(0, 10)]);
+    await sweeper.sweepOnce();
+    expect(await queue.getTeamActiveCount(owner)).toBe(0);
+    expect(await queue.getTeamPendingCount(owner)).toBe(0);
+    expect(await queue.getJobToProcess()).toBeNull();
+    expect((await group.getGroup(gid))?.status).toBe("completed");
+  });
+
   test("limit raise promotes backlogged jobs via the sweeper", async () => {
     const { queue, sweeper } = await makeCtx("raise");
     const owner = freshOwner();
@@ -764,7 +1163,31 @@ describeIf("NuQ FDB core", () => {
     await queue.jobFinish(last.id, last.lock!, null);
   });
 
-  test("group TTL cleanup removes job records", async () => {
+  test("parallel releases converge exactly after a team limit is lowered", async () => {
+    const { queue } = await makeCtx("limit-lower");
+    const owner = freshOwner();
+    const ids = Array.from({ length: 20 }, () => randomUUID());
+    await queue.addJobs(
+      ids.map(id => ({
+        id,
+        data: scrapeData(),
+        options: { ownerId: owner },
+      })),
+      gate(10),
+    );
+    const active = await takeAll(queue, 10);
+    expect(active).toHaveLength(10);
+
+    await queue.addJob(randomUUID(), scrapeData(), { ownerId: owner }, gate(2));
+    await Promise.all(
+      active.map(job => queue.jobFinish(job.id, job.lock!, null)),
+    );
+    expect(await queue.getTeamActiveCount(owner)).toBe(2);
+    const promoted = await takeAll(queue, 10);
+    expect(promoted).toHaveLength(2);
+  });
+
+  test("group TTL cleanup resumes after more than 40k members", async () => {
     const { queue, group, sweeper } = await makeCtx("gttl");
     const owner = freshOwner();
     const gid = randomUUID();
@@ -781,10 +1204,22 @@ describeIf("NuQ FDB core", () => {
     await queue.jobFinish(j.id, j.lock!, null);
 
     expect((await group.getGroup(gid))?.status).toBe("completed");
+    for (let start = 0; start < 40_001; start += 5_000) {
+      await getNuqFdbDatabase().doTn(async tn => {
+        for (let i = start; i < Math.min(start + 5_000, 40_001); i++) {
+          tn.set(
+            queue.ks.groupJob(gid, `synthetic-${String(i).padStart(5, "0")}`),
+            encodeJson({ m: 0, s: "completed" }),
+          );
+        }
+      });
+    }
     await new Promise(resolve => setTimeout(resolve, 1100));
+    await sweeper.sweepOnce();
+    expect(await group.getGroup(gid)).not.toBeNull();
     await sweeper.sweepOnce();
 
     expect(await group.getGroup(gid)).toBeNull();
     expect(await queue.getJob(id)).toBeNull();
-  });
+  }, 60_000);
 });

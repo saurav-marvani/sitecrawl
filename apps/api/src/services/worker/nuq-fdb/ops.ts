@@ -18,6 +18,8 @@ import {
   F_CRAWL_GATED,
   F_COUNTABLE,
   F_KEY_GATED,
+  METRIC_SHARDS,
+  fnv1a,
 } from "./keyspace";
 
 export const ONE = encodeI64(1);
@@ -36,9 +38,33 @@ export function bumpTeamActive(
   delta: number,
 ): void {
   if (delta === 0) return;
-  const encoded = encodeI64(delta);
-  tn.add(ks.teamActive(teamId), encoded);
-  tn.add(ks.teamActiveIndex(teamId), encoded);
+  tn.add(ks.teamActive(teamId), encodeI64(delta));
+  // This is a compact presence index, not a second counter. Zero transitions
+  // use setTeamActive below and remove the key entirely.
+  if (delta > 0) tn.set(ks.teamActiveIndex(teamId), EMPTY);
+}
+
+export function setTeamActive(
+  tn: Transaction,
+  ks: NuqFdbKeyspace,
+  teamId: string,
+  count: number,
+): void {
+  const next = Math.max(0, count);
+  tn.set(ks.teamActive(teamId), encodeI64(next));
+  if (next === 0) tn.clear(ks.teamActiveIndex(teamId));
+  else tn.set(ks.teamActiveIndex(teamId), EMPTY);
+}
+
+export function bumpQueueStatus(
+  tn: Transaction,
+  ks: NuqFdbKeyspace,
+  id: string,
+  status: "pending" | "queued" | "active",
+  delta: 1 | -1,
+): void {
+  const shard = fnv1a(id) % METRIC_SHARDS;
+  tn.add(ks.metricCount(status, shard), delta === 1 ? ONE : MINUS_ONE);
 }
 
 // Per-transaction-attempt context. uv makes versionstamp-suffixed keys unique
@@ -161,6 +187,8 @@ export function promoteEntryToReady(
 ): void {
   pushReady(tn, ks, e, txc);
   setStatusQueued(tn, ks, e.i);
+  bumpQueueStatus(tn, ks, e.i, "pending", -1);
+  bumpQueueStatus(tn, ks, e.i, "queued", 1);
   if (e.g && e.f & F_COUNTABLE) {
     tn.add(ks.groupStatusCount(e.g, "pending"), MINUS_ONE);
     tn.add(ks.groupStatusCount(e.g, "queued"), ONE);
@@ -213,9 +241,9 @@ export function clearPendingPlacement(
 
 // === Pending queue pops
 
-// Pops the best entry from a team's pending shards. Snapshot-reads the shard
-// occupancy counters and probes up to 3 non-empty shards. Returns null if all
-// probed shards are empty.
+// Pops the best entry from a team's pending shards. The occupancy read is
+// intentionally conflicting: otherwise a slot releaser can miss a concurrent
+// append and commit a free slot plus a stranded backlog entry (lost wake-up).
 export async function popTeamPending(
   tn: Transaction,
   ks: NuqFdbKeyspace,
@@ -223,7 +251,7 @@ export async function popTeamPending(
 ): Promise<QueueEntry | null> {
   const startedAt = Date.now();
   const range = ks.teamShardCountRange(tid);
-  const counts = await tn.snapshot().getRangeAll(range.begin, range.end);
+  const counts = await tn.getRangeAll(range.begin, range.end);
   const nonEmpty: number[] = [];
   for (const [key, value] of counts) {
     if (decodeI64(value as Buffer) > 0)
@@ -345,14 +373,14 @@ export async function releaseSlotsAndPromote(
 
   // Limit-lowering convergence: if the team is over its limit, don't hand off.
   let overLimit = false;
-  let limit = Infinity;
+  let active = 0;
   if (held.team) {
     const limitBuf = await tn.get(ks.teamLimit(tid)); // cold key, rarely written
-    if (limitBuf) {
-      limit = decodeI64(limitBuf);
-      const snapActive = decodeI64(await tn.snapshot().get(ks.teamActive(tid)));
-      overLimit = snapActive > limit;
-    }
+    const limit = limitBuf ? decodeI64(limitBuf) : Infinity;
+    // Serialize parallel releases while a lowered limit converges. Snapshot
+    // reads can make several releasers all swallow the same last excess slot.
+    active = decodeI64(await tn.get(ks.teamActive(tid)));
+    overLimit = active > limit;
   }
 
   let teamHead: QueueEntry | null | "consumed" = null;
@@ -370,7 +398,7 @@ export async function releaseSlotsAndPromote(
     const kLimitBuf = await tn.get(ks.keyLimit(e.k!)); // cold key
     if (kLimitBuf) {
       const kLimit = decodeI64(kLimitBuf);
-      const kActive = decodeI64(await tn.snapshot().get(ks.keyActive(e.k!)));
+      const kActive = decodeI64(await tn.get(ks.keyActive(e.k!)));
       keyOverLimit = kActive > kLimit;
     }
     if (keyOverLimit) {
@@ -399,9 +427,7 @@ export async function releaseSlotsAndPromote(
   let crawlPromoted: QueueEntry | null = null;
   let crawlDelaySeconds = 0;
   if (holdsCrawl) {
-    const gMeta = decodeJson<GroupMeta>(
-      await tn.snapshot().get(ks.groupMeta(e.g!)),
-    );
+    const gMeta = decodeJson<GroupMeta>(await tn.get(ks.groupMeta(e.g!)));
     if (gMeta && gMeta.s === "active") {
       crawlPromoted = await popCrawlPending(tn, ks, e.g!);
       if (crawlPromoted) {
@@ -472,7 +498,7 @@ export async function releaseSlotsAndPromote(
     } else if (teamHead !== null) {
       promoteEntryToReady(tn, ks, teamHead, txc);
     } else {
-      bumpTeamActive(tn, ks, tid, -1);
+      setTeamActive(tn, ks, tid, active - 1);
     }
   }
 }
