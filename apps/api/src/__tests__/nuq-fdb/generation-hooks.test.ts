@@ -14,6 +14,7 @@ import {
   getNuqFdbDatabase,
 } from "../../services/worker/nuq-fdb/client";
 import { READY_SHARDS } from "../../services/worker/nuq-fdb/keyspace";
+import { clearMigrationTestTeams } from "./migration-test-cleanup";
 
 const describeIf = config.FDB_CLUSTER_FILE ? describe : describe.skip;
 const run = randomUUID();
@@ -118,21 +119,7 @@ describeIf("NuQ FDB transaction-scoped migration generation hooks", () => {
         tn.clearRange(range.begin as Buffer, range.end as Buffer),
       );
     }
-    for (const teamId of teams) {
-      const range = fdb.tuple.range(["nuq-migration", 1, "team", teamId]);
-      await db.doTn(async tn => {
-        const objects = fdb.tuple.range(["nuq-migration", 1, "object"]);
-        const rows = await tn
-          .snapshot()
-          .getRangeAll(objects.begin as Buffer, objects.end as Buffer);
-        for (const [key, value] of rows) {
-          if (JSON.parse((value as Buffer).toString()).teamId === teamId) {
-            tn.clear(key as Buffer);
-          }
-        }
-        tn.clearRange(range.begin as Buffer, range.end as Buffer);
-      });
-    }
+    await clearMigrationTestTeams(teams);
   });
 
   test("unmanaged legacy teams remain compatible while managed missing pins fail closed", async () => {

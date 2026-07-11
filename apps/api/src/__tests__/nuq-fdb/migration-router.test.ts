@@ -75,56 +75,18 @@ import {
   crawlGroupFdb,
   externalSlotMigrationObjectId,
   externalSlotsFdb,
-  type MigrationObjectKind,
-  type MigrationObjectPin,
   NuqFdbSweeper,
   nuqFdbMigrationStore,
   scrapeQueueFdb,
 } from "../../services/worker/nuq-fdb";
-import {
-  getFdb,
-  getNuqFdbDatabase,
-} from "../../services/worker/nuq-fdb/client";
+import { getNuqFdbDatabase } from "../../services/worker/nuq-fdb/client";
 import { decodeJson, timeBucket } from "../../services/worker/nuq-fdb/keyspace";
+import { clearMigrationTestTeams } from "./migration-test-cleanup";
 
 const describeIf = config.FDB_CLUSTER_FILE ? describe : describe.skip;
 const teams = new Set<string>();
 const previousBackend = config.NUQ_BACKEND;
 const previousMetricsActivation = config.NUQ_FDB_METRICS_V2_ACTIVATE;
-
-async function clearTeam(teamId: string): Promise<void> {
-  const pins: MigrationObjectPin[] = [];
-  let cursor: { kind: MigrationObjectKind; objectId: string } | undefined;
-  do {
-    const page = await nuqFdbMigrationStore.inspectTeamPinsPage(teamId, {
-      limit: 1000,
-      cursor,
-    });
-    pins.push(...page.pins);
-    cursor = page.nextCursor;
-  } while (cursor);
-
-  const fdb = getFdb();
-  const db = getNuqFdbDatabase();
-  await db.doTn(async tn => {
-    for (const pin of pins) {
-      tn.clear(nuqFdbMigrationStore.objectKey(pin.kind, pin.objectId));
-    }
-    // Terminal pins intentionally leave only global routing tombstones, so
-    // test cleanup must find those outside the active-only team index.
-    const objects = fdb.tuple.range(["nuq-migration", 1, "object"]);
-    const rows = await tn
-      .snapshot()
-      .getRangeAll(objects.begin as Buffer, objects.end as Buffer);
-    for (const [key, value] of rows) {
-      if (JSON.parse((value as Buffer).toString()).teamId === teamId) {
-        tn.clear(key as Buffer);
-      }
-    }
-    const team = fdb.tuple.range(["nuq-migration", 1, "team", teamId]);
-    tn.clearRange(team.begin as Buffer, team.end as Buffer);
-  });
-}
 
 async function makeMetricsReady(): Promise<void> {
   for (const queue of [scrapeQueueFdb, crawlFinishedQueueFdb]) {
@@ -198,7 +160,7 @@ describeIf("NuQ durable migration router", () => {
     controls.pgResidue = 0;
     config.NUQ_BACKEND = previousBackend;
     config.NUQ_FDB_METRICS_V2_ACTIVATE = previousMetricsActivation;
-    for (const teamId of teams) await clearTeam(teamId);
+    await clearMigrationTestTeams(teams);
   });
 
   test("freezes authority initialization until both corrected-core counters are ready", async () => {

@@ -11,6 +11,7 @@ import {
 } from "../../services/worker/nuq-fdb/client";
 import { encodeI64 } from "../../services/worker/nuq-fdb/keyspace";
 import { reconcilePgResidueFence } from "../../services/worker/nuq-migration-control";
+import { clearMigrationTestTeams } from "./migration-test-cleanup";
 
 // These tests intentionally exercise transaction conflicts and atomic ADDs on
 // a real FoundationDB cluster. They are skipped in ordinary PG-only runs.
@@ -19,7 +20,6 @@ const describeIf = config.FDB_CLUSTER_FILE ? describe : describe.skip;
 const RUN = randomUUID();
 const store = new NuqFdbMigrationStore();
 const teams = new Set<string>();
-const objects: Array<{ kind: "scrape_job" | "group"; id: string }> = [];
 
 function team(): string {
   const id = `${RUN}-${randomUUID()}`;
@@ -27,10 +27,8 @@ function team(): string {
   return id;
 }
 
-function object(kind: "scrape_job" | "group" = "scrape_job") {
-  const id = `${RUN}-${randomUUID()}`;
-  objects.push({ kind, id });
-  return id;
+function object(_kind: "scrape_job" | "group" = "scrape_job") {
+  return `${RUN}-${randomUUID()}`;
 }
 
 async function initialize(teamId: string, backend: "pg" | "fdb" = "pg") {
@@ -128,63 +126,7 @@ async function withGcPostCommitReplay<T>(body: () => Promise<T>): Promise<T> {
 
 describeIf("NuQ global FDB migration control plane", () => {
   afterAll(async () => {
-    const fdb = getFdb();
-    const db = getNuqFdbDatabase();
-    for (const teamId of teams) {
-      const range = fdb.tuple.range(["nuq-migration", 1, "team", teamId]);
-      await db.doTn(async tn =>
-        tn.clearRange(range.begin as Buffer, range.end as Buffer),
-      );
-    }
-    for (const item of objects) {
-      await db.doTn(async tn => tn.clear(store.objectKey(item.kind, item.id)));
-    }
-    // GC indexes are global by design; test identities are run-qualified.
-    const gcRange = fdb.tuple.range(["nuq-migration", 1, "gc"]);
-    const gcRows = await db.doTn(async tn =>
-      tn.snapshot().getRangeAll(gcRange.begin as Buffer, gcRange.end as Buffer),
-    );
-    await db.doTn(async tn => {
-      const dueCountRange = fdb.tuple.range([
-        "nuq-migration",
-        1,
-        "gc",
-        "due-count",
-      ]);
-      tn.clearRange(dueCountRange.begin as Buffer, dueCountRange.end as Buffer);
-      for (const [key] of gcRows) {
-        const parts = fdb.tuple.unpack(key as Buffer);
-        if (parts.some(part => String(part).includes(RUN))) {
-          tn.clear(key as Buffer);
-          continue;
-        }
-        const category = String(parts[3]);
-        const partition = Number(parts[4]);
-        const dueAt = Number(parts[5]);
-        if (
-          (category === "pin" ||
-            category === "control" ||
-            category === "generation") &&
-          Number.isSafeInteger(partition) &&
-          Number.isSafeInteger(dueAt)
-        ) {
-          let node = BigInt(dueAt) + 1n;
-          while (node <= 1n << 53n) {
-            tn.add(
-              store.pack([
-                "gc",
-                "due-count",
-                category,
-                partition,
-                node.toString(),
-              ]),
-              encodeI64(1),
-            );
-            node += node & -node;
-          }
-        }
-      }
-    });
+    await clearMigrationTestTeams(teams);
   });
 
   test("legacy teams require explicit authority and steady resolution is durable", async () => {
