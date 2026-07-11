@@ -2799,30 +2799,34 @@ export class NuqFdbMigrationStore {
 
   private async claimGcPartition(
     category: string,
-    now: number,
   ): Promise<{ partition: number; token: string } | null> {
-    for (let attempt = 0; attempt < MIGRATION_GC_PARTITIONS; attempt++) {
-      const token = randomUUID();
-      const claim = await this.db.doTn(async tn => {
-        this.configureGcTransaction(tn);
-        const cursorKey = this.gcCursorKey(category);
-        const cursor = Number(
-          parseJson(await tn.get(cursorKey), `GC ${category} cursor`) ?? 0,
+    const token = randomUUID();
+    return await this.db.doTn(async tn => {
+      this.configureGcTransaction(tn);
+      // This closure may start or retry long after the sweep's index cutoff was
+      // captured. Lease eligibility must use the current attempt's wall clock,
+      // not that stale cutoff, or delayed claimants can skip an expired shard
+      // and advance the cursor past it.
+      const leaseNow = Date.now();
+      const cursorKey = this.gcCursorKey(category);
+      const cursor = Number(
+        parseJson(await tn.get(cursorKey), `GC ${category} cursor`) ?? 0,
+      );
+      if (!isNonnegativeInteger(cursor) || cursor >= MIGRATION_GC_PARTITIONS) {
+        throw new MigrationCorruptionError(
+          `GC ${category} cursor`,
+          "invalid partition",
         );
-        if (
-          !isNonnegativeInteger(cursor) ||
-          cursor >= MIGRATION_GC_PARTITIONS
-        ) {
-          throw new MigrationCorruptionError(
-            `GC ${category} cursor`,
-            "invalid partition",
-          );
-        }
-        const partition = cursor;
-        tn.set(
-          cursorKey,
-          encodeJson((partition + 1) % MIGRATION_GC_PARTITIONS),
-        );
+      }
+
+      // Select and advance in one transaction. Advancing once per unavailable
+      // partition let racing callers consume a complete cursor rotation while
+      // old owners were still finishing empty shards, so an expired owner with
+      // real work could be skipped indefinitely. A successful claim is now the
+      // only operation that advances the cursor; the lease reads also conflict
+      // with concurrent claims and releases.
+      for (let offset = 0; offset < MIGRATION_GC_PARTITIONS; offset++) {
+        const partition = (cursor + offset) % MIGRATION_GC_PARTITIONS;
         const leaseKey = this.gcLeaseKey(category, partition);
         const lease = parseJson(
           await tn.get(leaseKey),
@@ -2839,16 +2843,19 @@ export class NuqFdbMigrationStore {
             "invalid lease fields",
           );
         }
-        if (lease && (lease.expiresAt as number) > now) return null;
+        if (lease && (lease.expiresAt as number) > leaseNow) continue;
         tn.set(
           leaseKey,
-          encodeJson({ token, expiresAt: now + MIGRATION_GC_LEASE_MS }),
+          encodeJson({ token, expiresAt: leaseNow + MIGRATION_GC_LEASE_MS }),
+        );
+        tn.set(
+          cursorKey,
+          encodeJson((partition + 1) % MIGRATION_GC_PARTITIONS),
         );
         return { partition, token };
-      });
-      if (claim) return claim;
-    }
-    return null;
+      }
+      return null;
+    });
   }
 
   private async assertGcLeaseInTxn(
@@ -2946,7 +2953,7 @@ export class NuqFdbMigrationStore {
         "GC recheck must be a positive safe integer",
       );
     }
-    const claim = await this.claimGcPartition("pin", now);
+    const claim = await this.claimGcPartition("pin");
     if (!claim) return null;
     const result: MigrationGcSweepResult = {
       partition: claim.partition,
@@ -3189,7 +3196,7 @@ export class NuqFdbMigrationStore {
         "GC recheck must be a positive safe integer",
       );
     }
-    const claim = await this.claimGcPartition("control", now);
+    const claim = await this.claimGcPartition("control");
     if (!claim) return null;
     const result: MigrationGcSweepResult = {
       partition: claim.partition,
@@ -3356,7 +3363,7 @@ export class NuqFdbMigrationStore {
         "GC recheck must be a positive safe integer",
       );
     }
-    const claim = await this.claimGcPartition("generation", now);
+    const claim = await this.claimGcPartition("generation");
     if (!claim) return null;
     const result: MigrationGcSweepResult = {
       partition: claim.partition,

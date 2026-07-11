@@ -1315,11 +1315,14 @@ describeIf("NuQ global FDB migration control plane", () => {
     }
   });
 
-  test("expired lease takeover fences an authority probe from every final mutation", async () => {
+  test("expired lease takeover wraps past 31 owners and fences the old authority probe", async () => {
     const base = 1_825_000_000_000;
     const due = base + 46 * 24 * 60 * 60 * 1000;
     const clock = vi.spyOn(Date, "now").mockReturnValue(base);
     try {
+      const baselineDue = (await store.inspectGcBacklog(due)).pin.due;
+      const baselineAfterExpiry = (await store.inspectGcBacklog(due + 31_000))
+        .pin.due;
       const teamId = team();
       const objectId = object();
       await initialize(teamId, "pg");
@@ -1335,6 +1338,22 @@ describeIf("NuQ global FDB migration control plane", () => {
         objectId,
         operationId: randomUUID(),
         fromLifecycle: "prepared",
+      });
+      const indexRows = await getNuqFdbDatabase().doTn(async tn =>
+        tn
+          .snapshot()
+          .getRangeAll(
+            store.pack(["gc", "pin"]),
+            store.pack(["gc", "pin", 32]),
+          ),
+      );
+      const indexParts = indexRows
+        .map(([key]) => getFdb().tuple.unpack(key as Buffer))
+        .find(parts => parts.some(part => String(part) === objectId));
+      expect(indexParts).toBeDefined();
+      const partition = Number(indexParts![4]);
+      await expect(store.inspectGcBacklog(due)).resolves.toMatchObject({
+        pin: { due: baselineDue + 1, oldestDueAt: expect.any(Number) },
       });
 
       let releaseProbe!: () => void;
@@ -1359,34 +1378,162 @@ describeIf("NuQ global FDB migration control plane", () => {
       };
 
       clock.mockReturnValue(due);
-      const expiredOwners = Promise.allSettled(
-        Array.from({ length: 32 }, () =>
-          store.sweepTerminalPins(authority, { limit: 1 }),
+      await getNuqFdbDatabase().doTn(async tn =>
+        tn.set(
+          store.pack(["gc", "cursor", "pin"]),
+          Buffer.from(JSON.stringify(partition)),
         ),
       );
+      const expiredOwner = store.sweepTerminalPins(authority, { limit: 1 });
       await probeStarted;
-      clock.mockReturnValue(due + 31_000);
-      await Promise.all(
-        Array.from({ length: 32 }, () =>
-          store.sweepTerminalPins(authority, { limit: 1 }),
-        ),
-      );
-      releaseProbe();
-      const expiredResults = await expiredOwners;
 
-      expect(
-        expiredResults.some(
-          result =>
-            result.status === "rejected" &&
-            result.reason?.code === "NUQ_MIGRATION_GC_LEASE_LOST",
-        ),
-      ).toBe(true);
+      // Keep every empty shard owned while the cursor starts immediately after
+      // the expired work shard. The takeover must inspect one bounded rotation,
+      // wrap, and claim the only eligible partition without advancing past it.
+      clock.mockReturnValue(due + 31_000);
+      const liveLeaseKeys = Array.from({ length: 32 }, (_, candidate) =>
+        candidate === partition
+          ? null
+          : store.pack(["gc", "lease", "pin", candidate]),
+      ).filter((key): key is Buffer => key !== null);
+      await getNuqFdbDatabase().doTn(async tn => {
+        tn.set(
+          store.pack(["gc", "cursor", "pin"]),
+          Buffer.from(JSON.stringify((partition + 1) % 32)),
+        );
+        for (let candidate = 0; candidate < 32; candidate++) {
+          if (candidate !== partition) {
+            tn.set(
+              store.pack(["gc", "lease", "pin", candidate]),
+              Buffer.from(
+                JSON.stringify({
+                  token: `simultaneous-owner-${candidate}`,
+                  expiresAt: due + 61_000,
+                }),
+              ),
+            );
+          }
+        }
+      });
+      const takeover = await store.sweepTerminalPins(authority, { limit: 1 });
+      releaseProbe();
+      const expiredResult = await Promise.allSettled([expiredOwner]);
+      await getNuqFdbDatabase().doTn(async tn => {
+        for (const key of liveLeaseKeys) tn.clear(key);
+      });
+
+      expect(takeover).toEqual({
+        partition,
+        read: 1,
+        removed: 1,
+        retained: 0,
+        stale: 0,
+        hasMore: true,
+      });
+      expect(expiredResult[0]).toMatchObject({
+        status: "rejected",
+        reason: { code: "NUQ_MIGRATION_GC_LEASE_LOST" },
+      });
       await expect(
         store.inspectPin("scrape_job", objectId),
       ).resolves.toBeNull();
-      await expect(store.inspectGcBacklog()).resolves.toMatchObject({
-        pin: { due: expect.any(Number) },
+      await expect(store.inspectGcBacklog(due + 31_000)).resolves.toMatchObject(
+        { pin: { due: baselineAfterExpiry } },
+      );
+    } finally {
+      clock.mockRestore();
+    }
+  });
+
+  test("takeover accounting is exact for retained and stale terminal pins", async () => {
+    const base = 1_837_500_000_000;
+    const due = base + 46 * 24 * 60 * 60 * 1000;
+    const recheckMs = 60 * 60 * 1000;
+    const clock = vi.spyOn(Date, "now").mockReturnValue(base);
+    try {
+      const baselineDue = (await store.inspectGcBacklog(due)).pin.due;
+      const baselineAtRecheck = (await store.inspectGcBacklog(due + recheckMs))
+        .pin.due;
+      const teamId = team();
+      const objectId = object();
+      await initialize(teamId, "pg");
+      await store.preparePinnedObject({
+        teamId,
+        kind: "scrape_job",
+        objectId,
+        admission: { type: "new-root" },
       });
+      await store.completePinnedObject({
+        teamId,
+        kind: "scrape_job",
+        objectId,
+        operationId: randomUUID(),
+        fromLifecycle: "prepared",
+      });
+      const indexRows = await getNuqFdbDatabase().doTn(async tn =>
+        tn
+          .snapshot()
+          .getRangeAll(
+            store.pack(["gc", "pin"]),
+            store.pack(["gc", "pin", 32]),
+          ),
+      );
+      const indexParts = indexRows
+        .map(([key]) => getFdb().tuple.unpack(key as Buffer))
+        .find(parts => parts.some(part => String(part) === objectId));
+      const partition = Number(indexParts?.[4]);
+      expect(partition).toBeGreaterThanOrEqual(0);
+      const authority = {
+        pgObjectExists: vi.fn(async () => true),
+        fdbReferenceExistsInTxn: vi.fn(async () => false),
+      };
+
+      clock.mockReturnValue(due);
+      await getNuqFdbDatabase().doTn(async tn =>
+        tn.set(
+          store.pack(["gc", "cursor", "pin"]),
+          Buffer.from(JSON.stringify(partition)),
+        ),
+      );
+      await expect(
+        store.sweepTerminalPins(authority, { limit: 1, recheckMs }),
+      ).resolves.toEqual({
+        partition,
+        read: 1,
+        removed: 0,
+        retained: 1,
+        stale: 0,
+        hasMore: true,
+      });
+      await expect(store.inspectGcBacklog(due)).resolves.toMatchObject({
+        pin: { due: baselineDue },
+      });
+      await expect(
+        store.inspectGcBacklog(due + recheckMs),
+      ).resolves.toMatchObject({ pin: { due: baselineAtRecheck + 1 } });
+
+      await getNuqFdbDatabase().doTn(async tn => {
+        tn.clear(store.objectKey("scrape_job", objectId));
+        tn.set(
+          store.pack(["gc", "cursor", "pin"]),
+          Buffer.from(JSON.stringify(partition)),
+        );
+      });
+      clock.mockReturnValue(due + recheckMs);
+      await expect(
+        store.sweepTerminalPins(authority, { limit: 1 }),
+      ).resolves.toEqual({
+        partition,
+        read: 1,
+        removed: 0,
+        retained: 0,
+        stale: 1,
+        hasMore: true,
+      });
+      expect(authority.pgObjectExists).toHaveBeenCalledTimes(1);
+      await expect(
+        store.inspectGcBacklog(due + recheckMs),
+      ).resolves.toMatchObject({ pin: { due: baselineAtRecheck } });
     } finally {
       clock.mockRestore();
     }
