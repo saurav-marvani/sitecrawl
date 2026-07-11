@@ -85,6 +85,7 @@ import {
   getFdb,
   getNuqFdbDatabase,
 } from "../../services/worker/nuq-fdb/client";
+import { decodeJson, timeBucket } from "../../services/worker/nuq-fdb/keyspace";
 
 const describeIf = config.FDB_CLUSTER_FILE ? describe : describe.skip;
 const teams = new Set<string>();
@@ -134,6 +135,49 @@ async function makeMetricsReady(): Promise<void> {
   }
   while (!(await crawlGroupFdb.backfillLegacyOwnerIndex(100))) {
     // bounded pages
+  }
+}
+
+async function waitForGroupMaintenanceLeaseExpiry(
+  groupId: string,
+): Promise<void> {
+  const db = getNuqFdbDatabase();
+  const bucket = timeBucket(groupId);
+  const keys = [
+    scrapeQueueFdb.ks.sweeperPartition("group-cancel", bucket),
+    scrapeQueueFdb.ks.sweeperPartition("group-finish", bucket),
+  ];
+  let waitDeadline: number | null = null;
+
+  while (true) {
+    const expiresAt = await db.doTn(async tn =>
+      Promise.all(
+        keys.map(
+          async key =>
+            decodeJson<{ x: number }>(await tn.snapshot().get(key))?.x ?? 0,
+        ),
+      ),
+    );
+    const now = Date.now();
+    const latestActiveLease = Math.max(...expiresAt.filter(at => at > now), 0);
+    if (latestActiveLease === 0) return;
+
+    // A prior test process may have exited immediately after a full sweep,
+    // leaving these exact partitions fenced for the remainder of their
+    // protocol lease. Wait for that recorded deadline rather than racing it
+    // with a fixed number of rapid sweeps. A live owner renewing the lease is
+    // an isolation failure, not permission for this test to steal its claim.
+    waitDeadline ??= latestActiveLease + 1_000;
+    const deadline = waitDeadline;
+    if (latestActiveLease > deadline || now >= deadline) {
+      throw new Error("group maintenance partition lease remained active");
+    }
+    await new Promise(resolve =>
+      setTimeout(
+        resolve,
+        Math.min(latestActiveLease + 1 - now, deadline - now),
+      ),
+    );
   }
 }
 
@@ -378,6 +422,7 @@ describeIf("NuQ durable migration router", () => {
       [scrapeQueueFdb, crawlFinishedQueueFdb],
       [],
     );
+    await waitForGroupMaintenanceLeaseExpiry(groupId);
     let finished = await crawlFinishedQueueFdb.getJobToProcess();
     for (let attempt = 0; attempt < 20 && !finished; attempt++) {
       await sweeper.sweepOnce();
