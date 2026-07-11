@@ -378,7 +378,11 @@ export async function listMcpActionLogs(
     .select({
       id: schema.mcp_action_logs.id,
       user_id: schema.mcp_action_logs.user_id,
-      api_key_id: schema.mcp_action_logs.api_key_id,
+      // API-key identifiers are bigint in Postgres. Read them as text so the
+      // JSON boundary never rounds values beyond JavaScript's safe integer range.
+      api_key_id: sql<
+        string | null
+      >`${schema.mcp_action_logs.api_key_id}::text`,
       oauth_client_id: schema.mcp_action_logs.oauth_client_id,
       auth_type: schema.mcp_action_logs.auth_type,
       tool_name: schema.mcp_action_logs.tool_name,

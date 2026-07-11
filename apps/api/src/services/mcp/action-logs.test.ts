@@ -252,8 +252,12 @@ describe("MCP action log contract", () => {
 
   it("paginates non-expired rows with stable cursors", async () => {
     const rows = [
-      { id: REQUEST_ID, created_at: "2026-07-10T10:03:00.000Z" },
-      { id: USER_ID, created_at: "2026-07-10T10:02:00.000Z" },
+      {
+        id: REQUEST_ID,
+        api_key_id: "9007199254740993",
+        created_at: "2026-07-10T10:03:00.000Z",
+      },
+      { id: USER_ID, api_key_id: null, created_at: "2026-07-10T10:02:00.000Z" },
     ];
     const execute = vi.fn().mockResolvedValue(undefined);
     const db = {
@@ -273,11 +277,21 @@ describe("MCP action log contract", () => {
     };
     const result = await listMcpActionLogs(db as any, TEAM_ID, { limit: 1 });
     expect(result.data).toEqual(rows.slice(0, 1));
-    expect(decodeMcpActionLogCursor(result.nextCursor!)).toEqual(rows[0]);
+    expect(result.data[0].api_key_id).toBe("9007199254740993");
+    expect(decodeMcpActionLogCursor(result.nextCursor!)).toEqual({
+      id: rows[0].id,
+      created_at: rows[0].created_at,
+    });
     expect(execute).not.toHaveBeenCalled();
 
     const cursor = encodeMcpActionLogCursor(rows[0]);
-    expect(decodeMcpActionLogCursor(cursor)).toEqual(rows[0]);
+    expect(decodeMcpActionLogCursor(cursor)).toEqual({
+      id: rows[0].id,
+      created_at: rows[0].created_at,
+    });
     expect(() => decodeMcpActionLogCursor("bad")).toThrow("cursor is invalid");
+
+    const complete = await listMcpActionLogs(db as any, TEAM_ID, { limit: 2 });
+    expect(complete.data[1].api_key_id).toBeNull();
   });
 });
