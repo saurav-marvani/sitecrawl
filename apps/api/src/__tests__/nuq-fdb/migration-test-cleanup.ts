@@ -9,14 +9,15 @@ import {
 } from "../../services/worker/nuq-fdb/migration-store";
 
 const GC_CATEGORIES = new Set(["pin", "control", "generation"]);
-const OBJECT_KINDS = new Set<MigrationObjectKind>([
+const OBJECT_KIND_VALUES = [
   "scrape_job",
   "group",
   "external_holder",
   "crawl_finished",
   "sweeper_task",
   "cross_store_intent",
-]);
+] as const satisfies readonly MigrationObjectKind[];
+const OBJECT_KINDS: ReadonlySet<string> = new Set(OBJECT_KIND_VALUES);
 const FENWICK_UPPER_BOUND = 1n << 53n;
 
 /**
