@@ -250,18 +250,14 @@ function billThreatBlockedDiscoveries(
     blocked.map(x => x.decision),
   );
   if (threatScanCredits <= 0) return;
-  billTeam(
-    args.teamId,
-    undefined,
-    threatScanCredits,
-    args.apiKeyId,
-    args.billing,
-  ).catch(error => {
-    logger.error(
-      `Failed to bill team ${args.teamId} for ${threatScanCredits} threat scan credit(s)`,
-      { error },
-    );
-  });
+  billTeam(args.teamId, threatScanCredits, args.apiKeyId, args.billing).catch(
+    error => {
+      logger.error(
+        `Failed to bill team ${args.teamId} for ${threatScanCredits} threat scan credit(s)`,
+        { error },
+      );
+    },
+  );
 }
 
 async function processJob(job: NuQJob<ScrapeJobSingleUrls>) {

@@ -238,13 +238,12 @@ export async function searchController(
     if (!isSearchPreview && shouldBill) {
       billTeam(
         req.auth.team_id,
-        req.acuc?.sub_id ?? undefined,
         result.searchCredits,
         req.acuc?.api_key_id ?? null,
         billing,
       ).catch(error =>
         logger.error(
-          `Failed to bill team ${req.acuc?.sub_id} for ${result.searchCredits} credits: ${error}`,
+          `Failed to bill team ${req.auth.team_id} for ${result.searchCredits} credits: ${error}`,
         ),
       );
     }

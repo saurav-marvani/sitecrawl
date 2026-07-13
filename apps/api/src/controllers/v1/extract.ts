@@ -171,7 +171,6 @@ export async function extractController(
     if (threatScanCredits > 0) {
       billTeam(
         req.auth.team_id,
-        req.acuc?.sub_id ?? undefined,
         threatScanCredits,
         req.acuc?.api_key_id ?? null,
         { endpoint: "extract" },

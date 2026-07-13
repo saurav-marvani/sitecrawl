@@ -78,7 +78,7 @@ export async function performExtraction_F0(
   extractId: string,
   options: ExtractServiceOptions,
 ): Promise<ExtractResult> {
-  const { request, teamId, subId, apiKeyId } = options;
+  const { request, teamId, apiKeyId } = options;
   const createdAt = options.createdAt
     ? new Date(options.createdAt)
     : new Date();
@@ -869,7 +869,6 @@ export async function performExtraction_F0(
   // Bill team for usage
   billTeam(
     teamId,
-    subId,
     creditsToBill,
     apiKeyId,
     { endpoint: "extract", jobId: extractId },
