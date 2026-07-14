@@ -177,7 +177,7 @@ export type Meta = {
   threatDecisions: ThreatDecision[];
 };
 
-function buildFeatureFlags(
+export function buildFeatureFlags(
   url: string,
   options: ScrapeOptions,
   internalOptions: InternalOptions,
@@ -204,6 +204,10 @@ function buildFeatureFlags(
 
   if (hasFormatOfType(options.formats, "branding")) {
     flags.add("branding");
+  }
+
+  if (hasFormatOfType(options.formats, "menu")) {
+    flags.add("menuModifiers");
   }
 
   if (hasFormatOfType(options.formats, "audio")) {

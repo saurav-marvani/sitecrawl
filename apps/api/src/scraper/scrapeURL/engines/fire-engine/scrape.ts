@@ -64,6 +64,7 @@ export type FireEngineScrapeRequestChromeCDP = {
   mobile?: boolean;
   disableSmartWaitCache?: boolean;
   persistentStorage?: { uniqueId: string };
+  menuModifiers?: boolean;
 };
 
 export type FireEngineScrapeRequestTLSClient = {

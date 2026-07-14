@@ -107,6 +107,7 @@ const featureFlags = [
   "useFastMode",
   "stealthProxy",
   "branding",
+  "menuModifiers",
   "disableAdblock",
 ] as const;
 
@@ -132,6 +133,7 @@ const featureFlagOptions: {
   skipTlsVerification: { priority: 10 },
   stealthProxy: { priority: 20 },
   branding: { priority: 20 }, // Requires CDP executeJavascript
+  menuModifiers: { priority: 20 }, // Requires CDP executeJavascript
   disableAdblock: { priority: 10 },
 } as const;
 
@@ -255,6 +257,7 @@ const engineOptions: {
       useFastMode: true,
       stealthProxy: false,
       branding: false,
+      menuModifiers: false,
       disableAdblock: false,
     },
     quality: 2000,
@@ -276,6 +279,7 @@ const engineOptions: {
       useFastMode: true,
       stealthProxy: true,
       branding: false,
+      menuModifiers: false,
       disableAdblock: true,
     },
     quality: 1000, // index should always be tried first
@@ -297,6 +301,7 @@ const engineOptions: {
       useFastMode: false,
       stealthProxy: false,
       branding: true,
+      menuModifiers: true,
       disableAdblock: false,
     },
     quality: 50,
@@ -318,6 +323,7 @@ const engineOptions: {
       useFastMode: false,
       stealthProxy: false,
       branding: true,
+      menuModifiers: true,
       disableAdblock: false,
     },
     quality: 45,
@@ -339,6 +345,7 @@ const engineOptions: {
       useFastMode: true,
       stealthProxy: true,
       branding: false,
+      menuModifiers: false,
       disableAdblock: false,
     },
     quality: -1,
@@ -360,6 +367,7 @@ const engineOptions: {
       useFastMode: false,
       stealthProxy: true,
       branding: true,
+      menuModifiers: true,
       disableAdblock: false,
     },
     quality: -2,
@@ -381,6 +389,7 @@ const engineOptions: {
       useFastMode: false,
       stealthProxy: true,
       branding: true,
+      menuModifiers: true,
       disableAdblock: false,
     },
     quality: -5,
@@ -402,6 +411,7 @@ const engineOptions: {
       useFastMode: false,
       stealthProxy: false,
       branding: false,
+      menuModifiers: false,
       disableAdblock: false,
     },
     quality: 20,
@@ -423,6 +433,7 @@ const engineOptions: {
       useFastMode: true,
       stealthProxy: false,
       branding: false,
+      menuModifiers: false,
       disableAdblock: false,
     },
     quality: 10,
@@ -444,6 +455,7 @@ const engineOptions: {
       useFastMode: true,
       stealthProxy: true,
       branding: false,
+      menuModifiers: false,
       disableAdblock: false,
     },
     quality: -15,
@@ -465,6 +477,7 @@ const engineOptions: {
       useFastMode: true,
       stealthProxy: false,
       branding: false,
+      menuModifiers: false,
       disableAdblock: false,
     },
     quality: 5,
@@ -486,6 +499,7 @@ const engineOptions: {
       useFastMode: true,
       stealthProxy: true, // kinda...
       branding: false,
+      menuModifiers: false,
       disableAdblock: true,
     },
     quality: -20,
@@ -507,6 +521,7 @@ const engineOptions: {
       useFastMode: true,
       stealthProxy: true, // kinda...
       branding: false,
+      menuModifiers: false,
       disableAdblock: true,
     },
     quality: -20,
@@ -528,6 +543,7 @@ const engineOptions: {
       useFastMode: true,
       stealthProxy: false,
       branding: false,
+      menuModifiers: false,
       disableAdblock: true,
     },
     quality: 500, // below index (1000) so cache is tried first, above fire-engine (50)
@@ -549,6 +565,7 @@ const engineOptions: {
       useFastMode: true,
       stealthProxy: false,
       branding: false,
+      menuModifiers: false,
       disableAdblock: true,
     },
     quality: 1500,
