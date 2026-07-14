@@ -88,7 +88,7 @@ import path from "node:path";
 import { tmpdir } from "node:os";
 import { randomUUID } from "node:crypto";
 import type { DataLayerScrapeMetadata } from "../../lib/data-layer";
-import { buildCacheMetadata } from "./cacheMetadata";
+import { buildScrapeCacheMetadata } from "./cacheMetadata";
 import {
   checkUrl,
   type ThreatCheckDedup,
@@ -1029,12 +1029,11 @@ async function scrapeURLLoop(meta: Meta): Promise<ScrapeUrlResponse> {
         contentType: engineResult.contentType,
         timezone: engineResult.timezone,
         proxyUsed: engineResult.proxyUsed ?? "basic",
-        ...buildCacheMetadata({
+        ...buildScrapeCacheMetadata({
           cacheInfo: engineResult.cacheInfo,
           indexWasEligible: fallbackList.some(x =>
             ["index", "index;documents"].includes(x.engine),
           ),
-          legacyMissEnabled: config.LEGACY_CACHE_MISS_METADATA_ENABLED,
         }),
         postprocessorsUsed: engineResult.postprocessorsUsed,
       },

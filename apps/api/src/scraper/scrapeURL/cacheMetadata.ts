@@ -1,3 +1,5 @@
+import { config } from "../../config";
+
 export type CacheInfo = {
   created_at: Date;
 };
@@ -45,4 +47,18 @@ export function buildCacheMetadata({
   }
 
   return {};
+}
+
+export function buildScrapeCacheMetadata({
+  cacheInfo,
+  indexWasEligible,
+}: {
+  cacheInfo?: CacheInfo;
+  indexWasEligible: boolean;
+}): CacheMetadata {
+  return buildCacheMetadata({
+    cacheInfo,
+    indexWasEligible,
+    legacyMissEnabled: config.LEGACY_CACHE_MISS_METADATA_ENABLED,
+  });
 }

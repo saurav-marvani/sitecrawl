@@ -1,5 +1,6 @@
-import { describe, expect, it } from "vitest";
-import { buildCacheMetadata } from "./cacheMetadata";
+import { afterEach, describe, expect, it } from "vitest";
+import { buildCacheMetadata, buildScrapeCacheMetadata } from "./cacheMetadata";
+import { config } from "../../config";
 
 describe("buildCacheMetadata", () => {
   it("emits attested cache metadata and legacy hit fields for Firecrawl index hits", () => {
@@ -41,6 +42,34 @@ describe("buildCacheMetadata", () => {
       buildCacheMetadata({
         indexWasEligible: false,
         legacyMissEnabled: true,
+      }),
+    ).toEqual({});
+  });
+});
+
+describe("buildScrapeCacheMetadata", () => {
+  const originalLegacyMissEnabled = config.LEGACY_CACHE_MISS_METADATA_ENABLED;
+
+  afterEach(() => {
+    config.LEGACY_CACHE_MISS_METADATA_ENABLED = originalLegacyMissEnabled;
+  });
+
+  it("threads the startup bridge flag into scrape metadata assembly", () => {
+    config.LEGACY_CACHE_MISS_METADATA_ENABLED = true;
+
+    expect(
+      buildScrapeCacheMetadata({
+        indexWasEligible: true,
+      }),
+    ).toEqual({ cacheState: "miss" });
+  });
+
+  it("keeps fabricated misses disabled at the scrape assembly boundary by default", () => {
+    config.LEGACY_CACHE_MISS_METADATA_ENABLED = false;
+
+    expect(
+      buildScrapeCacheMetadata({
+        indexWasEligible: true,
       }),
     ).toEqual({});
   });
