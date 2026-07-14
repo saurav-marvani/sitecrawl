@@ -12,7 +12,7 @@ import { pollUntilTerminal } from "./poll";
 import { fetchResult } from "./result";
 import { FIRE_PDF_ASYNC_MIN_REMAINING_MS } from "./routing";
 import { POLL_FLOOR_MS, POLL_TIMEOUT_BUFFER_MS } from "./schema";
-import { submitJob } from "./submit";
+import { submitJob, SubmitJobMayHaveBeenAcceptedError } from "./submit";
 import { computeDeadlineMs, defaultSleep, failAsync } from "./utils";
 
 export { FirePdfAsyncFailure } from "./utils";
@@ -78,22 +78,25 @@ export async function scrapePDFWithFirePDFAsync(
   const pollingDeadline = submitTime + deadlineFromNow + POLL_TIMEOUT_BUFFER_MS;
 
   // ── Step 1: POST /jobs ────────────────────────────────────────────────
-  const submit = await submitJob({
-    meta,
-    baseUrl,
-    base64Content,
-    maxPages,
-    pagesProcessed,
-    mode,
-    deadlineAt,
-    fetchImpl,
-  });
-
-  // ── Step 2: poll until terminal (skip on idempotent-replay done) ──────
-  let terminalReached = submit.alreadyDone;
+  let submissionAccepted = false;
+  let terminalReached = false;
   let polled: Awaited<ReturnType<typeof pollUntilTerminal>>;
   let fetched: Awaited<ReturnType<typeof fetchResult>>;
   try {
+    const submit = await submitJob({
+      meta,
+      baseUrl,
+      base64Content,
+      maxPages,
+      pagesProcessed,
+      mode,
+      deadlineAt,
+      fetchImpl,
+    });
+    submissionAccepted = true;
+    terminalReached = submit.alreadyDone;
+
+    // ── Step 2: poll until terminal (skip on idempotent-replay done) ──────
     polled = submit.alreadyDone
       ? {
           poll: { scrape_id: meta.id, status: "done" as const },
@@ -121,10 +124,12 @@ export async function scrapePDFWithFirePDFAsync(
       sleep,
     });
   } catch (error) {
-    if (!terminalReached) {
+    const submitMayHaveBeenAccepted =
+      error instanceof SubmitJobMayHaveBeenAcceptedError;
+    if ((submissionAccepted || submitMayHaveBeenAccepted) && !terminalReached) {
       await cancelJob({ baseUrl, scrapeId: meta.id, meta, fetchImpl });
     }
-    throw error;
+    throw submitMayHaveBeenAccepted ? error.originalError : error;
   }
 
   // ── Assemble + cache save ─────────────────────────────────────────────

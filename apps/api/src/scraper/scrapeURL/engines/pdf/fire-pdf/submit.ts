@@ -23,6 +23,30 @@ type SubmitArgs = {
   fetchImpl: typeof undiciFetch;
 };
 
+/**
+ * The submit request may have reached FirePDF even though Firecrawl could not
+ * observe a valid success response. The caller should best-effort DELETE the
+ * idempotent scrape_id before falling back, then rethrow `originalError`.
+ */
+export class SubmitJobMayHaveBeenAcceptedError extends Error {
+  constructor(public readonly originalError: unknown) {
+    super("FirePDF submit may have been accepted");
+    this.name = "SubmitJobMayHaveBeenAcceptedError";
+  }
+}
+
+function failPossiblyAccepted(
+  meta: Meta,
+  reason: Parameters<typeof failAsync>[1],
+  extra: Record<string, unknown> = {},
+): never {
+  try {
+    failAsync(meta, reason, extra);
+  } catch (error) {
+    throw new SubmitJobMayHaveBeenAcceptedError(error);
+  }
+}
+
 export async function submitJob(args: SubmitArgs): Promise<SubmitOutcome> {
   const {
     meta,
@@ -67,8 +91,10 @@ export async function submitJob(args: SubmitArgs): Promise<SubmitOutcome> {
     status = resp.status;
     json = await resp.json().catch(() => ({}));
   } catch (error) {
-    if (error instanceof AbortManagerThrownError) throw error;
-    failAsync(meta, "network_error", { error: String(error) });
+    if (error instanceof AbortManagerThrownError) {
+      throw new SubmitJobMayHaveBeenAcceptedError(error);
+    }
+    failPossiblyAccepted(meta, "network_error", { error: String(error) });
   }
 
   if (status === 401) failAsync(meta, "http_401");
@@ -109,7 +135,10 @@ export async function submitJob(args: SubmitArgs): Promise<SubmitOutcome> {
 
   const parsed = submitResponseSchema.safeParse(json);
   if (!parsed.success) {
-    failAsync(meta, "http_5xx", {
+    // A 2xx response means the server accepted this scrape_id even when the
+    // response body is incompatible. Mark it cancellation-worthy before
+    // surfacing the existing fallback reason.
+    failPossiblyAccepted(meta, "http_5xx", {
       error: String(parsed.error),
       body: json,
       status,

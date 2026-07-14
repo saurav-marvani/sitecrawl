@@ -244,25 +244,32 @@ describe("scrapePDFWithFirePDFAsync", () => {
   });
 
   it("cancels accepted work when polling is abandoned", async () => {
-    const calls: string[] = [];
-    const fetchImpl: any = async (url: string, init: any) => {
-      const method = (init?.method ?? "GET").toUpperCase();
-      calls.push(method);
-      if (method === "POST") {
-        return jsonResp({
+    const { fetchImpl, calls } = makeFetchFromSequence([
+      {
+        matchUrl: /\/jobs$/,
+        matchMethod: "POST",
+        response: {
           status: 202,
           body: {
             scrape_id: "scrape-id-test",
             status: "queued",
             lane: "standard",
           },
-        });
-      }
-      if (method === "DELETE") {
-        return jsonResp({ status: 200, body: { status: "cancelled" } });
-      }
-      throw new Error(`poll transport failed for ${url}`);
-    };
+        },
+      },
+      {
+        matchUrl: /\/jobs\/scrape-id-test$/,
+        matchMethod: "GET",
+        response: () => {
+          throw new Error("poll transport failed");
+        },
+      },
+      {
+        matchUrl: /\/jobs\/scrape-id-test$/,
+        matchMethod: "DELETE",
+        response: { status: 200, body: { status: "cancelled" } },
+      },
+    ]);
 
     const error = await scrapePDFWithFirePDFAsync(
       makeMeta(),
@@ -275,7 +282,23 @@ describe("scrapePDFWithFirePDFAsync", () => {
 
     expect(error).toBeInstanceOf(FirePdfAsyncFailure);
     expect(error.reason).toBe("network_error");
-    expect(calls).toEqual(["POST", "GET", "DELETE"]);
+    expect(calls).toEqual([
+      {
+        url: "http://fire-pdf.test/jobs",
+        method: "POST",
+        headers: expect.any(Object),
+      },
+      {
+        url: "http://fire-pdf.test/jobs/scrape-id-test",
+        method: "GET",
+        headers: expect.any(Object),
+      },
+      {
+        url: "http://fire-pdf.test/jobs/scrape-id-test",
+        method: "DELETE",
+        headers: expect.any(Object),
+      },
+    ]);
   });
 
   it("idempotent replay: POST 200 done skips polling and fetches result", async () => {
@@ -288,7 +311,6 @@ describe("scrapePDFWithFirePDFAsync", () => {
           body: {
             scrape_id: "scrape-id-test",
             status: "done",
-            lane: "fast",
           },
         },
       },
@@ -329,7 +351,7 @@ describe("scrapePDFWithFirePDFAsync", () => {
   ])(
     "throws FirePdfAsyncFailure when POST /jobs returns %s",
     async (_, status, reason) => {
-      const { fetchImpl } = makeFetchFromSequence([
+      const { fetchImpl, calls } = makeFetchFromSequence([
         {
           matchUrl: /\/jobs$/,
           matchMethod: "POST",
@@ -350,12 +372,20 @@ describe("scrapePDFWithFirePDFAsync", () => {
       expect(err).toBeInstanceOf(FirePdfAsyncFailure);
       expect(err.reason).toBe(reason);
       expect(fallback).not.toHaveBeenCalled();
+      expect(calls).toHaveLength(1);
+      expect(calls[0]).toMatchObject({ method: "POST" });
     },
   );
 
-  it("throws FirePdfAsyncFailure when POST /jobs throws a network error", async () => {
-    const fetchImpl: any = async () => {
-      throw new Error("connect ECONNREFUSED");
+  it("cancels when POST /jobs has an ambiguous network failure", async () => {
+    const calls: Array<{ method: string; url: string }> = [];
+    const fetchImpl: any = async (url: string, init: any) => {
+      const method = (init?.method ?? "GET").toUpperCase();
+      calls.push({ method, url });
+      if (method === "DELETE") {
+        return jsonResp({ status: 404, body: {} });
+      }
+      throw new Error("connection reset after request write");
     };
     const fallback = vi.fn();
 
@@ -371,6 +401,44 @@ describe("scrapePDFWithFirePDFAsync", () => {
     expect(err).toBeInstanceOf(FirePdfAsyncFailure);
     expect(err.reason).toBe("network_error");
     expect(fallback).not.toHaveBeenCalled();
+    expect(calls).toEqual([
+      { method: "POST", url: "http://fire-pdf.test/jobs" },
+      {
+        method: "DELETE",
+        url: "http://fire-pdf.test/jobs/scrape-id-test",
+      },
+    ]);
+  });
+
+  it("cancels a 2xx submit with an incompatible response body", async () => {
+    const { fetchImpl, calls } = makeFetchFromSequence([
+      {
+        matchUrl: /\/jobs$/,
+        matchMethod: "POST",
+        response: {
+          status: 202,
+          body: { scrape_id: "scrape-id-test", unexpected: true },
+        },
+      },
+      {
+        matchUrl: /\/jobs\/scrape-id-test$/,
+        matchMethod: "DELETE",
+        response: { status: 200, body: { status: "cancelled" } },
+      },
+    ]);
+
+    const err = await scrapePDFWithFirePDFAsync(
+      makeMeta(),
+      "BASE64",
+      undefined,
+      undefined,
+      undefined,
+      { fetchImpl, fallbackImpl: vi.fn(), sleepImpl: noopSleep },
+    ).catch(error => error);
+
+    expect(err).toBeInstanceOf(FirePdfAsyncFailure);
+    expect(err.reason).toBe("http_5xx");
+    expect(calls.map(call => call.method)).toEqual(["POST", "DELETE"]);
   });
 
   it("throws on POST 409 scrape_id conflict (fatal, no fallback)", async () => {
