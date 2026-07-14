@@ -28,6 +28,15 @@ describe("buildCacheMetadata", () => {
     ).toEqual({});
   });
 
+  it("treats an invalid cache timestamp as unattested instead of throwing", () => {
+    expect(
+      buildCacheMetadata({
+        cacheInfo: { created_at: new Date("not-a-date") },
+        indexWasEligible: true,
+      }),
+    ).toEqual({});
+  });
+
   it("can temporarily emit the deprecated legacy miss behind the bridge flag", () => {
     expect(
       buildCacheMetadata({

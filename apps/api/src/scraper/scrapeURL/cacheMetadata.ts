@@ -18,7 +18,9 @@ export type LegacyMissCacheMetadata = {
 };
 
 export type CacheMetadata =
-  AttestedCacheMetadata | LegacyMissCacheMetadata | Record<string, never>;
+  | AttestedCacheMetadata
+  | LegacyMissCacheMetadata
+  | Record<string, never>;
 
 export function buildCacheMetadata({
   cacheInfo,
@@ -29,7 +31,7 @@ export function buildCacheMetadata({
   indexWasEligible: boolean;
   legacyMissEnabled?: boolean;
 }): CacheMetadata {
-  if (cacheInfo) {
+  if (cacheInfo && !Number.isNaN(cacheInfo.created_at.getTime())) {
     const cachedAt = cacheInfo.created_at.toISOString();
 
     return {

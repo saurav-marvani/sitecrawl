@@ -1061,8 +1061,10 @@ async function scrapeURLLoop(meta: Meta): Promise<ScrapeUrlResponse> {
       "engine.content_type": document.metadata.contentType,
       "engine.proxy_used": document.metadata.proxyUsed,
       "engine.cache_state": document.metadata.cacheState,
-      "engine.cache_source": document.metadata.cache?.source,
-      "engine.cache_cached_at": document.metadata.cache?.cachedAt,
+      "engine.cache_provenance": document.metadata.cache
+        ? "firecrawl-index-hit"
+        : "unattested",
+      "engine.legacy_miss_emitted": document.metadata.cacheState === "miss",
       "engine.postprocessors_used": engineResult.postprocessorsUsed?.join(","),
     });
 
