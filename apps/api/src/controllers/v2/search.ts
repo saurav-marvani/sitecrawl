@@ -242,9 +242,11 @@ export async function searchController(
         req.acuc?.api_key_id ?? null,
         billing,
       ).catch(error =>
-        logger.error(
-          `Failed to bill team ${req.auth.team_id} for ${result.searchCredits} credits: ${error}`,
-        ),
+        logger.error("Failed to bill team for search credits", {
+          teamId: req.auth.team_id,
+          searchCredits: result.searchCredits,
+          error,
+        }),
       );
     }
 

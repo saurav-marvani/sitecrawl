@@ -44,7 +44,6 @@ import { resolveThreatProtection } from "../../threat-protection/request";
 interface ExtractServiceOptions {
   request: ExtractRequest;
   teamId: string;
-  subId?: string;
   cacheMode?: "load" | "save" | "direct";
   cacheKey?: string;
   apiKeyId: number | null;
