@@ -50,7 +50,6 @@ describeIf(TEST_PRODUCTION)("V2 Scrape Lockdown Mode", () => {
 
       expect(data.metadata.cache).toEqual({
         source: "firecrawl-index",
-
         cachedAt: data.metadata.cachedAt,
       });
       expect(data.metadata.creditsUsed).toBe(5);

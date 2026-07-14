@@ -47,7 +47,6 @@ describeIf(TEST_PRODUCTION)("V2 Scrape Default maxAge", () => {
 
       expect(data2.metadata.cache).toEqual({
         source: "firecrawl-index",
-
         cachedAt: data2.metadata.cachedAt,
       });
     },
@@ -125,7 +124,6 @@ describeIf(TEST_PRODUCTION)("V2 Scrape Default maxAge", () => {
 
       expect(data2.metadata.cache).toEqual({
         source: "firecrawl-index",
-
         cachedAt: data2.metadata.cachedAt,
       });
     },
@@ -203,7 +201,6 @@ describeIf(TEST_PRODUCTION)("V2 Scrape Default maxAge", () => {
 
       expect(data2.metadata.cache).toEqual({
         source: "firecrawl-index",
-
         cachedAt: data2.metadata.cachedAt,
       });
     },

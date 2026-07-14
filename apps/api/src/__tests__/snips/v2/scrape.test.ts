@@ -514,7 +514,6 @@ describe("Scrape tests", () => {
 
           expect(response3.metadata.cache).toEqual({
             source: "firecrawl-index",
-
             cachedAt: response3.metadata.cachedAt,
           });
 
