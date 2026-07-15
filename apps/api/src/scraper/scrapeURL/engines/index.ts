@@ -613,7 +613,9 @@ export async function buildFallbackList(meta: Meta): Promise<
     // blocklistMiddleware, which only applies to flagged orgs; if the
     // Exchange is no longer usable by execution time (catalog changed,
     // service down), fail closed rather than letting normal engines scrape
-    // a blocklisted site. Errors here must never fail ordinary scrapes.
+    // a blocklisted site. An error here also fails closed: this branch only
+    // runs for flagged orgs, and a retryable scrape failure is preferable
+    // to scraping a potentially blocklisted site with normal engines.
     if (
       meta.internalOptions.teamFlags?.professionalProfileCompanyDataBeta ===
       true
@@ -632,7 +634,11 @@ export async function buildFallbackList(meta: Meta): Promise<
           return [];
         }
       } catch (error) {
-        meta.logger.warn("Exchange blocklist re-check failed", { error });
+        meta.logger.warn(
+          "Exchange blocklist re-check failed; failing closed",
+          { error },
+        );
+        return [];
       }
     }
   }
