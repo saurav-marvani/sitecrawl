@@ -11,11 +11,11 @@ describe("Audio format engine routing (buildFallbackList)", () => {
 
   const originalFireEngineUrl = process.env.FIRE_ENGINE_BETA_URL;
   const originalIndexUrl = process.env.INDEX_DATABASE_URL;
-  const originalExchangeUrl = process.env.EXCHANGE_URL;
+  const originalExchangeUrl = process.env.FIRE_EXCHANGE_URL;
 
   beforeAll(async () => {
     process.env.FIRE_ENGINE_BETA_URL = "http://test-fire-engine";
-    process.env.EXCHANGE_URL = "http://test-exchange";
+    process.env.FIRE_EXCHANGE_URL = "http://test-exchange";
     process.env.INDEX_DATABASE_URL =
       "postgresql://postgres:postgres@localhost:5432/postgres";
 
@@ -46,9 +46,9 @@ describe("Audio format engine routing (buildFallbackList)", () => {
       process.env.INDEX_DATABASE_URL = originalIndexUrl;
     }
     if (originalExchangeUrl === undefined) {
-      delete process.env.EXCHANGE_URL;
+      delete process.env.FIRE_EXCHANGE_URL;
     } else {
-      process.env.EXCHANGE_URL = originalExchangeUrl;
+      process.env.FIRE_EXCHANGE_URL = originalExchangeUrl;
     }
   });
 

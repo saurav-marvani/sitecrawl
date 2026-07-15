@@ -23,7 +23,7 @@ vi.mock("undici", () => ({
 }));
 
 const originalConfig = {
-  EXCHANGE_URL: config.EXCHANGE_URL,
+  FIRE_EXCHANGE_URL: config.FIRE_EXCHANGE_URL,
   USE_DB_AUTHENTICATION: config.USE_DB_AUTHENTICATION,
 };
 
@@ -66,13 +66,13 @@ const ENABLED_EXCHANGE_FLAGS = {
 describe("Exchange routing", () => {
   beforeEach(() => {
     vi.mocked(fetch).mockReset();
-    config.EXCHANGE_URL = "https://exchange.example";
+    config.FIRE_EXCHANGE_URL = "https://exchange.example";
     config.USE_DB_AUTHENTICATION = true;
     setExchangeProvidersForTest(TEST_PROVIDERS);
   });
 
   afterEach(() => {
-    config.EXCHANGE_URL = originalConfig.EXCHANGE_URL;
+    config.FIRE_EXCHANGE_URL = originalConfig.FIRE_EXCHANGE_URL;
     config.USE_DB_AUTHENTICATION = originalConfig.USE_DB_AUTHENTICATION;
     clearExchangeProvidersForTest();
   });
@@ -429,7 +429,7 @@ describe("Exchange routing", () => {
   });
 
   it("does not route unless the Exchange is configured", async () => {
-    config.EXCHANGE_URL = undefined;
+    config.FIRE_EXCHANGE_URL = undefined;
 
     await expect(
       canUseExchangeForRequest({

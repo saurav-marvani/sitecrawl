@@ -134,11 +134,11 @@ function normalizePathPrefix(prefix: string): string {
 }
 
 function getExchangeBaseUrl(): string | null {
-  if (!config.EXCHANGE_URL) {
+  if (!config.FIRE_EXCHANGE_URL) {
     return null;
   }
 
-  return config.EXCHANGE_URL.replace(/\/+$/, "");
+  return config.FIRE_EXCHANGE_URL.replace(/\/+$/, "");
 }
 
 function normalizeProviders(
@@ -380,7 +380,7 @@ function isExchangeEligibleRequest(input: RouteInput): boolean {
     return false;
   }
 
-  if (!config.EXCHANGE_URL) {
+  if (!config.FIRE_EXCHANGE_URL) {
     return false;
   }
 

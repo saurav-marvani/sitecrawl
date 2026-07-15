@@ -98,7 +98,7 @@ export async function scrapeURLWithExchange(
 
     try {
       const response = await robustFetch({
-        url: `${config.EXCHANGE_URL!.replace(/\/+$/, "")}/v1/scrape`,
+        url: `${config.FIRE_EXCHANGE_URL!.replace(/\/+$/, "")}/v1/scrape`,
         method: "POST",
         body: {
           requestId: meta.id,
