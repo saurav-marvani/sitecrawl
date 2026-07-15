@@ -293,8 +293,7 @@ export function blocklistMiddleware(
   (async () => {
     const zeroDataRetention =
       getScrapeZDR(req.acuc?.flags) === "forced" ||
-      req.body?.zeroDataRetention === true ||
-      req.body?.lockdown === true;
+      req.body?.zeroDataRetention === true;
     const exchangeAccess =
       typeof req.body.url === "string" &&
       (await getExchangeAccessForRequest({

@@ -16,7 +16,9 @@ const exchangeScrapeResponseSchema = z.union([
     .object({
       success: z.literal(true),
       accessEventId: z.string().optional(),
-      creditsCost: z.number().int().nonnegative().catch(0),
+      // No .catch() here: a malformed credit cost must fail the scrape
+      // loudly rather than silently billing 0 for a delivered access.
+      creditsCost: z.number().int().nonnegative(),
       data: z
         .object({
           url: z.string().optional(),
@@ -51,6 +53,25 @@ const exchangeScrapeResponseSchema = z.union([
 
 export function exchangeMaxReasonableTime(meta: Meta): number {
   return meta.options.timeout ?? 60_000;
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+// Exchange responses carry no page HTML; synthesize a minimal head so the
+// metadata transformer can populate the document's title and description.
+function buildMetadataHtml(title?: string, description?: string): string {
+  const titleTag = title === undefined ? "" : `<title>${escapeHtml(title)}</title>`;
+  const descriptionTag =
+    description === undefined
+      ? ""
+      : `<meta name="description" content="${escapeHtml(description)}">`;
+  return `<!DOCTYPE html><html><head>${titleTag}${descriptionTag}</head><body></body></html>`;
 }
 
 export async function scrapeURLWithExchange(
@@ -132,7 +153,7 @@ export async function scrapeURLWithExchange(
 
       return {
         url: response.data.url ?? url,
-        html: "",
+        html: buildMetadataHtml(response.data.title, response.data.description),
         markdown: response.data.markdown,
         json: response.data.json,
         statusCode: 200,

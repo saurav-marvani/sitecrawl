@@ -100,7 +100,7 @@ import {
   recordMonitorScrapeSuccess,
 } from "../monitoring/results";
 import {
-  confirmExchangeBilling,
+  reportExchangeBilling,
   type ExchangeScrapeMetadata,
 } from "../../lib/exchange";
 
@@ -202,11 +202,12 @@ async function billScrapeJob(
           },
         );
 
-        // Reconcile the exchange ledger; fire-and-forget - the service
-        // flags unconfirmed access events for follow-up on its side.
+        // Reconcile the Exchange ledger; fire-and-forget - the service
+        // flags unresolved access events for follow-up on its side.
         if (exchange?.accessEventId !== undefined) {
-          void confirmExchangeBilling({
+          void reportExchangeBilling({
             accessEventId: exchange.accessEventId,
+            status: "confirmed",
             billingReference: billingJobId,
           });
         }
@@ -974,6 +975,16 @@ async function processJob(job: NuQJob<ScrapeJobSingleUrls>) {
       undefined,
       pipeline?.threatDecisions,
     );
+
+    // The Exchange delivered this access but the scrape ultimately failed,
+    // so the customer was never billed for it - void the access event so
+    // the Exchange ledger reconciles. Fire-and-forget.
+    if (pipeline?.success && pipeline.exchange?.accessEventId !== undefined) {
+      void reportExchangeBilling({
+        accessEventId: pipeline.exchange.accessEventId,
+        status: "void",
+      });
+    }
 
     logger.debug("Logging job to DB...");
     await logScrape(

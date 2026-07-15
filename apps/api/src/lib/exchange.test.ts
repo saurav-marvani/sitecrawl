@@ -5,7 +5,7 @@ import { config } from "../config";
 import {
   canUseExchangeForRequest,
   clearExchangeProvidersForTest,
-  confirmExchangeBilling,
+  reportExchangeBilling,
   getExchangeAccessForRequest,
   getExchangeRequestLogContext,
   getExchangeResponseLogContext,
@@ -236,6 +236,17 @@ describe("Exchange routing", () => {
     });
 
     expect(getExchangeRequestLogContext("not a url")).toBeUndefined();
+
+    // Embedded credentials must never reach the logs.
+    expect(
+      getExchangeRequestLogContext(
+        "https://user:secret@profiles.example/person/example",
+      ),
+    ).toEqual({
+      url: "https://profiles.example/person/example",
+      host: "profiles.example",
+      pathPrefix: "person",
+    });
   });
 
   it("extracts response cache metadata for logs", () => {
@@ -270,6 +281,11 @@ describe("Exchange routing", () => {
       ]),
     ).toBe(true);
     expect(isSupportedExchangeFormatRequest([{ type: "html" }])).toBe(false);
+    // deterministicJson extractors run against page HTML, which Exchange
+    // responses do not carry.
+    expect(isSupportedExchangeFormatRequest([{ type: "deterministicJson" }])).toBe(
+      false,
+    );
     expect(isSupportedExchangeFormatRequest([])).toBe(false);
   });
 
@@ -458,26 +474,44 @@ describe("Exchange routing", () => {
     ).toBeNull();
   });
 
-  it("confirms billing without throwing on service failures", async () => {
+  it("reports billing outcomes without throwing on service failures", async () => {
     vi.mocked(fetch).mockResolvedValue({
       ok: true,
       status: 200,
     } as Awaited<ReturnType<typeof fetch>>);
 
-    await confirmExchangeBilling({
+    await reportExchangeBilling({
       accessEventId: "6f1f5aab-3f78-4d0a-8a3d-2b1d3c4e5f60",
+      status: "confirmed",
       billingReference: "bill-1",
     });
 
     expect(fetch).toHaveBeenCalledWith(
       "https://exchange.example/v1/access-events/6f1f5aab-3f78-4d0a-8a3d-2b1d3c4e5f60/billing",
-      expect.objectContaining({ method: "POST" }),
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ status: "confirmed", billingReference: "bill-1" }),
+      }),
+    );
+
+    await reportExchangeBilling({
+      accessEventId: "6f1f5aab-3f78-4d0a-8a3d-2b1d3c4e5f60",
+      status: "void",
+    });
+
+    expect(fetch).toHaveBeenLastCalledWith(
+      "https://exchange.example/v1/access-events/6f1f5aab-3f78-4d0a-8a3d-2b1d3c4e5f60/billing",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ status: "void" }),
+      }),
     );
 
     vi.mocked(fetch).mockRejectedValue(new Error("connect timeout"));
     await expect(
-      confirmExchangeBilling({
+      reportExchangeBilling({
         accessEventId: "6f1f5aab-3f78-4d0a-8a3d-2b1d3c4e5f60",
+        status: "confirmed",
         billingReference: "bill-1",
       }),
     ).resolves.toBeUndefined();

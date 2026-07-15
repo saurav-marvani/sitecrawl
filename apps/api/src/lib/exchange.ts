@@ -60,7 +60,9 @@ export type ExchangeProvider = {
   }[];
 };
 
-const SUPPORTED_FORMATS = new Set(["markdown", "json", "deterministicJson"]);
+// deterministicJson is deliberately unsupported: its extractor scripts run
+// against page HTML, which Exchange responses do not carry.
+const SUPPORTED_FORMATS = new Set(["markdown", "json"]);
 const EXCHANGE_BETA_FLAG = "professionalProfileCompanyDataBeta";
 const THIRD_PARTY_DATA_TERMS_REQUIRED_CODE = "THIRD_PARTY_DATA_TERMS_REQUIRED";
 const THIRD_PARTY_DATA_TERMS_REQUIRED_MESSAGE =
@@ -77,7 +79,9 @@ const exchangeProvidersSchema = z.object({
     z
       .object({
         id: z.string(),
-        creditsCost: z.number().int().nonnegative().catch(0),
+        // No .catch() here: a malformed credit cost must reject the catalog
+        // (keeping the last good one) rather than silently billing 0.
+        creditsCost: z.number().int().nonnegative(),
         terms: z
           .object({
             key: z.string(),
@@ -270,6 +274,10 @@ export function getExchangeRequestLogContext(inputUrl: string):
   } catch {
     return undefined;
   }
+
+  // Never log embedded credentials from user-submitted URLs.
+  parsed.username = "";
+  parsed.password = "";
 
   return {
     url: parsed.href,
@@ -507,13 +515,15 @@ export function getExchangeSuccessCredits(input: {
 const EXCHANGE_BILLING_TIMEOUT_MS = 5_000;
 
 /**
- * Confirm billing for a delivered exchange access so the service can
- * reconcile its ledger. Failures only log - billing already happened on our
- * side, and the service flags unconfirmed events for follow-up.
+ * Report the billing outcome of a delivered Exchange access so the service
+ * can reconcile its ledger: "confirmed" once the customer was billed, "void"
+ * when the delivered access was ultimately discarded and never billed.
+ * Failures only log - the service flags unresolved events for follow-up.
  */
-export async function confirmExchangeBilling(input: {
+export async function reportExchangeBilling(input: {
   accessEventId: string;
-  billingReference: string;
+  status: "confirmed" | "void";
+  billingReference?: string;
 }): Promise<void> {
   const baseUrl = getExchangeBaseUrl();
   if (!baseUrl) {
@@ -527,22 +537,26 @@ export async function confirmExchangeBilling(input: {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          status: "confirmed",
-          billingReference: input.billingReference,
+          status: input.status,
+          ...(input.billingReference === undefined
+            ? {}
+            : { billingReference: input.billingReference }),
         }),
         signal: AbortSignal.timeout(EXCHANGE_BILLING_TIMEOUT_MS),
       },
     );
 
     if (!response.ok) {
-      rootLogger.warn("Exchange billing confirmation failed", {
+      rootLogger.warn("Exchange billing report failed", {
         accessEventId: input.accessEventId,
+        status: input.status,
         statusCode: response.status,
       });
     }
   } catch (error) {
-    rootLogger.warn("Exchange billing confirmation errored", {
+    rootLogger.warn("Exchange billing report errored", {
       accessEventId: input.accessEventId,
+      status: input.status,
       error,
     });
   }

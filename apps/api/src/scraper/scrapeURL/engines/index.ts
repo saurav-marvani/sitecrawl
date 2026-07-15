@@ -34,6 +34,7 @@ import { getPDFMaxPages } from "../../../controllers/v2/types";
 import type { PdfMetadata } from "./pdf/types";
 import { BrandingProfile } from "../../../types/branding";
 import { BrandingNotSupportedError } from "../error";
+import { isUrlBlocked } from "../../WebScraper/utils/blocklist";
 import {
   canUseExchangeForRequest,
   type ExchangeScrapeMetadata,
@@ -582,27 +583,58 @@ export async function buildFallbackList(meta: Meta): Promise<
 > {
   if (
     !meta.internalOptions.agentIndexOnly &&
-    (await canUseExchangeForRequest({
-      url: meta.rewrittenUrl ?? meta.url,
-      formats: meta.options.formats,
-      actions: meta.options.actions,
-      headers: meta.options.headers,
-      waitFor: meta.options.waitFor,
-      mobile: meta.options.mobile,
-      location: meta.options.location,
-      proxy: meta.options.proxy,
-      blockAds: meta.options.blockAds,
-      zeroDataRetention: meta.internalOptions.zeroDataRetention,
-      lockdown: meta.options.lockdown,
-      flags: meta.internalOptions.teamFlags ?? null,
-    }))
+    meta.internalOptions.forceEngine === undefined
   ) {
-    return [
-      {
-        engine: "exchange",
-        unsupportedFeatures: new Set(),
-      },
-    ];
+    if (
+      await canUseExchangeForRequest({
+        url: meta.rewrittenUrl ?? meta.url,
+        formats: meta.options.formats,
+        actions: meta.options.actions,
+        headers: meta.options.headers,
+        waitFor: meta.options.waitFor,
+        mobile: meta.options.mobile,
+        location: meta.options.location,
+        proxy: meta.options.proxy,
+        blockAds: meta.options.blockAds,
+        zeroDataRetention: meta.internalOptions.zeroDataRetention,
+        lockdown: meta.options.lockdown,
+        flags: meta.internalOptions.teamFlags ?? null,
+      })
+    ) {
+      return [
+        {
+          engine: "exchange",
+          unsupportedFeatures: new Set(),
+        },
+      ];
+    }
+
+    // A blocked URL can only have been admitted by the Exchange bypass in
+    // blocklistMiddleware, which only applies to flagged orgs; if the
+    // Exchange is no longer usable by execution time (catalog changed,
+    // service down), fail closed rather than letting normal engines scrape
+    // a blocklisted site. Errors here must never fail ordinary scrapes.
+    if (
+      meta.internalOptions.teamFlags?.professionalProfileCompanyDataBeta ===
+      true
+    ) {
+      try {
+        if (
+          isUrlBlocked(
+            meta.rewrittenUrl ?? meta.url,
+            meta.internalOptions.teamFlags ?? null,
+            {
+              team_id: meta.internalOptions.teamId ?? null,
+              origin: null,
+            },
+          )
+        ) {
+          return [];
+        }
+      } catch (error) {
+        meta.logger.warn("Exchange blocklist re-check failed", { error });
+      }
+    }
   }
 
   const shouldPrioritizeTlsClient = meta.options.__experimental_engpicker
