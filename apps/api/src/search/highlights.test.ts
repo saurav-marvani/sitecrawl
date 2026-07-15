@@ -65,7 +65,7 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-describe("applySearchHighlights", () => {
+describe("runIndexedSearchHighlightsShadow", () => {
   it("resolves lightweight index references without loading page content", async () => {
     vi.mocked(generateHighlightsIndexedBatch).mockResolvedValue(
       new Map([["0", { highlights: [], markdown: "shadow highlight" }]]),
@@ -111,7 +111,9 @@ describe("applySearchHighlights", () => {
       succeeded: true,
     });
   });
+});
 
+describe("applySearchHighlights", () => {
   it("enables the in-cluster service without requiring a bearer token", () => {
     const token = config.HIGHLIGHT_MODEL_TOKEN;
     config.HIGHLIGHT_MODEL_TOKEN = undefined;
