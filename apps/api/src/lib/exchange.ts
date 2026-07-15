@@ -31,6 +31,7 @@ type RouteInput = {
   proxy?: unknown;
   blockAds?: boolean;
   profile?: unknown;
+  atsv?: boolean;
   zeroDataRetention?: boolean;
   lockdown?: boolean;
   flags?: {
@@ -412,6 +413,12 @@ function isExchangeEligibleRequest(input: RouteInput): boolean {
   // Profile-backed scrapes expect session-specific content, which the
   // Exchange cannot serve.
   if (input.profile !== undefined) {
+    return false;
+  }
+
+  // atsv is only supported by browser engines; requests that set it keep an
+  // engine that can honor it instead of routing to the Exchange.
+  if (input.atsv === true) {
     return false;
   }
 

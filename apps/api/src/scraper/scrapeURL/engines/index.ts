@@ -597,6 +597,7 @@ export async function buildFallbackList(meta: Meta): Promise<
         proxy: meta.options.proxy,
         blockAds: meta.options.blockAds,
         profile: meta.options.profile,
+        atsv: meta.internalOptions.atsv,
         zeroDataRetention: meta.internalOptions.zeroDataRetention,
         lockdown: meta.options.lockdown,
         flags: meta.internalOptions.teamFlags ?? null,

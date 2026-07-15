@@ -314,6 +314,7 @@ export function blocklistMiddleware(
         proxy: scrapeOptions.proxy,
         blockAds: scrapeOptions.blockAds,
         profile: scrapeOptions.profile,
+        atsv: scrapeOptions.atsv ?? req.body.pageOptions?.atsv,
         zeroDataRetention,
         lockdown: scrapeOptions.lockdown ?? req.body.lockdown,
         flags: req.acuc?.flags ?? null,
