@@ -1,0 +1,552 @@
+import { fetch } from "undici";
+import { z } from "zod";
+
+import { config } from "../config";
+import type { FormatObject } from "../controllers/v2/types";
+import { logger as rootLogger } from "./logger";
+
+type OrganizationDataSourceAccessRecord = {
+  status?: string | null;
+  termsKey?: string | null;
+  termsVersion?: string | null;
+  termsAcceptedAt?: string | null;
+  enabledAt?: string | null;
+  disabledAt?: string | null;
+  disabledReason?: string | null;
+};
+
+type OrganizationDataSourceAccess = Record<
+  string,
+  OrganizationDataSourceAccessRecord | null | undefined
+>;
+
+type RouteInput = {
+  url: string;
+  formats?: FormatObject[] | unknown[];
+  actions?: unknown[];
+  headers?: Record<string, unknown>;
+  waitFor?: number;
+  mobile?: boolean;
+  location?: unknown;
+  proxy?: unknown;
+  blockAds?: boolean;
+  zeroDataRetention?: boolean;
+  lockdown?: boolean;
+  flags?: {
+    professionalProfileCompanyDataBeta?: boolean;
+    organizationDataSourceAccess?: OrganizationDataSourceAccess | null;
+  } | null;
+};
+
+export type ExchangeScrapeMetadata = {
+  handled: true;
+  creditsCost: number;
+  accessEventId?: string;
+  integrationId?: string;
+};
+
+export type ExchangeTerms = {
+  key: string;
+  version: string;
+};
+
+export type ExchangeProvider = {
+  id: string;
+  creditsCost: number;
+  terms?: ExchangeTerms;
+  routes: {
+    domains: Set<string>;
+    pathPrefixes: string[];
+  }[];
+};
+
+const SUPPORTED_FORMATS = new Set(["markdown", "json", "deterministicJson"]);
+const EXCHANGE_BETA_FLAG = "professionalProfileCompanyDataBeta";
+const THIRD_PARTY_DATA_TERMS_REQUIRED_CODE = "THIRD_PARTY_DATA_TERMS_REQUIRED";
+const THIRD_PARTY_DATA_TERMS_REQUIRED_MESSAGE =
+  "An organization admin must accept this data source's terms before this URL can be processed.";
+
+const EXCHANGE_PROVIDERS_PATH = "/v1/providers";
+const EXCHANGE_PROVIDERS_TIMEOUT_MS = 2_000;
+const EXCHANGE_PROVIDERS_TTL_MS = 60_000;
+const EXCHANGE_PROVIDERS_FAILURE_TTL_MS = 30_000;
+
+const exchangeProvidersSchema = z.object({
+  success: z.literal(true),
+  data: z.array(
+    z
+      .object({
+        id: z.string(),
+        creditsCost: z.number().int().nonnegative().catch(0),
+        terms: z
+          .object({
+            key: z.string(),
+            version: z.string(),
+          })
+          .optional(),
+        capabilities: z
+          .object({
+            scrape: z
+              .object({
+                urlRoutes: z
+                  .array(
+                    z
+                      .object({
+                        domains: z.string().array(),
+                        pathPrefixes: z.string().array(),
+                      })
+                      .passthrough(),
+                  )
+                  .optional(),
+              })
+              .passthrough()
+              .optional(),
+          })
+          .passthrough(),
+      })
+      .passthrough(),
+  ),
+});
+
+let cachedProviders:
+  | {
+      expiresAt: number;
+      value: ExchangeProvider[] | null;
+    }
+  | undefined;
+let providersRequest: Promise<ExchangeProvider[] | null> | undefined;
+
+function normalizeHost(host: string): string {
+  return host.trim().toLowerCase().replace(/\.$/, "");
+}
+
+function normalizePathPrefix(prefix: string): string {
+  const trimmed = prefix.trim();
+  if (!trimmed) {
+    return "/";
+  }
+
+  return trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
+}
+
+function getExchangeBaseUrl(): string | null {
+  if (!config.EXCHANGE_URL) {
+    return null;
+  }
+
+  return config.EXCHANGE_URL.replace(/\/+$/, "");
+}
+
+function normalizeProviders(
+  raw: z.infer<typeof exchangeProvidersSchema>,
+): ExchangeProvider[] {
+  return raw.data
+    .map(provider => ({
+      id: provider.id,
+      creditsCost: provider.creditsCost,
+      ...(provider.terms === undefined ? {} : { terms: provider.terms }),
+      routes: (provider.capabilities.scrape?.urlRoutes ?? []).map(route => ({
+        domains: new Set(route.domains.map(normalizeHost)),
+        pathPrefixes: route.pathPrefixes.map(normalizePathPrefix),
+      })),
+    }))
+    .filter(provider => provider.routes.length > 0);
+}
+
+async function fetchExchangeProviders(): Promise<ExchangeProvider[] | null> {
+  const baseUrl = getExchangeBaseUrl();
+  if (!baseUrl) {
+    return null;
+  }
+
+  try {
+    const response = await fetch(`${baseUrl}${EXCHANGE_PROVIDERS_PATH}`, {
+      method: "GET",
+      signal: AbortSignal.timeout(EXCHANGE_PROVIDERS_TIMEOUT_MS),
+    });
+
+    if (!response.ok) {
+      rootLogger.warn("Exchange providers request failed", {
+        statusCode: response.status,
+      });
+      return null;
+    }
+
+    const parsed = exchangeProvidersSchema.parse(await response.json());
+    return normalizeProviders(parsed);
+  } catch (error) {
+    rootLogger.warn("Exchange providers request errored", { error });
+    return null;
+  }
+}
+
+async function getExchangeProviders(): Promise<ExchangeProvider[] | null> {
+  if (cachedProviders && cachedProviders.expiresAt > Date.now()) {
+    return cachedProviders.value;
+  }
+
+  if (!providersRequest) {
+    providersRequest = fetchExchangeProviders().finally(() => {
+      providersRequest = undefined;
+    });
+  }
+
+  const providers = await providersRequest;
+  cachedProviders = {
+    value: providers,
+    expiresAt:
+      Date.now() +
+      (providers === null
+        ? EXCHANGE_PROVIDERS_FAILURE_TTL_MS
+        : EXCHANGE_PROVIDERS_TTL_MS),
+  };
+
+  return providers;
+}
+
+function providerMatchesUrl(provider: ExchangeProvider, inputUrl: string): boolean {
+  let parsed: URL;
+  try {
+    parsed = new URL(inputUrl);
+  } catch {
+    return false;
+  }
+
+  const host = normalizeHost(parsed.hostname);
+  const pathname = parsed.pathname || "/";
+
+  return provider.routes.some(route => {
+    if (!route.domains.has(host)) {
+      return false;
+    }
+
+    if (route.pathPrefixes.length === 0) {
+      return true;
+    }
+
+    return route.pathPrefixes.some(prefix => pathname.startsWith(prefix));
+  });
+}
+
+export async function resolveExchangeProvider(
+  inputUrl: string,
+): Promise<ExchangeProvider | null> {
+  const providers = await getExchangeProviders();
+  if (providers === null) {
+    return null;
+  }
+
+  return providers.find(provider => providerMatchesUrl(provider, inputUrl)) ?? null;
+}
+
+export async function isExchangeSupportedUrl(inputUrl: string): Promise<boolean> {
+  return (await resolveExchangeProvider(inputUrl)) !== null;
+}
+
+export function getExchangeRequestLogContext(inputUrl: string):
+  | {
+      url: string;
+      host: string;
+      pathPrefix: string | null;
+    }
+  | undefined {
+  let parsed: URL;
+  try {
+    parsed = new URL(inputUrl);
+  } catch {
+    return undefined;
+  }
+
+  return {
+    url: parsed.href,
+    host: parsed.hostname.toLowerCase(),
+    pathPrefix:
+      parsed.pathname
+        .split("/")
+        .map(part => part.trim())
+        .filter(part => part.length > 0)[0] ?? null,
+  };
+}
+
+export function getExchangeResponseLogContext(meta: unknown): {
+  cacheState?: string;
+  cachedAt?: string;
+  cacheAgeMs?: number;
+  providerRequestId?: string;
+} {
+  if (typeof meta !== "object" || meta === null) {
+    return {};
+  }
+
+  const record = meta as Record<string, unknown>;
+  const requestId = record.request_id ?? record.requestId;
+
+  return {
+    ...(typeof record.cacheState === "string"
+      ? { cacheState: record.cacheState }
+      : {}),
+    ...(typeof record.cachedAt === "string"
+      ? { cachedAt: record.cachedAt }
+      : {}),
+    ...(typeof record.cacheAgeMs === "number"
+      ? { cacheAgeMs: record.cacheAgeMs }
+      : {}),
+    ...(typeof requestId === "string" ? { providerRequestId: requestId } : {}),
+  };
+}
+
+export function isSuccessfulExchangeStatusCode(statusCode: number): boolean {
+  return (statusCode >= 200 && statusCode < 300) || statusCode === 304;
+}
+
+export function isSupportedExchangeFormatRequest(
+  formats?: FormatObject[] | unknown[],
+): boolean {
+  if (formats === undefined) {
+    return true;
+  }
+
+  if (!Array.isArray(formats) || formats.length === 0) {
+    return false;
+  }
+
+  return formats.every(format => {
+    const type =
+      typeof format === "string"
+        ? format
+        : typeof format === "object" && format !== null && "type" in format
+          ? (format as { type?: unknown }).type
+          : undefined;
+
+    return typeof type === "string" && SUPPORTED_FORMATS.has(type);
+  });
+}
+
+type DataSourceAccessDecision = "allowed" | "terms_required" | "not_enabled";
+
+function getProviderAccessDecision(
+  provider: ExchangeProvider,
+  flags: RouteInput["flags"],
+): DataSourceAccessDecision {
+  if (config.USE_DB_AUTHENTICATION !== true) {
+    return "allowed";
+  }
+
+  const access = flags?.organizationDataSourceAccess?.[provider.id];
+  const entry = typeof access === "object" && access !== null ? access : null;
+
+  if (provider.terms === undefined) {
+    return entry !== null && entry.status !== "enabled" ? "not_enabled" : "allowed";
+  }
+
+  if (entry === null) {
+    return "terms_required";
+  }
+
+  if (entry.status !== "enabled") {
+    return "not_enabled";
+  }
+
+  return entry.termsKey === provider.terms.key &&
+    entry.termsVersion === provider.terms.version
+    ? "allowed"
+    : "terms_required";
+}
+
+function isExchangeEligibleRequest(input: RouteInput): boolean {
+  if (input.flags?.[EXCHANGE_BETA_FLAG] !== true) {
+    return false;
+  }
+
+  if (!config.EXCHANGE_URL) {
+    return false;
+  }
+
+  if (!input.url) {
+    return false;
+  }
+
+  if (input.zeroDataRetention || input.lockdown) {
+    return false;
+  }
+
+  if (Array.isArray(input.actions) && input.actions.length > 0) {
+    return false;
+  }
+
+  if (input.headers && Object.keys(input.headers).length > 0) {
+    return false;
+  }
+
+  if (input.waitFor !== undefined && input.waitFor !== 0) {
+    return false;
+  }
+
+  if (input.mobile || input.location || input.blockAds === false) {
+    return false;
+  }
+
+  if (input.proxy === "stealth" || input.proxy === "enhanced") {
+    return false;
+  }
+
+  if (!isSupportedExchangeFormatRequest(input.formats)) {
+    return false;
+  }
+
+  return true;
+}
+
+export type ExchangeAccess =
+  | {
+      allowed: true;
+      termsRequired: false;
+      provider: ExchangeProvider;
+    }
+  | {
+      allowed: false;
+      termsRequired: true;
+      terms: ExchangeTerms;
+    }
+  | {
+      allowed: false;
+      termsRequired: false;
+    };
+
+export async function getExchangeAccessForRequest(
+  input: RouteInput,
+): Promise<ExchangeAccess> {
+  if (!isExchangeEligibleRequest(input)) {
+    return { allowed: false, termsRequired: false };
+  }
+
+  const provider = await resolveExchangeProvider(input.url);
+  if (provider === null) {
+    return { allowed: false, termsRequired: false };
+  }
+
+  const decision = getProviderAccessDecision(provider, input.flags);
+  if (decision === "terms_required" && provider.terms !== undefined) {
+    return { allowed: false, termsRequired: true, terms: provider.terms };
+  }
+  if (decision !== "allowed") {
+    return { allowed: false, termsRequired: false };
+  }
+
+  return { allowed: true, termsRequired: false, provider };
+}
+
+export async function canUseExchangeForRequest(
+  input: RouteInput,
+): Promise<boolean> {
+  return (await getExchangeAccessForRequest(input)).allowed;
+}
+
+function getThirdPartyDataTermsSettingsUrl(): string {
+  return `${config.FIRECRAWL_DASHBOARD_URL.replace(/\/+$/, "")}/app/settings?tab=data-sources`;
+}
+
+export function getThirdPartyDataTermsRequiredResponse(terms: ExchangeTerms) {
+  return {
+    success: false,
+    code: THIRD_PARTY_DATA_TERMS_REQUIRED_CODE,
+    error: THIRD_PARTY_DATA_TERMS_REQUIRED_MESSAGE,
+    requiresAction: {
+      type: "accept_terms",
+      terms: terms.key,
+      version: terms.version,
+      url: getThirdPartyDataTermsSettingsUrl(),
+    },
+  };
+}
+
+export function getExchangeSuccessCredits(input: {
+  exchange?: ExchangeScrapeMetadata;
+  statusCode?: number | null;
+}): number | null {
+  if (input.exchange?.handled !== true) {
+    return null;
+  }
+
+  const statusCode = input.statusCode;
+  if (
+    statusCode === undefined ||
+    statusCode === null ||
+    !isSuccessfulExchangeStatusCode(statusCode)
+  ) {
+    return null;
+  }
+
+  return input.exchange.creditsCost;
+}
+
+const EXCHANGE_BILLING_TIMEOUT_MS = 5_000;
+
+/**
+ * Confirm billing for a delivered exchange access so the service can
+ * reconcile its ledger. Failures only log - billing already happened on our
+ * side, and the service flags unconfirmed events for follow-up.
+ */
+export async function confirmExchangeBilling(input: {
+  accessEventId: string;
+  billingReference: string;
+}): Promise<void> {
+  const baseUrl = getExchangeBaseUrl();
+  if (!baseUrl) {
+    return;
+  }
+
+  try {
+    const response = await fetch(
+      `${baseUrl}/v1/access-events/${encodeURIComponent(input.accessEventId)}/billing`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          status: "confirmed",
+          billingReference: input.billingReference,
+        }),
+        signal: AbortSignal.timeout(EXCHANGE_BILLING_TIMEOUT_MS),
+      },
+    );
+
+    if (!response.ok) {
+      rootLogger.warn("Exchange billing confirmation failed", {
+        accessEventId: input.accessEventId,
+        statusCode: response.status,
+      });
+    }
+  } catch (error) {
+    rootLogger.warn("Exchange billing confirmation errored", {
+      accessEventId: input.accessEventId,
+      error,
+    });
+  }
+}
+
+export function setExchangeProvidersForTest(
+  providers: {
+    id: string;
+    creditsCost?: number;
+    terms?: ExchangeTerms;
+    routes: { domains: string[]; pathPrefixes?: string[] }[];
+  }[],
+) {
+  cachedProviders = {
+    value: providers.map(provider => ({
+      id: provider.id,
+      creditsCost: provider.creditsCost ?? 0,
+      ...(provider.terms === undefined ? {} : { terms: provider.terms }),
+      routes: provider.routes.map(route => ({
+        domains: new Set(route.domains.map(normalizeHost)),
+        pathPrefixes: (route.pathPrefixes ?? []).map(normalizePathPrefix),
+      })),
+    })),
+    expiresAt: Date.now() + 300_000,
+  };
+}
+
+export function clearExchangeProvidersForTest() {
+  cachedProviders = undefined;
+  providersRequest = undefined;
+}

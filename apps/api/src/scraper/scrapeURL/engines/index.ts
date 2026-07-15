@@ -7,6 +7,10 @@ import {
   scrapeURLWithFireEngineChromeCDP,
   scrapeURLWithFireEngineTLSClient,
 } from "./fire-engine";
+import {
+  exchangeMaxReasonableTime,
+  scrapeURLWithExchange,
+} from "./exchange";
 import { pdfMaxReasonableTime, scrapePDF } from "./pdf";
 import { fetchMaxReasonableTime, scrapeURLWithFetch } from "./fetch";
 import {
@@ -30,8 +34,13 @@ import { getPDFMaxPages } from "../../../controllers/v2/types";
 import type { PdfMetadata } from "./pdf/types";
 import { BrandingProfile } from "../../../types/branding";
 import { BrandingNotSupportedError } from "../error";
+import {
+  canUseExchangeForRequest,
+  type ExchangeScrapeMetadata,
+} from "../../../lib/exchange";
 
 export type Engine =
+  | "exchange"
   | "fire-engine;chrome-cdp"
   | "fire-engine(retry);chrome-cdp"
   | "fire-engine;chrome-cdp;stealth"
@@ -162,11 +171,13 @@ export type EngineScrapeResult = {
 
   proxyUsed: "basic" | "stealth";
   timezone?: string;
+  exchange?: ExchangeScrapeMetadata;
 };
 
 const engineHandlers: {
   [E in Engine]: (meta: Meta) => Promise<EngineScrapeResult>;
 } = {
+  "exchange": scrapeURLWithExchange,
   index: scrapeURLWithIndex,
   "index;documents": scrapeURLWithIndex,
   "fire-engine;chrome-cdp": scrapeURLWithFireEngineChromeCDP,
@@ -186,6 +197,7 @@ const engineHandlers: {
 const engineMRTs: {
   [E in Engine]: (meta: Meta) => number;
 } = {
+  "exchange": exchangeMaxReasonableTime,
   index: indexMaxReasonableTime,
   "index;documents": indexMaxReasonableTime,
   "fire-engine;chrome-cdp": meta =>
@@ -218,6 +230,27 @@ const engineOptions: {
     quality: number;
   };
 } = {
+  "exchange": {
+    features: {
+      actions: false,
+      waitFor: false,
+      screenshot: false,
+      "screenshot@fullScreen": false,
+      pdf: false,
+      document: false,
+      audio: false,
+      video: false,
+      atsv: false,
+      location: false,
+      mobile: false,
+      skipTlsVerification: true,
+      useFastMode: true,
+      stealthProxy: false,
+      branding: false,
+      disableAdblock: false,
+    },
+    quality: 2000,
+  },
   index: {
     features: {
       actions: false,
@@ -547,6 +580,31 @@ export async function buildFallbackList(meta: Meta): Promise<
     unsupportedFeatures: Set<FeatureFlag>;
   }[]
 > {
+  if (
+    !meta.internalOptions.agentIndexOnly &&
+    (await canUseExchangeForRequest({
+      url: meta.rewrittenUrl ?? meta.url,
+      formats: meta.options.formats,
+      actions: meta.options.actions,
+      headers: meta.options.headers,
+      waitFor: meta.options.waitFor,
+      mobile: meta.options.mobile,
+      location: meta.options.location,
+      proxy: meta.options.proxy,
+      blockAds: meta.options.blockAds,
+      zeroDataRetention: meta.internalOptions.zeroDataRetention,
+      lockdown: meta.options.lockdown,
+      flags: meta.internalOptions.teamFlags ?? null,
+    }))
+  ) {
+    return [
+      {
+        engine: "exchange",
+        unsupportedFeatures: new Set(),
+      },
+    ];
+  }
+
   const shouldPrioritizeTlsClient = meta.options.__experimental_engpicker
     ? (await queryEngpickerVerdict(
         meta.options.__experimental_omceDomain ?? new URL(meta.url).hostname,

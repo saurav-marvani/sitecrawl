@@ -29,6 +29,11 @@ import {
   CREDITS_FEATURE_ID,
 } from "../services/autumn/autumn.service";
 import { getTeamBalance } from "../services/autumn/usage";
+import {
+  getExchangeAccessForRequest,
+  getThirdPartyDataTermsRequiredResponse,
+} from "../lib/exchange";
+import { getScrapeZDR } from "../lib/zdr-helpers";
 
 export function checkCreditsMiddleware(
   _minimum?: number,
@@ -286,8 +291,40 @@ export function blocklistMiddleware(
   next: NextFunction,
 ) {
   (async () => {
+    const zeroDataRetention =
+      getScrapeZDR(req.acuc?.flags) === "forced" ||
+      req.body?.zeroDataRetention === true ||
+      req.body?.lockdown === true;
+    const exchangeAccess =
+      typeof req.body.url === "string" &&
+      (await getExchangeAccessForRequest({
+        url: req.body.url,
+        formats: req.body.formats,
+        actions: req.body.actions,
+        headers: req.body.headers,
+        waitFor: req.body.waitFor,
+        mobile: req.body.mobile,
+        location: req.body.location,
+        proxy: req.body.proxy,
+        blockAds: req.body.blockAds,
+        zeroDataRetention,
+        lockdown: req.body.lockdown,
+        flags: req.acuc?.flags ?? null,
+      }));
+    const canUseExchange =
+      typeof exchangeAccess === "object" && exchangeAccess.allowed;
+
+    if (typeof exchangeAccess === "object" && exchangeAccess.termsRequired) {
+      if (!res.headersSent) {
+        return res
+          .status(403)
+          .json(getThirdPartyDataTermsRequiredResponse(exchangeAccess.terms));
+      }
+    }
+
     if (
       typeof req.body.url === "string" &&
+      !canUseExchange &&
       isUrlBlocked(req.body.url, req.acuc?.flags ?? null, {
         team_id: req.acuc?.team_id ?? null,
         origin: typeof req.body.origin === "string" ? req.body.origin : null,

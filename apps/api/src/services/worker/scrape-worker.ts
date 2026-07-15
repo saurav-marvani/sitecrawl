@@ -99,6 +99,10 @@ import {
   recordMonitorScrapeFailure,
   recordMonitorScrapeSuccess,
 } from "../monitoring/results";
+import {
+  confirmExchangeBilling,
+  type ExchangeScrapeMetadata,
+} from "../../lib/exchange";
 
 configDotenv();
 
@@ -118,6 +122,7 @@ async function billScrapeJob(
   flags: TeamFlags,
   error?: Error | null,
   unsupportedFeatures?: Set<FeatureFlag>,
+  exchange?: ExchangeScrapeMetadata,
   threatDecisions?: ThreatDecision[],
 ) {
   let creditsToBeBilled: number | null = null;
@@ -146,6 +151,7 @@ async function billScrapeJob(
       flags,
       error,
       unsupportedFeatures,
+      exchange,
       threatDecisions,
     );
 
@@ -195,6 +201,15 @@ async function billScrapeJob(
             priority: 10,
           },
         );
+
+        // Reconcile the exchange ledger; fire-and-forget - the service
+        // flags unconfirmed access events for follow-up on its side.
+        if (exchange?.accessEventId !== undefined) {
+          void confirmExchangeBilling({
+            accessEventId: exchange.accessEventId,
+            billingReference: billingJobId,
+          });
+        }
 
         return creditsToBeBilled;
       } catch (error) {
@@ -663,6 +678,7 @@ async function processJob(job: NuQJob<ScrapeJobSingleUrls>) {
         (await getACUCTeam(job.data.team_id))?.flags ?? null,
         undefined,
         pipeline.unsupportedFeatures,
+        pipeline.exchange,
         pipeline.threatDecisions,
       );
 
@@ -754,6 +770,7 @@ async function processJob(job: NuQJob<ScrapeJobSingleUrls>) {
         (await getACUCTeam(job.data.team_id))?.flags ?? null,
         undefined,
         pipeline.unsupportedFeatures,
+        pipeline.exchange,
         pipeline.threatDecisions,
       );
 
@@ -953,6 +970,7 @@ async function processJob(job: NuQJob<ScrapeJobSingleUrls>) {
       costTracking,
       (await getACUCTeam(job.data.team_id))?.flags ?? null,
       error instanceof Error ? error : null,
+      undefined,
       undefined,
       pipeline?.threatDecisions,
     );
