@@ -99,7 +99,11 @@ import {
   recordMonitorScrapeFailure,
   recordMonitorScrapeSuccess,
 } from "../monitoring/results";
-import type { DataLayerScrapeMetadata } from "../../lib/data-layer";
+import {
+  reportExchangeBilling,
+  warmExchangeCatalog,
+  type ExchangeScrapeMetadata,
+} from "../../lib/exchange";
 
 configDotenv();
 
@@ -109,6 +113,7 @@ const jobLockExtensionTime = config.JOB_LOCK_EXTENSION_TIME;
 if (require.main === module) {
   cacheableLookup.install(http.globalAgent);
   cacheableLookup.install(https.globalAgent);
+  warmExchangeCatalog();
 }
 
 async function billScrapeJob(
@@ -119,7 +124,7 @@ async function billScrapeJob(
   flags: TeamFlags,
   error?: Error | null,
   unsupportedFeatures?: Set<FeatureFlag>,
-  dataLayer?: DataLayerScrapeMetadata,
+  exchange?: ExchangeScrapeMetadata,
   threatDecisions?: ThreatDecision[],
 ) {
   let creditsToBeBilled: number | null = null;
@@ -148,7 +153,7 @@ async function billScrapeJob(
       flags,
       error,
       unsupportedFeatures,
-      dataLayer,
+      exchange,
       threatDecisions,
     );
 
@@ -185,7 +190,6 @@ async function billScrapeJob(
           "bill_team",
           {
             team_id: job.data.team_id,
-            subscription_id: undefined,
             credits: creditsToBeBilled,
             billing,
             is_extract: false,
@@ -199,6 +203,18 @@ async function billScrapeJob(
             priority: 10,
           },
         );
+
+        // Reconcile the Exchange ledger. Awaited so the confirmation lands
+        // before any later failure path could attempt to void this access -
+        // the service rejects confirmed->void, making the order decisive.
+        // reportExchangeBilling never throws and is bounded by its timeout.
+        if (exchange?.accessEventId !== undefined) {
+          await reportExchangeBilling({
+            accessEventId: exchange.accessEventId,
+            status: "confirmed",
+            billingReference: billingJobId,
+          });
+        }
 
         return creditsToBeBilled;
       } catch (error) {
@@ -250,18 +266,14 @@ function billThreatBlockedDiscoveries(
     blocked.map(x => x.decision),
   );
   if (threatScanCredits <= 0) return;
-  billTeam(
-    args.teamId,
-    undefined,
-    threatScanCredits,
-    args.apiKeyId,
-    args.billing,
-  ).catch(error => {
-    logger.error(
-      `Failed to bill team ${args.teamId} for ${threatScanCredits} threat scan credit(s)`,
-      { error },
-    );
-  });
+  billTeam(args.teamId, threatScanCredits, args.apiKeyId, args.billing).catch(
+    error => {
+      logger.error(
+        `Failed to bill team ${args.teamId} for ${threatScanCredits} threat scan credit(s)`,
+        { error },
+      );
+    },
+  );
 }
 
 async function processJob(job: NuQJob<ScrapeJobSingleUrls>) {
@@ -671,7 +683,7 @@ async function processJob(job: NuQJob<ScrapeJobSingleUrls>) {
         (await getACUCTeam(job.data.team_id))?.flags ?? null,
         undefined,
         pipeline.unsupportedFeatures,
-        pipeline.dataLayer,
+        pipeline.exchange,
         pipeline.threatDecisions,
       );
 
@@ -763,7 +775,7 @@ async function processJob(job: NuQJob<ScrapeJobSingleUrls>) {
         (await getACUCTeam(job.data.team_id))?.flags ?? null,
         undefined,
         pipeline.unsupportedFeatures,
-        pipeline.dataLayer,
+        pipeline.exchange,
         pipeline.threatDecisions,
       );
 
@@ -967,6 +979,19 @@ async function processJob(job: NuQJob<ScrapeJobSingleUrls>) {
       undefined,
       pipeline?.threatDecisions,
     );
+
+    // The Exchange delivered this access but the scrape ultimately failed,
+    // so the customer was never billed for it - void the access event so
+    // the Exchange ledger reconciles. Fire-and-forget. If billing did
+    // happen before a later step failed, its confirmation was awaited
+    // above and the service rejects confirmed->void, so a paid access can
+    // never be marked void.
+    if (pipeline?.success && pipeline.exchange?.accessEventId !== undefined) {
+      void reportExchangeBilling({
+        accessEventId: pipeline.exchange.accessEventId,
+        status: "void",
+      });
+    }
 
     logger.debug("Logging job to DB...");
     await logScrape(

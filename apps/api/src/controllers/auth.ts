@@ -5,7 +5,6 @@ import { logger } from "../lib/logger";
 import { parseApi } from "../lib/parseApi";
 import { withAuth } from "../lib/withAuth";
 import { getAgentSponsorStatus } from "../services/agent-sponsor";
-import { getRedisConnection } from "../services/queue-service";
 import { getRateLimiter } from "../services/rate-limiter";
 import {
   KEYLESS_FREE_TIER_LIMIT_MESSAGE,
@@ -84,11 +83,6 @@ const mockPreviewACUC: (
   api_key: "preview",
   api_key_id: 0,
   team_id,
-  sub_id: null,
-  sub_current_period_start: null,
-  sub_current_period_end: null,
-  sub_user_id: null,
-  price_id: null,
   rate_limits: {
     crawl: 2,
     scrape: 10,
@@ -101,8 +95,6 @@ const mockPreviewACUC: (
     extractAgentPreview: 1,
     scrapeAgentPreview: 5,
   },
-  price_should_be_graceful: false,
-  price_associated_auto_recharge_price_id: null,
   plan_priority: {
     bucketLimit: 25,
     planModifier: 0.1,
@@ -116,13 +108,6 @@ const mockACUC: () => AuthCreditUsageChunk = () => ({
   api_key: "bypass",
   api_key_id: 0,
   team_id: "bypass",
-  sub_id: "bypass",
-  sub_current_period_start: new Date().toISOString(),
-  sub_current_period_end: new Date(
-    new Date().getTime() + 30 * 24 * 60 * 60 * 1000,
-  ).toISOString(),
-  sub_user_id: "bypass",
-  price_id: "bypass",
   rate_limits: {
     crawl: 99999999,
     scrape: 99999999,
@@ -135,8 +120,6 @@ const mockACUC: () => AuthCreditUsageChunk = () => ({
     extractAgentPreview: 99999999,
     scrapeAgentPreview: 99999999,
   },
-  price_should_be_graceful: false,
-  price_associated_auto_recharge_price_id: null,
   plan_priority: {
     bucketLimit: 25,
     planModifier: 0.1,
@@ -171,8 +154,7 @@ async function resolveOAuthToken(
   });
 }
 
-/** @public used by auto_charge.ts (disabled, Autumn handles auto-recharge) */
-export async function getACUC(
+async function getACUC(
   api_key: string,
   cacheOnly = false,
   useCache = true,
@@ -395,9 +377,6 @@ export async function clearACUCTeam(team_id: string): Promise<void> {
 
   // Also clear the base cache key
   await deleteKey(`acuc_team_${team_id}`);
-
-  // Add team to billed_teams set so tally gets updated too
-  await getRedisConnection().sadd("billed_teams", team_id);
 }
 
 const KEYLESS_ENDPOINT_NOT_AVAILABLE_MESSAGE = `This endpoint is not supported by the keyless free tier. Sign up for a free API key at https://www.firecrawl.dev/signin for more endpoints, more usage, and higher rate limits.
@@ -646,7 +625,6 @@ async function supaAuthenticateUser(
   let normalizedApi: string;
 
   let teamId: string | null = null;
-  let priceId: string | null = null;
   let chunk: AuthCreditUsageChunk | null = null;
   if (token == "this_is_just_a_preview_token") {
     throw new Error(
@@ -687,7 +665,6 @@ async function supaAuthenticateUser(
     }
 
     teamId = chunk.team_id;
-    priceId = chunk.price_id;
 
     subscriptionData = {
       team_id: teamId,
@@ -718,7 +695,6 @@ async function supaAuthenticateUser(
     }
 
     teamId = chunk.team_id;
-    priceId = chunk.price_id;
 
     subscriptionData = {
       team_id: teamId,
@@ -768,7 +744,6 @@ async function supaAuthenticateUser(
   } catch (rateLimiterRes) {
     // logger.error(`Rate limit exceeded: ${rateLimiterRes}`, {
     //   teamId,
-    //   priceId,
     //   mode,
     //   rateLimits: chunk?.rate_limits,
     //   rateLimiterRes,
