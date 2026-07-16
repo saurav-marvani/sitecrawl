@@ -22,7 +22,7 @@ import { config } from "../config";
 const HIGHLIGHTS_INDEX_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 
 /**
- * Whether the deployment has every dependency the highlights beta needs: the
+ * Whether the deployment has every dependency indexed highlights need: the
  * index DB (to find cached content), the GCS index bucket (to fetch it), and the
  * highlight model service URL (to score it). Missing any => silently skip.
  */
@@ -176,10 +176,6 @@ function indexedSearchHighlightTargets(
   return targets;
 }
 
-export function searchHighlightURLs(response: SearchV2Response): string[] {
-  return indexedSearchHighlightTargets(response).map(target => target.url);
-}
-
 async function runIndexedSearchHighlights(
   targets: IndexedSearchHighlightTarget[],
   query: string,
@@ -255,20 +251,6 @@ export async function applyIndexedSearchHighlights(
     timeTakenMs: Date.now() - start,
   });
   return result;
-}
-
-export function runIndexedSearchHighlightsShadow(
-  urls: string[],
-  query: string,
-  logger: Logger,
-  requestId: string,
-): ReturnType<typeof runIndexedSearchHighlights> {
-  return runIndexedSearchHighlights(
-    urls.map(url => ({ url })),
-    query,
-    logger,
-    requestId,
-  );
 }
 
 /**

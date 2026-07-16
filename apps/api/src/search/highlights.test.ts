@@ -48,8 +48,6 @@ import {
   applyIndexedSearchHighlights,
   applySearchHighlights,
   highlightsEnvReady,
-  runIndexedSearchHighlightsShadow,
-  searchHighlightURLs,
 } from "./highlights";
 
 const logger = {
@@ -66,57 +64,8 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-describe("runIndexedSearchHighlightsShadow", () => {
-  it("resolves lightweight index references without loading page content", async () => {
-    vi.mocked(generateHighlightsIndexedBatch).mockResolvedValue(
-      new Map([["0", { highlights: [], markdown: "shadow highlight" }]]),
-    );
-    const response = {
-      web: [{ url: "https://first.test", description: "fallback" }],
-      news: [{ url: "https://second.test", snippet: "fallback" }],
-    } as any;
-    const urls = searchHighlightURLs(response);
-
-    const result = await runIndexedSearchHighlightsShadow(
-      urls,
-      "query",
-      logger,
-      "request-1",
-    );
-
-    expect(generateHighlightsIndexedBatch).toHaveBeenCalledWith(
-      "query",
-      [
-        {
-          id: "0",
-          url: "https://first.test",
-          indexObject: "index:https://first.test.json",
-        },
-        {
-          id: "1",
-          url: "https://second.test",
-          indexObject: "index:https://second.test.json",
-        },
-      ],
-      {
-        logger,
-        logPayload: false,
-        requestId: "request-1",
-        timeoutMs: null,
-        onFailure: expect.any(Function),
-      },
-    );
-    expect(result).toEqual({
-      attempted: 2,
-      indexHits: 2,
-      replaced: 1,
-      succeeded: true,
-    });
-  });
-});
-
 describe("applyIndexedSearchHighlights", () => {
-  it("uses the shadow indexed request path and applies web and news responses by ID", async () => {
+  it("uses indexed references and applies web and news responses by ID", async () => {
     vi.mocked(generateHighlightsIndexedBatch).mockResolvedValue(
       new Map([
         ["0", { highlights: [], markdown: "first highlight" }],

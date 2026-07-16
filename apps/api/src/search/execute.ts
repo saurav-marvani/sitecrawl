@@ -14,7 +14,6 @@ import {
   calculateScrapeCredits,
 } from "./scrape";
 import { applyIndexedSearchHighlights, highlightsEnvReady } from "./highlights";
-import { runSearchHighlightsShadow } from "./highlights-shadow";
 import { trackSearchResults, trackSearchRequest } from "../lib/tracking";
 import type { BillingMetadata } from "../services/billing/types";
 import type { ThreatProtectionPolicy } from "../lib/threat-protection/types";
@@ -241,17 +240,13 @@ export async function executeSearch(
     }
   }
 
-  // Experimental highlights beta: replace provider snippets with index-backed
-  // highlights. Gated on (1) the request opting in, (2) the team's highlightsBeta
-  // flag, and (3) all required envs being present (index DB, GCS, model). Any
-  // gate failing => silently keep the provider snippets.
+  // Replace provider snippets with index-backed highlights when requested and
+  // the required services are configured. Missing configuration silently keeps
+  // the provider snippets.
   // Runs after scraping (mergeScrapedContent rebuilds the result objects, so
   // highlight mutations must come last to survive). Uses the user's original
   // query, not the domain-filtered upstream query.
-  const shouldApplyHighlights =
-    options.highlights &&
-    flags?.highlightsBeta === true &&
-    highlightsEnvReady();
+  const shouldApplyHighlights = options.highlights && highlightsEnvReady();
   if (shouldApplyHighlights) {
     await applyIndexedSearchHighlights(
       searchResponse,
@@ -259,14 +254,6 @@ export async function executeSearch(
       logger,
       context.requestId,
     );
-  } else {
-    runSearchHighlightsShadow({
-      response: searchResponse,
-      query,
-      requestId: context.requestId,
-      teamId,
-      zeroDataRetention: zeroDataRetention === true || isZDR === true,
-    });
   }
 
   const scrapeFormats = scrapeOptions?.formats
