@@ -108,7 +108,8 @@ const processBillingJobInternal = async (token: string, job: Job) => {
         }),
         is_extract,
         autumnTrackInRequest,
-        typeof exchangeAccessEventId === "string"
+        typeof exchangeAccessEventId === "string" &&
+          exchangeAccessEventId.length > 0
           ? {
               accessEventId: exchangeAccessEventId,
               billingReference: String(job.id),

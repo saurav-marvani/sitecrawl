@@ -547,53 +547,82 @@ export function getExchangeSuccessCredits(input: {
 }
 
 const EXCHANGE_BILLING_TIMEOUT_MS = 5_000;
+const EXCHANGE_BILLING_ATTEMPTS = 3;
+const EXCHANGE_BILLING_RETRY_DELAY_MS = 2_000;
 
 /**
  * Report the billing outcome of a delivered Exchange access so the service
  * can reconcile its ledger: "confirmed" once the customer was billed, "void"
  * when the delivered access was ultimately discarded and never billed.
- * Failures only log - the service flags unresolved events for follow-up.
+ * Retries transient failures with a short backoff; never throws. Returns
+ * whether the report was accepted - a sustained failure leaves the event
+ * pending on the Exchange, which flags unresolved events for follow-up.
  */
 export async function reportExchangeBilling(input: {
   accessEventId: string;
   status: "confirmed" | "void";
   billingReference?: string;
-}): Promise<void> {
+}): Promise<boolean> {
   const baseUrl = getExchangeBaseUrl();
   if (!baseUrl) {
-    return;
+    return false;
   }
 
-  try {
-    const response = await fetch(
-      `${baseUrl}/v1/access-events/${encodeURIComponent(input.accessEventId)}/billing`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          status: input.status,
-          ...(input.billingReference === undefined
-            ? {}
-            : { billingReference: input.billingReference }),
-        }),
-        signal: AbortSignal.timeout(EXCHANGE_BILLING_TIMEOUT_MS),
-      },
-    );
+  for (let attempt = 1; attempt <= EXCHANGE_BILLING_ATTEMPTS; attempt++) {
+    try {
+      const response = await fetch(
+        `${baseUrl}/v1/access-events/${encodeURIComponent(input.accessEventId)}/billing`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            status: input.status,
+            ...(input.billingReference === undefined
+              ? {}
+              : { billingReference: input.billingReference }),
+          }),
+          signal: AbortSignal.timeout(EXCHANGE_BILLING_TIMEOUT_MS),
+        },
+      );
 
-    if (!response.ok) {
+      if (response.ok) {
+        return true;
+      }
+
+      // 4xx responses are definitive (conflict, unknown event) - the
+      // Exchange has spoken and a retry cannot change the answer.
+      if (response.status < 500) {
+        rootLogger.warn("Exchange billing report rejected", {
+          accessEventId: input.accessEventId,
+          status: input.status,
+          statusCode: response.status,
+        });
+        return false;
+      }
+
       rootLogger.warn("Exchange billing report failed", {
         accessEventId: input.accessEventId,
         status: input.status,
         statusCode: response.status,
+        attempt,
+      });
+    } catch (error) {
+      rootLogger.warn("Exchange billing report errored", {
+        accessEventId: input.accessEventId,
+        status: input.status,
+        attempt,
+        error,
       });
     }
-  } catch (error) {
-    rootLogger.warn("Exchange billing report errored", {
-      accessEventId: input.accessEventId,
-      status: input.status,
-      error,
-    });
+
+    if (attempt < EXCHANGE_BILLING_ATTEMPTS) {
+      await new Promise(resolve =>
+        setTimeout(resolve, EXCHANGE_BILLING_RETRY_DELAY_MS * attempt),
+      );
+    }
   }
+
+  return false;
 }
 
 /**

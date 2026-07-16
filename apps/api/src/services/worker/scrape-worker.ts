@@ -187,7 +187,8 @@ async function billScrapeJob(
 
         // Add directly to the billing queue - the billing worker will handle
         // the rest, including confirming the Exchange access event once the
-        // debit actually commits (and voiding it if the commit fails).
+        // debit actually commits. A failed commit leaves the event pending
+        // for reconciliation - it is never voided on an ambiguous outcome.
         await getBillingQueue().add(
           "bill_team",
           {
@@ -221,6 +222,18 @@ async function billScrapeJob(
             value: creditsToBeBilled,
             properties: autumnProperties,
             featureId,
+          });
+        }
+        // The billing operation never reached the queue, so no debit will
+        // commit and no confirmation will ever arrive: void the Exchange
+        // access event instead of leaving it dangling. If the enqueue
+        // actually succeeded and only the acknowledgement was lost, the
+        // eventual confirmation repairs the void (void -> confirmed is
+        // legal on the Exchange). Fire-and-forget.
+        if (exchange?.accessEventId !== undefined) {
+          void reportExchangeBilling({
+            accessEventId: exchange.accessEventId,
+            status: "void",
           });
         }
         captureExceptionWithZdrCheck(error, {
