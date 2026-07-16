@@ -15,9 +15,30 @@ import {
 } from "./types";
 import { reportExchangeBilling } from "../../lib/exchange";
 
-// Upper bound on concurrent Exchange confirmation requests, so a full
-// batch never turns into a synchronized burst against the Exchange.
+// Upper bound on concurrent Exchange confirmation requests across the
+// whole worker, so slow or retrying deliveries from overlapping batch
+// runs never stack into a burst against the Exchange.
 const EXCHANGE_CONFIRM_CONCURRENCY = 16;
+let exchangeConfirmSlots = EXCHANGE_CONFIRM_CONCURRENCY;
+const exchangeConfirmWaiters: Array<() => void> = [];
+
+async function withExchangeConfirmSlot<T>(fn: () => Promise<T>): Promise<T> {
+  if (exchangeConfirmSlots > 0) {
+    exchangeConfirmSlots--;
+  } else {
+    await new Promise<void>(resolve => exchangeConfirmWaiters.push(resolve));
+  }
+  try {
+    return await fn();
+  } finally {
+    const next = exchangeConfirmWaiters.shift();
+    if (next !== undefined) {
+      next();
+    } else {
+      exchangeConfirmSlots++;
+    }
+  }
+}
 
 // Confirm the Exchange accesses behind a set of committed billing
 // operations. Runs after the batch lock is released so an Exchange outage
@@ -28,25 +49,19 @@ const EXCHANGE_CONFIRM_CONCURRENCY = 16;
 async function confirmExchangeOutcomes(
   operations: BillingOperation[],
 ): Promise<void> {
-  for (
-    let start = 0;
-    start < operations.length;
-    start += EXCHANGE_CONFIRM_CONCURRENCY
-  ) {
-    await Promise.all(
-      operations
-        .slice(start, start + EXCHANGE_CONFIRM_CONCURRENCY)
-        .map(op =>
-          reportExchangeBilling({
-            accessEventId: op.exchange_access_event_id!,
-            status: "confirmed",
-            ...(op.billing_reference === undefined
-              ? {}
-              : { billingReference: op.billing_reference }),
-          }),
-        ),
-    );
-  }
+  await Promise.all(
+    operations.map(op =>
+      withExchangeConfirmSlot(() =>
+        reportExchangeBilling({
+          accessEventId: op.exchange_access_event_id!,
+          status: "confirmed",
+          ...(op.billing_reference === undefined
+            ? {}
+            : { billingReference: op.billing_reference }),
+        }),
+      ),
+    ),
+  );
 }
 
 // Configuration constants

@@ -552,6 +552,7 @@ const EXCHANGE_BILLING_RETRY_DELAY_MS = 2_000;
 const EXCHANGE_BILLING_RETRY_MAX_DELAY_MS = 15_000;
 
 // Retry-After from a 429, in milliseconds, when present and sane.
+// Accepts both delta-seconds and HTTP-date forms.
 function getRetryAfterMs(response: {
   headers?: { get?: (name: string) => string | null };
 }): number | undefined {
@@ -559,11 +560,18 @@ function getRetryAfterMs(response: {
   if (!header) {
     return undefined;
   }
+
   const seconds = Number(header);
-  if (!Number.isFinite(seconds) || seconds <= 0) {
+  if (Number.isFinite(seconds)) {
+    return seconds > 0 ? seconds * 1_000 : undefined;
+  }
+
+  const resetAt = Date.parse(header);
+  if (Number.isNaN(resetAt)) {
     return undefined;
   }
-  return seconds * 1_000;
+  const delayMs = resetAt - Date.now();
+  return delayMs > 0 ? delayMs : undefined;
 }
 
 /**
@@ -641,9 +649,10 @@ export async function reportExchangeBilling(input: {
     if (attempt < EXCHANGE_BILLING_ATTEMPTS) {
       // Full jitter on the backoff so a batch of reports failing together
       // does not retry against a degraded Exchange in synchronized bursts.
+      // Retry-After, when given, is the lower bound.
       const backoff = EXCHANGE_BILLING_RETRY_DELAY_MS * attempt;
       const delay = Math.min(
-        Math.max(retryAfterMs ?? 0, backoff / 2 + Math.random() * backoff),
+        Math.max(retryAfterMs ?? 0, Math.random() * backoff),
         EXCHANGE_BILLING_RETRY_MAX_DELAY_MS,
       );
       await new Promise(resolve => setTimeout(resolve, delay));
