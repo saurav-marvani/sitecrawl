@@ -49,18 +49,33 @@ async function withExchangeConfirmSlot<T>(fn: () => Promise<T>): Promise<T> {
 async function confirmExchangeOutcomes(
   operations: BillingOperation[],
 ): Promise<void> {
+  // A small worker pool pulls operations one at a time, so a slow
+  // Exchange queues at most EXCHANGE_CONFIRM_CONCURRENCY waiters per
+  // invocation on the shared budget instead of one per operation.
+  let nextIndex = 0;
+  const workerCount = Math.min(
+    EXCHANGE_CONFIRM_CONCURRENCY,
+    operations.length,
+  );
   await Promise.all(
-    operations.map(op =>
-      withExchangeConfirmSlot(() =>
-        reportExchangeBilling({
-          accessEventId: op.exchange_access_event_id!,
-          status: "confirmed",
-          ...(op.billing_reference === undefined
-            ? {}
-            : { billingReference: op.billing_reference }),
-        }),
-      ),
-    ),
+    Array.from({ length: workerCount }, async () => {
+      while (true) {
+        const index = nextIndex++;
+        if (index >= operations.length) {
+          return;
+        }
+        const op = operations[index];
+        await withExchangeConfirmSlot(() =>
+          reportExchangeBilling({
+            accessEventId: op.exchange_access_event_id!,
+            status: "confirmed",
+            ...(op.billing_reference === undefined
+              ? {}
+              : { billingReference: op.billing_reference }),
+          }),
+        );
+      }
+    }),
   );
 }
 
