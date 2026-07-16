@@ -977,7 +977,7 @@ async function scrapeURLLoop(meta: Meta): Promise<ScrapeUrlResponse> {
     ).audioCookies;
 
     for (const postprocessor of postprocessors) {
-      if (postprocessor.shouldRun(meta, new URL(engineResult.url))) {
+      if (await postprocessor.shouldRun(meta, new URL(engineResult.url))) {
         meta.logger.info("Running postprocessor " + postprocessor.name);
         try {
           engineResult = await postprocessor.run(
