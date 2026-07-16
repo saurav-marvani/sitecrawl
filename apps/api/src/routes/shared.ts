@@ -29,10 +29,8 @@ import {
   CREDITS_FEATURE_ID,
 } from "../services/autumn/autumn.service";
 import { getTeamBalance } from "../services/autumn/usage";
-import {
-  getExchangeAccessForRequest,
-  getThirdPartyDataTermsRequiredResponse,
-} from "../lib/exchange";
+import { getThirdPartyDataTermsRequiredResponse } from "../lib/exchange";
+import { getExchangeAccessForRequestBody } from "../lib/exchange-request";
 import { getScrapeZDR } from "../lib/zdr-helpers";
 
 export function checkCreditsMiddleware(
@@ -317,34 +315,14 @@ function blocklistGate(
     const zeroDataRetention =
       getScrapeZDR(req.acuc?.flags) === "forced" ||
       req.body?.zeroDataRetention === true;
-    // Crawl routes nest per-page options under scrapeOptions; scrape routes
-    // carry them at the top level. Eligibility must see the effective ones.
-    const scrapeOptions =
-      typeof req.body?.scrapeOptions === "object" &&
-      req.body.scrapeOptions !== null
-        ? req.body.scrapeOptions
-        : req.body;
     const exchangeAccess =
       options.exchange &&
       typeof req.body.url === "string" &&
-      (await getExchangeAccessForRequest({
-        url: req.body.url,
-        formats: scrapeOptions.formats,
-        actions: scrapeOptions.actions,
-        headers: scrapeOptions.headers,
-        waitFor: scrapeOptions.waitFor,
-        mobile: scrapeOptions.mobile,
-        location: scrapeOptions.location,
-        proxy: scrapeOptions.proxy,
-        blockAds: scrapeOptions.blockAds,
-        profile: scrapeOptions.profile,
-        atsv: scrapeOptions.atsv ?? req.body.pageOptions?.atsv,
-        minAge: scrapeOptions.minAge,
-        includeTags: scrapeOptions.includeTags ?? req.body.pageOptions?.includeTags,
-        excludeTags: scrapeOptions.excludeTags ?? req.body.pageOptions?.excludeTags,
-        zeroDataRetention,
-        lockdown: scrapeOptions.lockdown ?? req.body.lockdown,
+      (await getExchangeAccessForRequestBody({
+        body: req.body,
         flags: req.acuc?.flags ?? null,
+        url: req.body.url,
+        zeroDataRetention,
       }));
     const canUseExchange =
       typeof exchangeAccess === "object" && exchangeAccess.allowed;

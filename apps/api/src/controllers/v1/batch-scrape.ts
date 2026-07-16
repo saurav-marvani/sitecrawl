@@ -24,6 +24,8 @@ import { createWebhookSender, WebhookEvent } from "../../services/webhook";
 import { logger as _logger } from "../../lib/logger";
 import { UNSUPPORTED_SITE_MESSAGE } from "../../lib/strings";
 import { isUrlBlocked } from "../../scraper/WebScraper/utils/blocklist";
+import { getThirdPartyDataTermsRequiredResponse } from "../../lib/exchange";
+import { getExchangeAccessForRequestBody } from "../../lib/exchange-request";
 import { fromV1ScrapeOptions } from "../v2/types";
 import { checkPermissions } from "../../lib/permissions";
 import {
@@ -127,27 +129,61 @@ export async function batchScrapeController(
           urls.push(nu);
           unnormalizedURLs.push(u);
         } else {
-          invalidURLs.push(u);
+          // A blocked URL may still be servable through the Exchange.
+          const exchangeAccess = await getExchangeAccessForRequestBody({
+            body: req.body,
+            flags: req.acuc?.flags ?? null,
+            url: nu,
+            zeroDataRetention: zeroDataRetention || false,
+          });
+          if (exchangeAccess.allowed) {
+            urls.push(nu);
+            unnormalizedURLs.push(u);
+          } else if (exchangeAccess.termsRequired) {
+            return res
+              .status(403)
+              .json(getThirdPartyDataTermsRequiredResponse(exchangeAccess.terms));
+          } else {
+            invalidURLs.push(u);
+          }
         }
       } catch (_) {
         invalidURLs.push(u);
       }
     }
   } else {
-    if (
-      req.body.urls?.some((url: string) =>
-        isUrlBlocked(url, req.acuc?.flags ?? null, {
+    for (const url of req.body.urls ?? []) {
+      if (
+        !isUrlBlocked(url, req.acuc?.flags ?? null, {
           team_id: req.auth.team_id,
           origin: req.body.origin ?? null,
-        }),
-      )
-    ) {
-      if (!res.headersSent) {
-        return res.status(403).json({
-          success: false,
-          error: UNSUPPORTED_SITE_MESSAGE,
-        });
+        })
+      ) {
+        continue;
       }
+
+      // A blocked URL may still be servable through the Exchange.
+      const exchangeAccess = await getExchangeAccessForRequestBody({
+        body: req.body,
+        flags: req.acuc?.flags ?? null,
+        url,
+        zeroDataRetention: zeroDataRetention || false,
+      });
+      if (exchangeAccess.allowed) {
+        continue;
+      }
+
+      if (!res.headersSent) {
+        return res.status(403).json(
+          exchangeAccess.termsRequired
+            ? getThirdPartyDataTermsRequiredResponse(exchangeAccess.terms)
+            : {
+                success: false,
+                error: UNSUPPORTED_SITE_MESSAGE,
+              },
+        );
+      }
+      return;
     }
   }
 

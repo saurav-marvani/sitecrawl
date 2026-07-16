@@ -514,8 +514,8 @@ function getThirdPartyDataTermsSettingsUrl(): string {
 
 export function getThirdPartyDataTermsRequiredResponse(terms: ExchangeTerms) {
   return {
-    success: false,
-    code: THIRD_PARTY_DATA_TERMS_REQUIRED_CODE,
+    success: false as const,
+    code: THIRD_PARTY_DATA_TERMS_REQUIRED_CODE as "THIRD_PARTY_DATA_TERMS_REQUIRED",
     error: THIRD_PARTY_DATA_TERMS_REQUIRED_MESSAGE,
     requiresAction: {
       type: "accept_terms",
