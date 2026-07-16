@@ -292,10 +292,11 @@ export function blocklistMiddleware(
 }
 
 /**
- * Blocklist gate for scrape-shaped routes (scrape, crawl, batch scrape),
- * where an Exchange-eligible URL may bypass the blocklist because the
- * exchange engine can serve it. Non-scrape flows (map, search, monitors)
- * never route through the Exchange and must keep plain blocklist behavior.
+ * Blocklist gate for single-URL scrape-shaped routes (scrape, crawl), where
+ * an Exchange-eligible URL may bypass the blocklist because the exchange
+ * engine can serve it. Everything else (map, search, batch scrape, monitors)
+ * keeps plain blocklist behavior - batch stays out until its jobs carry the
+ * access flags the worker-side recheck needs.
  */
 export function scrapeBlocklistMiddleware(
   req: RequestWithMaybeACUC<any, any, any>,

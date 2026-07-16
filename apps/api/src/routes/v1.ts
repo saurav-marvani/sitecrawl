@@ -71,7 +71,7 @@ v1Router.post(
   authMiddleware(RateLimiterMode.Scrape),
   countryCheck,
   checkCreditsMiddleware(),
-  scrapeBlocklistMiddleware,
+  blocklistMiddleware,
   idempotencyMiddleware,
   wrap(batchScrapeController),
 );
