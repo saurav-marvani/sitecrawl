@@ -620,8 +620,34 @@ describe("Exchange routing", () => {
     }
     expect(fetch).toHaveBeenCalledTimes(2);
 
-    // A 4xx is the Exchange's final answer (conflict, unknown event):
-    // no retry, report failure to the caller.
+    // 429 is transient rate limiting, not a final answer: it retries.
+    vi.mocked(fetch).mockClear();
+    vi.mocked(fetch)
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 429,
+        headers: new Headers({ "retry-after": "1" }),
+      } as Awaited<ReturnType<typeof fetch>>)
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+      } as Awaited<ReturnType<typeof fetch>>);
+
+    vi.useFakeTimers();
+    try {
+      const report = reportExchangeBilling({
+        accessEventId: "6f1f5aab-3f78-4d0a-8a3d-2b1d3c4e5f60",
+        status: "confirmed",
+      });
+      await vi.runAllTimersAsync();
+      await expect(report).resolves.toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
+    expect(fetch).toHaveBeenCalledTimes(2);
+
+    // Any other 4xx is the Exchange's final answer (conflict, unknown
+    // event): no retry, report failure to the caller.
     vi.mocked(fetch).mockClear();
     vi.mocked(fetch).mockResolvedValue({
       ok: false,

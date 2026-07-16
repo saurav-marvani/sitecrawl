@@ -15,6 +15,10 @@ import {
 } from "./types";
 import { reportExchangeBilling } from "../../lib/exchange";
 
+// Upper bound on concurrent Exchange confirmation requests, so a full
+// batch never turns into a synchronized burst against the Exchange.
+const EXCHANGE_CONFIRM_CONCURRENCY = 16;
+
 // Confirm the Exchange accesses behind a set of committed billing
 // operations. Runs after the batch lock is released so an Exchange outage
 // can never stall the billing loop past its lease. reportExchangeBilling
@@ -24,21 +28,25 @@ import { reportExchangeBilling } from "../../lib/exchange";
 async function confirmExchangeOutcomes(
   operations: BillingOperation[],
 ): Promise<void> {
-  if (operations.length === 0) {
-    return;
+  for (
+    let start = 0;
+    start < operations.length;
+    start += EXCHANGE_CONFIRM_CONCURRENCY
+  ) {
+    await Promise.all(
+      operations
+        .slice(start, start + EXCHANGE_CONFIRM_CONCURRENCY)
+        .map(op =>
+          reportExchangeBilling({
+            accessEventId: op.exchange_access_event_id!,
+            status: "confirmed",
+            ...(op.billing_reference === undefined
+              ? {}
+              : { billingReference: op.billing_reference }),
+          }),
+        ),
+    );
   }
-
-  await Promise.all(
-    operations.map(op =>
-      reportExchangeBilling({
-        accessEventId: op.exchange_access_event_id!,
-        status: "confirmed",
-        ...(op.billing_reference === undefined
-          ? {}
-          : { billingReference: op.billing_reference }),
-      }),
-    ),
-  );
 }
 
 // Configuration constants

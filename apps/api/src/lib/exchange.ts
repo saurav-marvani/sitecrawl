@@ -549,6 +549,22 @@ export function getExchangeSuccessCredits(input: {
 const EXCHANGE_BILLING_TIMEOUT_MS = 5_000;
 const EXCHANGE_BILLING_ATTEMPTS = 3;
 const EXCHANGE_BILLING_RETRY_DELAY_MS = 2_000;
+const EXCHANGE_BILLING_RETRY_MAX_DELAY_MS = 15_000;
+
+// Retry-After from a 429, in milliseconds, when present and sane.
+function getRetryAfterMs(response: {
+  headers?: { get?: (name: string) => string | null };
+}): number | undefined {
+  const header = response.headers?.get?.("retry-after");
+  if (!header) {
+    return undefined;
+  }
+  const seconds = Number(header);
+  if (!Number.isFinite(seconds) || seconds <= 0) {
+    return undefined;
+  }
+  return seconds * 1_000;
+}
 
 /**
  * Report the billing outcome of a delivered Exchange access so the service
@@ -569,6 +585,8 @@ export async function reportExchangeBilling(input: {
   }
 
   for (let attempt = 1; attempt <= EXCHANGE_BILLING_ATTEMPTS; attempt++) {
+    let retryAfterMs: number | undefined;
+
     try {
       const response = await fetch(
         `${baseUrl}/v1/access-events/${encodeURIComponent(input.accessEventId)}/billing`,
@@ -589,15 +607,20 @@ export async function reportExchangeBilling(input: {
         return true;
       }
 
-      // 4xx responses are definitive (conflict, unknown event) - the
-      // Exchange has spoken and a retry cannot change the answer.
-      if (response.status < 500) {
+      // 4xx responses other than 429 are definitive (conflict, unknown
+      // event) - the Exchange has spoken and a retry cannot change the
+      // answer. 429 is transient rate limiting and retries.
+      if (response.status < 500 && response.status !== 429) {
         rootLogger.warn("Exchange billing report rejected", {
           accessEventId: input.accessEventId,
           status: input.status,
           statusCode: response.status,
         });
         return false;
+      }
+
+      if (response.status === 429) {
+        retryAfterMs = getRetryAfterMs(response);
       }
 
       rootLogger.warn("Exchange billing report failed", {
@@ -616,9 +639,14 @@ export async function reportExchangeBilling(input: {
     }
 
     if (attempt < EXCHANGE_BILLING_ATTEMPTS) {
-      await new Promise(resolve =>
-        setTimeout(resolve, EXCHANGE_BILLING_RETRY_DELAY_MS * attempt),
+      // Full jitter on the backoff so a batch of reports failing together
+      // does not retry against a degraded Exchange in synchronized bursts.
+      const backoff = EXCHANGE_BILLING_RETRY_DELAY_MS * attempt;
+      const delay = Math.min(
+        Math.max(retryAfterMs ?? 0, backoff / 2 + Math.random() * backoff),
+        EXCHANGE_BILLING_RETRY_MAX_DELAY_MS,
       );
+      await new Promise(resolve => setTimeout(resolve, delay));
     }
   }
 
