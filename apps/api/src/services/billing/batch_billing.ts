@@ -13,6 +13,33 @@ import {
   type BillingEndpoint,
   type BillingMetadata,
 } from "./types";
+import { reportExchangeBilling } from "../../lib/exchange";
+
+// Report billing outcomes for the Exchange accesses in a group.
+// reportExchangeBilling never throws, so this cannot fail the batch.
+async function reportExchangeOutcomes(
+  group: GroupedBillingOperation,
+  status: "confirmed" | "void",
+): Promise<void> {
+  const exchangeOps = group.operations.filter(
+    op => op.exchange_access_event_id !== undefined,
+  );
+  if (exchangeOps.length === 0) {
+    return;
+  }
+
+  await Promise.all(
+    exchangeOps.map(op =>
+      reportExchangeBilling({
+        accessEventId: op.exchange_access_event_id!,
+        status,
+        ...(op.billing_reference === undefined
+          ? {}
+          : { billingReference: op.billing_reference }),
+      }),
+    ),
+  );
+}
 
 // Configuration constants
 const BATCH_KEY = "billing_batch";
@@ -31,6 +58,10 @@ interface BillingOperation {
   timestamp: string;
   api_key_id: number | null;
   autumnTrackInRequest: boolean;
+  // Exchange access backing this operation, if any: its ledger event is
+  // confirmed once the debit commits and voided if the commit fails.
+  exchange_access_event_id?: string;
+  billing_reference?: string;
 }
 
 // Grouped billing operations for batch processing
@@ -188,6 +219,7 @@ export async function processBillingBatch() {
 
         if (!billingResult.success) {
           await refundRequestTrackedCredits(group);
+          await reportExchangeOutcomes(group, "void");
           logger.warn(
             `⚠️ Billing returned success: false for team ${group.team_id}`,
             {
@@ -204,8 +236,12 @@ export async function processBillingBatch() {
         );
 
         // Ledger commit only — usage is tracked to Autumn at request time, not here.
+
+        // The debit is committed: confirm the Exchange accesses it covered.
+        await reportExchangeOutcomes(group, "confirmed");
       } catch (error) {
         await refundRequestTrackedCredits(group);
+        await reportExchangeOutcomes(group, "void");
         logger.error(`❌ Failed to bill team ${group.team_id}`, {
           error,
           group,
@@ -262,6 +298,7 @@ export async function queueBillingOperation(
   billing: BillingMetadata,
   is_extract: boolean = false,
   autumnTrackInRequest: boolean = false,
+  exchange?: { accessEventId: string; billingReference?: string },
 ) {
   // Skip queuing for preview teams
   if (team_id === "preview" || team_id.startsWith("preview_")) {
@@ -285,6 +322,14 @@ export async function queueBillingOperation(
       timestamp: new Date().toISOString(),
       api_key_id,
       autumnTrackInRequest,
+      ...(exchange === undefined
+        ? {}
+        : {
+            exchange_access_event_id: exchange.accessEventId,
+            ...(exchange.billingReference === undefined
+              ? {}
+              : { billing_reference: exchange.billingReference }),
+          }),
     };
 
     // Add operation to Redis list
