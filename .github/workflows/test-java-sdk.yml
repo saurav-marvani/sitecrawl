@@ -54,10 +54,10 @@ jobs:
         run: ./gradlew test
 
       - name: Run E2E tests
-        if: env.FIRECRAWL_API_KEY != ''
+        if: env.SITECRAWL_API_KEY != ''
         working-directory: ./apps/java-sdk
         env:
-          FIRECRAWL_API_KEY: ${{ secrets.FIRECRAWL_API_KEY }}
+          SITECRAWL_API_KEY: ${{ secrets.SITECRAWL_API_KEY }}
         run: ./gradlew test
 
       - name: Publish test report

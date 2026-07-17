@@ -64,7 +64,7 @@ jobs:
       FDB_VERSION: 7.3.63
       USE_GO_MARKDOWN_PARSER: true
       ALLOW_LOCAL_WEBHOOKS: true
-      FIRECRAWL_LOG_TO_FILE: true
+      SITECRAWL_LOG_TO_FILE: true
       # Exercise the parse upload-ref path in self-hosted CI. The snips run
       # against a separately started API server, so these must be server envs,
       # not test-process mutations.
@@ -244,8 +244,8 @@ jobs:
       - name: Run Docker Postgres
         if: matrix.nuq == 'postgres'
         run: |
-          docker build -t firecrawl/nuq-postgres:latest ./apps/nuq-postgres
-          docker run -d -p 5432:5432 -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=postgres --name postgres firecrawl/nuq-postgres:latest
+          docker build -t sitecrawl/nuq-postgres:latest ./apps/nuq-postgres
+          docker run -d -p 5432:5432 -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=postgres --name postgres sitecrawl/nuq-postgres:latest
 
       - name: Start FoundationDB
         if: matrix.nuq == 'fdb'
@@ -386,8 +386,8 @@ jobs:
         if: always()
         run: |
           mkdir -p logs
-          cp ./apps/api/firecrawl-app.log logs/firecrawl.log || true
-          cp ./apps/api/firecrawl-worker.log logs/firecrawl-worker.log || true
+          cp ./apps/api/sitecrawl-app.log logs/sitecrawl.log || true
+          cp ./apps/api/sitecrawl-worker.log logs/sitecrawl-worker.log || true
 
       - name: Copy SearXNG logs
         if: always() && matrix.search == 'searxng'
@@ -550,8 +550,8 @@ jobs:
 
   #     - name: Run Docker Postgres
   #       run: |
-  #         docker build -t firecrawl/nuq-postgres:latest ./apps/nuq-postgres
-  #         docker run -d -p 5432:5432 -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=postgres --name postgres firecrawl/nuq-postgres:latest
+  #         docker build -t sitecrawl/nuq-postgres:latest ./apps/nuq-postgres
+  #         docker run -d -p 5432:5432 -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=postgres --name postgres sitecrawl/nuq-postgres:latest
 
   #     - name: Run tests
   #       run: pnpm harness pnpm test:snips
@@ -563,7 +563,7 @@ jobs:
   #       if: always()
   #       run: |
   #         mkdir -p logs
-  #         cp ./apps/api/firecrawl.log logs/firecrawl.log
+  #         cp ./apps/api/sitecrawl.log logs/sitecrawl.log
   #         cd logs
   #         zip -r logs.zip ./*
   #         echo "${{ secrets.LOG_ENCRYPTION_KEY }}" | gpg --batch --yes --passphrase-fd 0 -c logs.zip

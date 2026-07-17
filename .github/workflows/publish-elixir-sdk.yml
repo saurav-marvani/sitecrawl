@@ -86,7 +86,7 @@ jobs:
           Auto-generated PR to update the Elixir SDK from the latest OpenAPI spec.
 
           ## Changes
-          - Regenerated \`lib/firecrawl.ex\` from the v2 OpenAPI spec
+          - Regenerated \`lib/sitecrawl.ex\` from the v2 OpenAPI spec
           - Version bumped to \`${VERSION}\`
 
           This PR was created automatically by the \`publish-elixir-sdk\` workflow.
@@ -127,7 +127,7 @@ jobs:
           echo "local_version=$LOCAL_VERSION" >> "$GITHUB_OUTPUT"
 
           # Check published version on hex.pm
-          HTTP_STATUS=$(curl -s -o /tmp/hex_response.json -w "%{http_code}" "https://hex.pm/api/packages/firecrawl")
+          HTTP_STATUS=$(curl -s -o /tmp/hex_response.json -w "%{http_code}" "https://hex.pm/api/packages/sitecrawl")
           if [ "$HTTP_STATUS" = "200" ]; then
             PUBLISHED_VERSION=$(python3 -c "import sys,json; releases=json.load(open('/tmp/hex_response.json'))['releases']; print(releases[0]['version'] if releases else '0.0.0')")
           else

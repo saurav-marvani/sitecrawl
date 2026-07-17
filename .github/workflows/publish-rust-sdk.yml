@@ -27,7 +27,7 @@ jobs:
       - name: Run version check script
         id: version_check
         run: |
-          VERSION_INCREMENTED=$(python .github/scripts/check_version_has_incremented.py rust ./apps/rust-sdk firecrawl)
+          VERSION_INCREMENTED=$(python .github/scripts/check_version_has_incremented.py rust ./apps/rust-sdk sitecrawl)
           echo "VERSION_INCREMENTED=$VERSION_INCREMENTED" >> $GITHUB_ENV
 
       - name: Install Rust toolchain

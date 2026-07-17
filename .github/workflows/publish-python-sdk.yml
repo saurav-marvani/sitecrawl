@@ -32,7 +32,7 @@ jobs:
       - name: Run version check script
         id: version_check_script
         run: |
-          VERSION_INCREMENTED=$(python .github/scripts/check_version_has_incremented.py python ./apps/python-sdk/firecrawl firecrawl-py)
+          VERSION_INCREMENTED=$(python .github/scripts/check_version_has_incremented.py python ./apps/python-sdk/sitecrawl sitecrawl-py)
           echo "VERSION_INCREMENTED=$VERSION_INCREMENTED" >> $GITHUB_ENV
 
       - name: Build and publish to PyPI
@@ -43,8 +43,8 @@ jobs:
         run: |
           python -m build
           twine upload dist/*
-          sed -i 's/name = "firecrawl-py"/name = "firecrawl"/g' pyproject.toml
-          sed -i 's/name="firecrawl-py"/name="firecrawl"/g' setup.py
+          sed -i 's/name = "sitecrawl-py"/name = "sitecrawl"/g' pyproject.toml
+          sed -i 's/name="sitecrawl-py"/name="sitecrawl"/g' setup.py
           python -m build
           twine upload dist/*
         working-directory: ./apps/python-sdk

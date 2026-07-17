@@ -109,7 +109,7 @@ jobs:
           EXPECTED_SHA: ${{ github.sha }}
         run: |
           docker pull "${IMAGE_TAG}"
-          actual_sha="$(docker run --rm --entrypoint node "${IMAGE_TAG}" -p 'process.env.FIRECRAWL_BUILD_SHA')"
+          actual_sha="$(docker run --rm --entrypoint node "${IMAGE_TAG}" -p 'process.env.SITECRAWL_BUILD_SHA')"
           if [ "${actual_sha}" != "${EXPECTED_SHA}" ]; then
             echo "::error::Image build SHA mismatch: expected ${EXPECTED_SHA}, got ${actual_sha}"
             exit 1

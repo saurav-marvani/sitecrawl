@@ -79,7 +79,7 @@ jobs:
       - name: Warm Go module proxy (triggers pkg.go.dev indexing)
         if: steps.tag_check.outputs.exists == 'false'
         run: |
-          MODULE="github.com/firecrawl/firecrawl/apps/go-sdk"
+          MODULE="github.com/sitecrawl/sitecrawl/apps/go-sdk"
           VERSION="v${{ steps.version.outputs.version }}"
           # Force a module-proxy fetch; pkg.go.dev discovers modules from proxy.golang.org.
           # Retry a few times because the tag may take a moment to be visible to the proxy.

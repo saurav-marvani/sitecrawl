@@ -46,12 +46,12 @@ jobs:
           set -o pipefail
           pnpm dlx audit-ci@^7 --directory apps/js-sdk --config apps/js-sdk/audit-ci.jsonc 2>&1 | tee /tmp/audit-outputs/js-sdk.txt
 
-      - name: Audit JavaScript SDK Firecrawl Packages
-        id: audit-js-sdk-firecrawl
+      - name: Audit JavaScript SDK Sitecrawl Packages
+        id: audit-js-sdk-sitecrawl
         continue-on-error: true
         run: |
           set -o pipefail
-          pnpm dlx audit-ci@^7 --directory apps/js-sdk/firecrawl --config apps/js-sdk/firecrawl/audit-ci.jsonc 2>&1 | tee /tmp/audit-outputs/js-sdk-firecrawl.txt
+          pnpm dlx audit-ci@^7 --directory apps/js-sdk/sitecrawl --config apps/js-sdk/sitecrawl/audit-ci.jsonc 2>&1 | tee /tmp/audit-outputs/js-sdk-sitecrawl.txt
 
       - name: Audit Test Suite Packages
         id: audit-test-suite
@@ -81,7 +81,7 @@ jobs:
             ["API"]="api.txt"
             ["Playwright Service"]="playwright-service.txt"
             ["JavaScript SDK"]="js-sdk.txt"
-            ["JavaScript SDK Firecrawl"]="js-sdk-firecrawl.txt"
+            ["JavaScript SDK Sitecrawl"]="js-sdk-sitecrawl.txt"
             ["Test Suite"]="test-suite.txt"
             ["Ingestion UI"]="ingestion-ui.txt"
             ["Test Site"]="test-site.txt"
@@ -91,14 +91,14 @@ jobs:
             ["API"]="${{ steps.audit-api.outcome }}"
             ["Playwright Service"]="${{ steps.audit-playwright-service.outcome }}"
             ["JavaScript SDK"]="${{ steps.audit-js-sdk.outcome }}"
-            ["JavaScript SDK Firecrawl"]="${{ steps.audit-js-sdk-firecrawl.outcome }}"
+            ["JavaScript SDK Sitecrawl"]="${{ steps.audit-js-sdk-sitecrawl.outcome }}"
             ["Test Suite"]="${{ steps.audit-test-suite.outcome }}"
             ["Ingestion UI"]="${{ steps.audit-ingestion-ui.outcome }}"
             ["Test Site"]="${{ steps.audit-test-site.outcome }}"
           )
 
           FAILED=false
-          for name in "API" "Playwright Service" "JavaScript SDK" "JavaScript SDK Firecrawl" "Test Suite" "Ingestion UI" "Test Site"; do
+          for name in "API" "Playwright Service" "JavaScript SDK" "JavaScript SDK Sitecrawl" "Test Suite" "Ingestion UI" "Test Site"; do
             if [ "${AUDIT_OUTCOMES[$name]}" == "failure" ]; then
               FAILED=true
               echo ""

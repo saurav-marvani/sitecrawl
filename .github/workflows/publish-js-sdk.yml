@@ -5,7 +5,7 @@ on:
     branches:
       - main
     paths:
-      - apps/js-sdk/firecrawl/package.json
+      - apps/js-sdk/sitecrawl/package.json
   workflow_dispatch:
 
 env:
@@ -26,7 +26,7 @@ jobs:
         with:
           node-version: "20"
           cache: "pnpm"
-          cache-dependency-path: './apps/js-sdk/firecrawl/pnpm-lock.yaml'
+          cache-dependency-path: './apps/js-sdk/sitecrawl/pnpm-lock.yaml'
       - name: Authenticate
         run: echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > ~/.npmrc
         env:
@@ -36,9 +36,9 @@ jobs:
           pnpm install
           pnpm run build
           pnpm publish --access public --no-git-checks
-          sed -i 's/"name": "@mendable\/firecrawl-js"/"name": "@mendable\/firecrawl"/g' package.json
+          sed -i 's/"name": "@mendable\/sitecrawl-js"/"name": "@mendable\/sitecrawl"/g' package.json
           pnpm publish --access public --no-git-checks
-          sed -i 's/"name": "@mendable\/firecrawl"/"name": "firecrawl"/g' package.json
-          sed -i '/"firecrawl":/d' package.json
+          sed -i 's/"name": "@mendable\/sitecrawl"/"name": "sitecrawl"/g' package.json
+          sed -i '/"sitecrawl":/d' package.json
           pnpm publish --access public --no-git-checks
-        working-directory: ./apps/js-sdk/firecrawl
+        working-directory: ./apps/js-sdk/sitecrawl

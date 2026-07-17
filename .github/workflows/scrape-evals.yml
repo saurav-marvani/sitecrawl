@@ -25,7 +25,7 @@ jobs:
           script: |
             try {
               await github.rest.orgs.checkMembershipForUser({
-                org: 'firecrawl',
+                org: 'sitecrawl',
                 username: context.actor,
               });
               return true;
@@ -57,9 +57,9 @@ jobs:
               headRepo = pr.data.head.repo.full_name;
             }
             await github.rest.repos.createDispatchEvent({
-              owner: 'firecrawl',
+              owner: 'sitecrawl',
               repo: 'scrape-evals',
-              event_type: 'firecrawl-pr-eval',
+              event_type: 'sitecrawl-pr-eval',
               client_payload: {
                 pr_number: prNumber,
                 pr_branch: prBranch,
@@ -87,7 +87,7 @@ jobs:
           script: |
             try {
               await github.rest.orgs.checkMembershipForUser({
-                org: 'firecrawl',
+                org: 'sitecrawl',
                 username: context.actor,
               });
               return true;
@@ -119,9 +119,9 @@ jobs:
               headRepo = pr.data.head.repo.full_name;
             }
             await github.rest.repos.createDispatchEvent({
-              owner: 'firecrawl',
+              owner: 'sitecrawl',
               repo: 'scrape-evals',
-              event_type: 'firecrawl-ocr-eval',
+              event_type: 'sitecrawl-ocr-eval',
               client_payload: {
                 pr_number: prNumber,
                 pr_branch: prBranch,

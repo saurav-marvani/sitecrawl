@@ -27,7 +27,7 @@ jobs:
       - name: Run version check script
         id: version_check
         run: |
-          VERSION_INCREMENTED=$(python .github/scripts/check_version_has_incremented.py java ./apps/java-sdk com.firecrawl:firecrawl-java)
+          VERSION_INCREMENTED=$(python .github/scripts/check_version_has_incremented.py java ./apps/java-sdk com.sitecrawl:sitecrawl-java)
           echo "VERSION_INCREMENTED=$VERSION_INCREMENTED" >> $GITHUB_ENV
 
       - name: Set up JDK 11
