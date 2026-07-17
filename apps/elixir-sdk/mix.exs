@@ -1,22 +1,22 @@
-defmodule Firecrawl.MixProject do
+defmodule Sitecrawl.MixProject do
   use Mix.Project
 
   @version "1.8.1"
-  @source_url "https://github.com/firecrawl/firecrawl/tree/main/apps/elixir-sdk"
+  @source_url "https://github.com/saurav-marvani/kineticrawl/tree/main/apps/elixir-sdk"
 
   def project do
     [
-      app: :firecrawl,
+      app: :sitecrawl,
       version: @version,
       elixir: "~> 1.15",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
       package: package(),
-      name: "Firecrawl",
-      description: "Auto-generated Elixir client for the Firecrawl API v2",
+      name: "Sitecrawl",
+      description: "Auto-generated Elixir client for the Sitecrawl API v2",
       source_url: @source_url,
       docs: [
-        main: "Firecrawl",
+        main: "Sitecrawl",
         extras: ["README.md"]
       ]
     ]

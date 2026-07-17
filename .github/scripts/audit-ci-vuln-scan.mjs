@@ -14,9 +14,9 @@ const AUDITS = [
   },
   { name: "JavaScript SDK", appPath: "apps/js-sdk", outputName: "js-sdk" },
   {
-    name: "JavaScript SDK Firecrawl",
-    appPath: "apps/js-sdk/firecrawl",
-    outputName: "js-sdk-firecrawl",
+    name: "JavaScript SDK Sitecrawl",
+    appPath: "apps/js-sdk/sitecrawl",
+    outputName: "js-sdk-sitecrawl",
   },
   {
     name: "Test Suite",

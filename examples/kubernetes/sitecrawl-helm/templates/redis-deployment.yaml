@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "sitecrawl.fullname" . }}-redis
+  labels:
+    app: {{ include "sitecrawl.name" . }}-redis
+spec:
+  replicas: {{ .Values.redis.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ include "sitecrawl.name" . }}-redis
+  template:
+    metadata:
+      labels:
+        app: {{ include "sitecrawl.name" . }}-redis
+    spec:
+      containers:
+      - name: redis
+        image: {{ .Values.redis.image }}
+        command: [ "/bin/sh", "-c" ]
+        args:
+          - |
+            if [ -n "$REDIS_PASSWORD" ]; then
+              echo "Starting Redis with authentication"
+              exec redis-server --bind 0.0.0.0 --requirepass "$REDIS_PASSWORD"
+            else
+              echo "Starting Redis without authentication"
+              exec redis-server --bind 0.0.0.0
+            fi
+        env:
+          - name: REDIS_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: {{ include "sitecrawl.fullname" . }}-secret
+                key: REDIS_PASSWORD

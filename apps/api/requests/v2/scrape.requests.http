@@ -1,6 +1,6 @@
 # Pick your baseUrl here:
 @baseUrl = http://localhost:3002
-# @baseUrl = https://api.firecrawl.dev
+# @baseUrl = https://api.sitecrawl.dev
 
 ### Summary
 POST {{baseUrl}}/v2/scrape HTTP/1.1
@@ -8,7 +8,7 @@ Authorization: Bearer {{$dotenv TEST_API_KEY}}
 content-type: application/json
 
 {
-  "url": "https://docs.firecrawl.dev",
+  "url": "https://docs.sitecrawl.dev",
   "formats": ["summary"]
 }
 
@@ -18,7 +18,7 @@ Authorization: Bearer {{$dotenv TEST_API_KEY}}
 content-type: application/json
 
 {
-  "url": "https://docs.firecrawl.dev",
+  "url": "https://docs.sitecrawl.dev",
   "formats": [{
     "type": "json",
     "schema": {
@@ -38,7 +38,7 @@ Authorization: Bearer {{$dotenv TEST_API_KEY}}
 content-type: application/json
 
 {
-  "url": "https://docs.firecrawl.dev",
+  "url": "https://docs.sitecrawl.dev",
   "formats": [{
     "type": "changeTracking",
     "modes": ["git-diff"]

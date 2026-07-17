@@ -1,5 +1,0 @@
-apiVersion: v2
-name: sitecrawl
-description: A Helm chart for deploying the Sitecrawl application
-type: application
-version: 0.2.0

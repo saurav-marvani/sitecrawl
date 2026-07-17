@@ -17,7 +17,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Firecrawl\Firecrawl.csproj" />
+    <ProjectReference Include="..\Sitecrawl\Sitecrawl.csproj" />
   </ItemGroup>
 
 </Project>

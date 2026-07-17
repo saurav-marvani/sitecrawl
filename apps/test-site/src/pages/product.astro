@@ -9,11 +9,11 @@ import Header from '../components/Header.astro';
 const productJsonLd = {
 	'@context': 'https://schema.org',
 	'@type': 'Product',
-	name: 'Firecrawl Test Widget',
+	name: 'Sitecrawl Test Widget',
 	description: 'A deterministic sample product used for end-to-end scrape testing.',
 	sku: 'FC-WIDGET-001',
-	brand: { '@type': 'Brand', name: 'Firecrawl' },
-	image: 'https://firecrawl.dev/firecrawl-logo.png',
+	brand: { '@type': 'Brand', name: 'Sitecrawl' },
+	image: 'https://sitecrawl.dev/sitecrawl-logo.png',
 	offers: {
 		'@type': 'Offer',
 		price: '49.99',
@@ -26,21 +26,21 @@ const productJsonLd = {
 <!doctype html>
 <html lang="en">
 	<head>
-		<BaseHead title="Firecrawl Test Widget" description="A deterministic sample product used for end-to-end scrape testing." />
+		<BaseHead title="Sitecrawl Test Widget" description="A deterministic sample product used for end-to-end scrape testing." />
 		<script type="application/ld+json" is:inline set:html={JSON.stringify(productJsonLd)}></script>
 	</head>
 	<body>
 		<Header />
 		<main>
-			<h1>Firecrawl Test Widget</h1>
+			<h1>Sitecrawl Test Widget</h1>
 			<p>
 				This page is a deterministic sample product page. It embeds a
-				schema.org <code>Product</code> as JSON-LD so the Firecrawl
+				schema.org <code>Product</code> as JSON-LD so the Sitecrawl
 				<code>product</code> scrape format has a stable target to extract.
 			</p>
 			<ul>
-				<li>Title: Firecrawl Test Widget</li>
-				<li>Brand: Firecrawl</li>
+				<li>Title: Sitecrawl Test Widget</li>
+				<li>Brand: Sitecrawl</li>
 				<li>Price: $49.99 USD</li>
 				<li>Availability: In stock</li>
 			</ul>

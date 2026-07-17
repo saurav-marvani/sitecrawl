@@ -1,6 +1,6 @@
 # Pick your baseUrl here:
 @baseUrl = http://localhost:3002
-# @baseUrl = https://api.firecrawl.dev
+# @baseUrl = https://api.sitecrawl.dev
 
 
 ### Crawl
@@ -10,7 +10,7 @@ Authorization: Bearer {{$dotenv TEST_API_KEY}}
 content-type: application/json
 
 {
-  "url": "https://firecrawl.dev",
+  "url": "https://sitecrawl.dev",
   "prompt": "only get me the blog posts"
 }
 
@@ -22,7 +22,7 @@ Authorization: Bearer {{$dotenv TEST_API_KEY}}
 content-type: application/json
 
 {
-  "url": "https://firecrawl.dev",
+  "url": "https://sitecrawl.dev",
   "prompt": "only get me the blog and news posts"
 }
 
@@ -30,7 +30,7 @@ content-type: application/json
 # {
 #   "success": true,
 #   "data": {
-#     "url": "https://firecrawl.dev",
+#     "url": "https://sitecrawl.dev",
 #     "includePaths": ["blog", "news"],
 #     "excludePaths": [],
 #     "limit": 50,
@@ -45,7 +45,7 @@ Authorization: Bearer {{$dotenv TEST_API_KEY}}
 content-type: application/json
 
 {
-    "url": "https://firecrawl.dev",
+    "url": "https://sitecrawl.dev",
     "includePaths": ["blog", "news"]
 }
 

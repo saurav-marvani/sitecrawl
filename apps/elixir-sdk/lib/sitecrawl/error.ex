@@ -1,6 +1,6 @@
-defmodule Firecrawl.Error do
+defmodule Sitecrawl.Error do
   @moduledoc """
-  Exception raised when the Firecrawl API returns an error response (HTTP 4xx/5xx).
+  Exception raised when the Sitecrawl API returns an error response (HTTP 4xx/5xx).
 
   ## Fields
 
@@ -23,10 +23,10 @@ defmodule Firecrawl.Error do
         _ -> inspect(body)
       end
 
-    "Firecrawl API error (HTTP #{status}): #{error_msg}"
+    "Sitecrawl API error (HTTP #{status}): #{error_msg}"
   end
 
   def message(%__MODULE__{status: status, body: body}) do
-    "Firecrawl API error (HTTP #{status}): #{inspect(body)}"
+    "Sitecrawl API error (HTTP #{status}): #{inspect(body)}"
   end
 end

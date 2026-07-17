@@ -3,7 +3,7 @@ plugins {
     id("com.vanniktech.maven.publish") version "0.30.0"
 }
 
-group = "com.firecrawl"
+group = "com.sitecrawl"
 version = "1.11.1"
 
 java {
@@ -41,12 +41,12 @@ mavenPublishing {
     publishToMavenCentral(com.vanniktech.maven.publish.SonatypeHost.CENTRAL_PORTAL)
     signAllPublications()
 
-    coordinates("com.firecrawl", "firecrawl-java", version.toString())
+    coordinates("com.sitecrawl", "sitecrawl-java", version.toString())
 
     pom {
-        name.set("Firecrawl Java SDK")
-        description.set("Java SDK for the Firecrawl API")
-        url.set("https://github.com/firecrawl/firecrawl")
+        name.set("Sitecrawl Java SDK")
+        description.set("Java SDK for the Sitecrawl API")
+        url.set("https://github.com/saurav-marvani/kineticrawl")
 
         licenses {
             license {
@@ -57,15 +57,15 @@ mavenPublishing {
 
         developers {
             developer {
-                name.set("Firecrawl")
-                url.set("https://firecrawl.dev")
+                name.set("Sitecrawl")
+                url.set("https://sitecrawl.dev")
             }
         }
 
         scm {
-            url.set("https://github.com/firecrawl/firecrawl")
-            connection.set("scm:git:git://github.com/firecrawl/firecrawl.git")
-            developerConnection.set("scm:git:ssh://github.com/firecrawl/firecrawl.git")
+            url.set("https://github.com/saurav-marvani/kineticrawl")
+            connection.set("scm:git:git://github.com/saurav-marvani/kineticrawl.git")
+            developerConnection.set("scm:git:ssh://github.com/saurav-marvani/kineticrawl.git")
         }
     }
 }

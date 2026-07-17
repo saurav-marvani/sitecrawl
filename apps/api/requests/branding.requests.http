@@ -1,11 +1,11 @@
-### Test 1: Firecrawl, SVG logo, bright colors, light theme
+### Test 1: Sitecrawl, SVG logo, bright colors, light theme
 # @name brandingTest1
 POST http://localhost:3002/v2/scrape
 Authorization: Bearer {{$dotenv TEST_API_KEY}}
 Content-Type: application/json
 
 {
-  "url": "https://firecrawl.dev",
+  "url": "https://sitecrawl.dev",
   "formats": [
     { "type": "branding" }
   ]
