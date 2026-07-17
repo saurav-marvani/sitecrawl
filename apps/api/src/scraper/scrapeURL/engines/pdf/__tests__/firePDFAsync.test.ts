@@ -7,13 +7,6 @@ vi.mock("../../../../../lib/gcs-pdf-cache", () => ({
   savePdfResultToCache: vi.fn(async () => null),
 }));
 
-// Stub the ACUC lookup: the async client reads the team's sold
-// concurrency (best-effort) to send as FirePDF account context. The
-// mock is swappable per-test via mockGetACUCTeam.
-const mockGetACUCTeam = vi.fn(async () => ({ concurrency: 12 }));
-vi.mock("../../../../../controllers/auth", () => ({
-  getACUCTeam: (...args: unknown[]) => mockGetACUCTeam(...args),
-}));
 
 import {
   FirePdfAsyncFailure,
@@ -79,6 +72,7 @@ function makeMeta(overrides: Record<string, unknown> = {}) {
     internalOptions: {
       zeroDataRetention: false,
       teamId: "team-x",
+      teamConcurrency: 12,
       crawlId: undefined,
     },
     options: {
@@ -151,6 +145,7 @@ describe("scrapePDFWithFirePDFAsync", () => {
       internalOptions: {
         zeroDataRetention: true,
         teamId: "team-x",
+      teamConcurrency: 12,
         crawlId: undefined,
       },
     });
@@ -260,8 +255,7 @@ describe("scrapePDFWithFirePDFAsync", () => {
     expect((calls[0].body as { team_concurrency?: number }).team_concurrency).toBe(12);
   });
 
-  it("submits without team context when the ACUC lookup fails", async () => {
-    mockGetACUCTeam.mockRejectedValueOnce(new Error("acuc unavailable"));
+  it("submits without team context when the snapshot is absent", async () => {
     const { fetchImpl, calls } = makeFetchFromSequence([
       {
         matchUrl: /\/jobs$/,
@@ -288,13 +282,15 @@ describe("scrapePDFWithFirePDFAsync", () => {
     ]);
     const fallback = vi.fn();
 
-    const result = await scrapePDFWithFirePDFAsync(makeMeta(), "BASE64", undefined, undefined, undefined, {
+    const meta = makeMeta();
+    meta.internalOptions.teamConcurrency = null;
+    const result = await scrapePDFWithFirePDFAsync(meta, "BASE64", undefined, undefined, undefined, {
       fetchImpl,
       fallbackImpl: fallback,
       sleepImpl: noopSleep,
     });
 
-    // Lookup failure must never block the scrape — field simply absent.
+    // Missing snapshot must never block the scrape — field simply absent.
     expect(result.markdown).toBe("# No context");
     expect((calls[0].body as { team_concurrency?: number }).team_concurrency).toBeUndefined();
     expect(fallback).not.toHaveBeenCalled();
@@ -458,7 +454,7 @@ describe("scrapePDFWithFirePDFAsync", () => {
     expect(err).toBeInstanceOf(FirePdfAsyncFailure);
     expect(err.reason).toBe("network_error");
     expect(fallback).not.toHaveBeenCalled();
-    expect(calls.map(({ url, method, headers }) => ({ url, method, ...(headers !== undefined && { headers }) }))).toEqual([
+    expect(calls.map(({ url, method }) => ({ url, method }))).toEqual([
       { method: "POST", url: "http://fire-pdf.test/jobs" },
       {
         method: "DELETE",

@@ -8,7 +8,6 @@ import { scrapePDFWithFirePDF } from "../firePDF";
 import { cancelJob } from "./cancel";
 import { tryGetCached, maybeSaveResult } from "./cache";
 import { firePdfAsyncTotalDurationSeconds } from "./metrics";
-import { getACUCTeam } from "../../../../../controllers/auth";
 import { pollUntilTerminal } from "./poll";
 import { fetchResult } from "./result";
 import { FIRE_PDF_ASYNC_MIN_REMAINING_MS } from "./routing";
@@ -83,20 +82,15 @@ export async function scrapePDFWithFirePDFAsync(
   const deadlineAt = new Date(submitTime + deadlineFromNow).toISOString();
   const pollingDeadline = submitTime + deadlineFromNow + POLL_TIMEOUT_BUFFER_MS;
 
-  // Best-effort account context for FirePDF's per-team admission
-  // observation. Cached lookup; failure or absence must never block the
-  // scrape — FirePDF simply skips team observation for this submit.
-  let teamConcurrency: number | undefined;
-  if (meta.internalOptions.teamId) {
-    try {
-      const acuc = await getACUCTeam(meta.internalOptions.teamId, true);
-      if (typeof acuc?.concurrency === "number" && acuc.concurrency > 0) {
-        teamConcurrency = acuc.concurrency;
-      }
-    } catch (error) {
-      meta.logger.debug("FirePDF async: ACUC lookup failed, submitting without team context", { error });
-    }
-  }
+  // Account context for FirePDF's per-team admission observation,
+  // snapshotted from the request ACUC into internalOptions at
+  // acceptance (same pattern as teamFlags) — no re-fetch here. Absence
+  // means FirePDF skips team observation for this submit.
+  const rawConcurrency = meta.internalOptions.teamConcurrency;
+  const teamConcurrency =
+    typeof rawConcurrency === "number" && rawConcurrency > 0
+      ? rawConcurrency
+      : undefined;
 
   // ── Step 1: POST /jobs ────────────────────────────────────────────────
   let submissionAccepted = false;
