@@ -20,7 +20,7 @@ load_dotenv()
 
 # Initialize clients
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-firecrawl_api_key = os.getenv("FIRECRAWL_API_KEY")
+sitecrawl_api_key = os.getenv("SITECRAWL_API_KEY")
 
 def search_google(query):
     """Search Google using SerpAPI and return top results."""
@@ -89,8 +89,8 @@ def select_urls_with_o1(company, objective, serp_results):
 
 
 def extract_company_info(urls, prompt, company, api_key):
-    """Use requests to call Firecrawl's extract endpoint with selected URLs."""
-    print(f"{Colors.YELLOW}Extracting structured data from the provided URLs using Firecrawl...{Colors.RESET}")
+    """Use requests to call Sitecrawl's extract endpoint with selected URLs."""
+    print(f"{Colors.YELLOW}Extracting structured data from the provided URLs using Sitecrawl...{Colors.RESET}")
     
     headers = {
         'Content-Type': 'application/json',
@@ -104,7 +104,7 @@ def extract_company_info(urls, prompt, company, api_key):
     
     try:
         response = requests.post(
-            "https://api.firecrawl.dev/v1/extract",
+            "https://api.sitecrawl.dev/v1/extract",
             headers=headers,
             json=payload
         )
@@ -135,7 +135,7 @@ def main():
     for url in selected_urls:
         print(f"- {url}")
 
-    data = extract_company_info(selected_urls, objective, company, firecrawl_api_key)
+    data = extract_company_info(selected_urls, objective, company, sitecrawl_api_key)
     
     if data and data.get('success') and data.get('data'):
         print(f"{Colors.GREEN}Data successfully extracted:{Colors.RESET}")

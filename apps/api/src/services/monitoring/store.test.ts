@@ -101,7 +101,7 @@ describe("monitoring store credit helpers", () => {
       {
         id: "target-1",
         type: "scrape",
-        urls: ["https://x.com/firecrawl"],
+        urls: ["https://x.com/sitecrawl"],
         scrapeOptions: {},
       },
     ];

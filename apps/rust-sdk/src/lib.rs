@@ -1,12 +1,12 @@
-//! Firecrawl Rust SDK
+//! Sitecrawl Rust SDK
 //!
-//! This SDK provides access to the Firecrawl v2 API for web scraping, crawling,
+//! This SDK provides access to the Sitecrawl v2 API for web scraping, crawling,
 //! searching, mapping, batch scraping, and agent operations.
 //!
 //! # Quick Start
 //!
 //! ```no_run
-//! use firecrawl::Client;
+//! use sitecrawl::Client;
 //!
 //! #[tokio::main]
 //! async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -36,7 +36,7 @@ pub use agent::*;
 pub use batch_scrape::*;
 pub use client::Client;
 pub use crawl::*;
-pub use error::FirecrawlError;
+pub use error::SitecrawlError;
 pub use map::*;
 pub use monitor::*;
 pub use parse::*;

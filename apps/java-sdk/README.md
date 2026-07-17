@@ -1,6 +1,6 @@
-# Firecrawl Java SDK
+# Sitecrawl Java SDK
 
-Java SDK for [Firecrawl](https://firecrawl.dev) — search, scrape, and interact with the web.
+Java SDK for [Sitecrawl](https://sitecrawl.dev) — search, scrape, and interact with the web.
 
 ## Prerequisites
 
@@ -60,20 +60,20 @@ Before using the Java SDK, ensure you have the following installed:
 
 ### API Key Setup
 
-1. Get your API key from [Firecrawl Dashboard](https://firecrawl.dev)
+1. Get your API key from [Sitecrawl Dashboard](https://sitecrawl.dev)
 2. Set it as an environment variable:
    ```bash
-   export FIRECRAWL_API_KEY="fc-your-api-key-here"
+   export SITECRAWL_API_KEY="fc-your-api-key-here"
    ```
 
 3. **Or** add it to your shell profile for persistence:
    ```bash
    # For Zsh (macOS/Linux)
-   echo 'export FIRECRAWL_API_KEY="fc-your-api-key-here"' >> ~/.zshrc
+   echo 'export SITECRAWL_API_KEY="fc-your-api-key-here"' >> ~/.zshrc
    source ~/.zshrc
    
    # For Bash
-   echo 'export FIRECRAWL_API_KEY="fc-your-api-key-here"' >> ~/.bashrc
+   echo 'export SITECRAWL_API_KEY="fc-your-api-key-here"' >> ~/.bashrc
    source ~/.bashrc
    ```
 
@@ -82,21 +82,21 @@ Before using the Java SDK, ensure you have the following installed:
 ### Gradle (Kotlin DSL)
 
 ```kotlin
-implementation("com.firecrawl:firecrawl-java:1.6.0")
+implementation("com.sitecrawl:sitecrawl-java:1.6.0")
 ```
 
 ### Gradle (Groovy)
 
 ```groovy
-implementation 'com.firecrawl:firecrawl-java:1.6.0'
+implementation 'com.sitecrawl:sitecrawl-java:1.6.0'
 ```
 
 ### Maven
 
 ```xml
 <dependency>
-    <groupId>com.firecrawl</groupId>
-    <artifactId>firecrawl-java</artifactId>
+    <groupId>com.sitecrawl</groupId>
+    <artifactId>sitecrawl-java</artifactId>
     <version>1.6.0</version>
 </dependency>
 ```
@@ -104,12 +104,12 @@ implementation 'com.firecrawl:firecrawl-java:1.6.0'
 ## Quick Start
 
 ```java
-import com.firecrawl.client.FirecrawlClient;
-import com.firecrawl.models.*;
+import com.sitecrawl.client.SitecrawlClient;
+import com.sitecrawl.models.*;
 import java.util.List;
 
 // Create client with explicit API key
-FirecrawlClient client = FirecrawlClient.builder()
+SitecrawlClient client = SitecrawlClient.builder()
     .apiKey("fc-your-api-key")
     .build();
 
@@ -125,8 +125,8 @@ System.out.println(doc.getMarkdown());
 Or create a client from the environment variable:
 
 ```java
-// export FIRECRAWL_API_KEY=fc-your-api-key
-FirecrawlClient client = FirecrawlClient.fromEnv();
+// export SITECRAWL_API_KEY=fc-your-api-key
+SitecrawlClient client = SitecrawlClient.fromEnv();
 ```
 
 ## API Reference
@@ -183,7 +183,7 @@ System.out.println(parsed.getMarkdown());
 #### JSON Extraction
 
 ```java
-import com.firecrawl.models.JsonFormat;
+import com.sitecrawl.models.JsonFormat;
 
 JsonFormat jsonFmt = JsonFormat.builder()
     .prompt("Extract the product name and price")
@@ -327,7 +327,7 @@ for (Map<String, Object> link : data.getLinks()) {
 Search the web and optionally scrape results.
 
 ```java
-SearchData results = client.search("firecrawl",
+SearchData results = client.search("sitecrawl",
     SearchOptions.builder()
         .limit(10)
         .build());
@@ -346,7 +346,7 @@ Run an AI-powered agent to research and extract data from the web.
 ```java
 AgentStatusResponse result = client.agent(
     AgentOptions.builder()
-        .prompt("Find the pricing plans for Firecrawl and compare them")
+        .prompt("Find the pricing plans for Sitecrawl and compare them")
         .build());
 
 System.out.println(result.getData());
@@ -381,7 +381,7 @@ future.thenAccept(doc -> System.out.println(doc.getMarkdown()));
 The SDK throws unchecked exceptions:
 
 ```java
-import com.firecrawl.errors.*;
+import com.sitecrawl.errors.*;
 
 try {
     Document doc = client.scrape("https://example.com");
@@ -394,7 +394,7 @@ try {
 } catch (JobTimeoutException e) {
     // Async job timed out
     System.err.println("Job " + e.getJobId() + " timed out after " + e.getTimeoutSeconds() + "s");
-} catch (FirecrawlException e) {
+} catch (SitecrawlException e) {
     // All other API errors
     System.err.println("Error " + e.getStatusCode() + ": " + e.getMessage());
 }
@@ -403,9 +403,9 @@ try {
 ## Configuration
 
 ```java
-FirecrawlClient client = FirecrawlClient.builder()
-    .apiKey("fc-your-api-key")            // Required (or set FIRECRAWL_API_KEY env var)
-    .apiUrl("https://api.firecrawl.dev")  // Optional (or set FIRECRAWL_API_URL env var)
+SitecrawlClient client = SitecrawlClient.builder()
+    .apiKey("fc-your-api-key")            // Required (or set SITECRAWL_API_KEY env var)
+    .apiUrl("https://api.sitecrawl.dev")  // Optional (or set SITECRAWL_API_URL env var)
     .timeoutMs(300_000)                   // HTTP timeout: 5 min default
     .maxRetries(3)                        // Auto-retries for transient failures
     .backoffFactor(0.5)                   // Exponential backoff factor (seconds)
@@ -419,8 +419,8 @@ FirecrawlClient client = FirecrawlClient.builder()
 
 ```bash
 # Clone the repository (if you haven't already)
-git clone https://github.com/firecrawl/firecrawl.git
-cd firecrawl/apps/java-sdk
+git clone https://github.com/sitecrawl/sitecrawl.git
+cd sitecrawl/apps/java-sdk
 
 # Build the project
 gradle build
@@ -430,14 +430,14 @@ gradle build
 
 ```bash
 gradle jar
-# Output: build/libs/firecrawl-java-1.6.0.jar
+# Output: build/libs/sitecrawl-java-1.6.0.jar
 ```
 
 ### Install Locally
 
 ```bash
 gradle publishToMavenLocal
-# Now available as: com.firecrawl:firecrawl-java:1.6.0 in local Maven repository
+# Now available as: com.sitecrawl:sitecrawl-java:1.6.0 in local Maven repository
 ```
 
 ## Running Tests
@@ -454,11 +454,11 @@ gradle test
 
 ### E2E Integration Tests (API Key Required)
 
-E2E tests make real API calls and require a valid API key. These tests will be **skipped** if `FIRECRAWL_API_KEY` is not set:
+E2E tests make real API calls and require a valid API key. These tests will be **skipped** if `SITECRAWL_API_KEY` is not set:
 
 ```bash
 # Set your API key
-export FIRECRAWL_API_KEY="fc-your-api-key-here"
+export SITECRAWL_API_KEY="fc-your-api-key-here"
 
 # Run all tests including E2E
 gradle test
@@ -474,7 +474,7 @@ gradle test --tests "*testScrape*"
 gradle test --tests "*E2E"
 
 # Run specific test class
-gradle test --tests "com.firecrawl.FirecrawlClientTest"
+gradle test --tests "com.sitecrawl.SitecrawlClientTest"
 ```
 
 ### View Test Results
@@ -494,9 +494,9 @@ If you're contributing to the SDK or testing local changes:
 
 2. **Set Environment Variables:**
    ```bash
-   export FIRECRAWL_API_KEY="fc-your-api-key"
+   export SITECRAWL_API_KEY="fc-your-api-key"
    # Optional: use local API server
-   export FIRECRAWL_API_URL="http://localhost:3002"
+   export SITECRAWL_API_URL="http://localhost:3002"
    ```
 
 3. **Build and Test:**

@@ -27,7 +27,7 @@ function shouldIndexForSearch(meta: Meta, document: Document): boolean {
     return false;
   }
 
-  // Exchange-delivered content is never stored on the Firecrawl side.
+  // Exchange-delivered content is never stored on the Sitecrawl side.
   if (meta.winnerEngine === "exchange") {
     return false;
   }

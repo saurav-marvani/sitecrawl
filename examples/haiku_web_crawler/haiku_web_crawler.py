@@ -1,5 +1,5 @@
 import os
-from firecrawl import FirecrawlApp
+from sitecrawl import SitecrawlApp
 import json
 from dotenv import load_dotenv
 import anthropic
@@ -19,11 +19,11 @@ class Colors:
 load_dotenv()
 
 # Retrieve API keys from environment variables
-firecrawl_api_key = os.getenv("FIRECRAWL_API_KEY")
+sitecrawl_api_key = os.getenv("SITECRAWL_API_KEY")
 anthropic_api_key = os.getenv("ANTHROPIC_API_KEY")
 
-# Initialize the FirecrawlApp and OpenAI client
-app = FirecrawlApp(api_key=firecrawl_api_key)
+# Initialize the SitecrawlApp and OpenAI client
+app = SitecrawlApp(api_key=sitecrawl_api_key)
 client = anthropic.Anthropic(api_key=anthropic_api_key)
 
 # Find the page that most likely contains the objective
@@ -137,7 +137,7 @@ def main():
     # Get user input
     url = input(f"{Colors.BLUE}Enter the website to crawl: {Colors.RESET}")
     if not url.strip():
-        url = "https://www.firecrawl.dev/"
+        url = "https://www.sitecrawl.dev/"
     
     objective = input(f"{Colors.BLUE}Enter your objective: {Colors.RESET}")
     if not objective.strip():

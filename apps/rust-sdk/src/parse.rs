@@ -1,4 +1,4 @@
-//! Parse endpoint for Firecrawl API v2.
+//! Parse endpoint for Sitecrawl API v2.
 
 use std::path::Path;
 
@@ -9,7 +9,7 @@ use std::collections::HashMap;
 use super::client::Client;
 use super::scrape::ParserConfig;
 use super::types::{AttributeSelector, Document, JsonOptions};
-use crate::FirecrawlError;
+use crate::SitecrawlError;
 
 /// Uploaded file payload for the `/v2/parse` endpoint.
 #[derive(Debug, Clone)]
@@ -30,10 +30,10 @@ impl ParseFile {
     }
 
     /// Build a parse file by reading bytes from disk.
-    pub fn from_path(path: impl AsRef<Path>) -> Result<Self, FirecrawlError> {
+    pub fn from_path(path: impl AsRef<Path>) -> Result<Self, SitecrawlError> {
         let path_ref = path.as_ref();
         let bytes = std::fs::read(path_ref).map_err(|e| {
-            FirecrawlError::Misuse(format!(
+            SitecrawlError::Misuse(format!(
                 "Failed to read parse file {}: {}",
                 path_ref.display(),
                 e
@@ -43,7 +43,7 @@ impl ParseFile {
             .file_name()
             .and_then(|name| name.to_str())
             .ok_or_else(|| {
-                FirecrawlError::Misuse("Could not derive a valid filename from path".to_string())
+                SitecrawlError::Misuse("Could not derive a valid filename from path".to_string())
             })?
             .to_string();
 
@@ -148,28 +148,28 @@ impl Client {
         &self,
         file: ParseFile,
         options: impl Into<Option<ParseOptions>>,
-    ) -> Result<Document, FirecrawlError> {
+    ) -> Result<Document, SitecrawlError> {
         let resolved_filename = file.filename.trim().to_string();
         if resolved_filename.is_empty() {
-            return Err(FirecrawlError::Misuse(
+            return Err(SitecrawlError::Misuse(
                 "filename cannot be empty".to_string(),
             ));
         }
 
         if file.bytes.is_empty() {
-            return Err(FirecrawlError::Misuse(
+            return Err(SitecrawlError::Misuse(
                 "file content cannot be empty".to_string(),
             ));
         }
 
         let options = options.into().unwrap_or_default();
         let options_json =
-            serde_json::to_string(&options).map_err(FirecrawlError::ResponseParseError)?;
+            serde_json::to_string(&options).map_err(SitecrawlError::ResponseParseError)?;
 
         let mut part = Part::bytes(file.bytes).file_name(resolved_filename);
         if let Some(content_type) = file.content_type {
             part = part.mime_str(&content_type).map_err(|e| {
-                FirecrawlError::Misuse(format!("Invalid content type for parse file: {}", e))
+                SitecrawlError::Misuse(format!("Invalid content type for parse file: {}", e))
             })?;
         }
 
@@ -183,7 +183,7 @@ impl Client {
             .multipart(form)
             .send()
             .await
-            .map_err(|e| FirecrawlError::HttpError("Parsing uploaded file".to_string(), e))?;
+            .map_err(|e| SitecrawlError::HttpError("Parsing uploaded file".to_string(), e))?;
 
         let response: ParseResponse = self.handle_response(response, "parse").await?;
         Ok(response.data)
@@ -213,7 +213,7 @@ mod tests {
                     "data": {
                         "markdown": "# Parsed File",
                         "metadata": {
-                            "sourceURL": "https://parse.firecrawl.dev/uploads/upload.html",
+                            "sourceURL": "https://parse.sitecrawl.dev/uploads/upload.html",
                             "statusCode": 200
                         }
                     }

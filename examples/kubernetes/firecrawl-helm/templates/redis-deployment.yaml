@@ -1,18 +1,18 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "firecrawl.fullname" . }}-redis
+  name: {{ include "sitecrawl.fullname" . }}-redis
   labels:
-    app: {{ include "firecrawl.name" . }}-redis
+    app: {{ include "sitecrawl.name" . }}-redis
 spec:
   replicas: {{ .Values.redis.replicaCount }}
   selector:
     matchLabels:
-      app: {{ include "firecrawl.name" . }}-redis
+      app: {{ include "sitecrawl.name" . }}-redis
   template:
     metadata:
       labels:
-        app: {{ include "firecrawl.name" . }}-redis
+        app: {{ include "sitecrawl.name" . }}-redis
     spec:
       containers:
       - name: redis
@@ -31,5 +31,5 @@ spec:
           - name: REDIS_PASSWORD
             valueFrom:
               secretKeyRef:
-                name: {{ include "firecrawl.fullname" . }}-secret
+                name: {{ include "sitecrawl.fullname" . }}-secret
                 key: REDIS_PASSWORD

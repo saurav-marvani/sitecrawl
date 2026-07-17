@@ -1,12 +1,12 @@
-//! End-to-end tests for Firecrawl API.
+//! End-to-end tests for Sitecrawl API.
 //!
 //! These tests require the following environment variables:
-//! - API_URL: The Firecrawl API URL
+//! - API_URL: The Sitecrawl API URL
 //! - TEST_API_KEY: A valid API key (optional for self-hosted)
 //!
 //! Run with: cargo test --test v2_e2e -- --ignored
 
-use firecrawl::{
+use sitecrawl::{
     AgentOptions, BatchScrapeOptions, Client, CrawlOptions, Format, JobStatus, MapOptions,
     ParseFile, ParseFormat, ParseOptions, ScrapeOptions, SearchOptions, SitemapMode,
 };
@@ -115,7 +115,7 @@ async fn test_search_with_options() {
     };
 
     let response = client
-        .search("firecrawl web scraping", options)
+        .search("sitecrawl web scraping", options)
         .await
         .expect("Search with options should succeed");
 
@@ -306,7 +306,7 @@ fn test_client_creation() {
     assert!(cloud_result.is_ok());
 
     // Cloud client without API key should fail
-    let cloud_no_key = Client::new_selfhosted("https://api.firecrawl.dev", None::<&str>);
+    let cloud_no_key = Client::new_selfhosted("https://api.sitecrawl.dev", None::<&str>);
     assert!(cloud_no_key.is_err());
 
     // Self-hosted client without API key should work

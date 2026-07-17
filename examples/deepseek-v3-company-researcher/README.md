@@ -1,12 +1,12 @@
 # DeepSeek V3 Company Researcher
 
-This tool is a powerful company research assistant that combines Google search, DeepSeek Chat V3, and Firecrawl to gather and analyze company information automatically.
+This tool is a powerful company research assistant that combines Google search, DeepSeek Chat V3, and Sitecrawl to gather and analyze company information automatically.
 
 ## Features
 
 - Automated Google search using SerpAPI
 - Intelligent URL selection using DeepSeek Chat V3
-- Structured data extraction using Firecrawl
+- Structured data extraction using Sitecrawl
 - Real-time progress monitoring and colorized output
 - Automated handling of rate limits and polling
 
@@ -15,7 +15,7 @@ This tool is a powerful company research assistant that combines Google search, 
 - Python 3.7+
 - API keys for:
   - OpenRouter (for DeepSeek Chat V3 access)
-  - Firecrawl
+  - Sitecrawl
   - SerpAPI
 
 ## Setup
@@ -28,7 +28,7 @@ This tool is a powerful company research assistant that combines Google search, 
 3. Create a `.env` file in the project root with your API keys:
    ```
    OPENROUTER_API_KEY=your_openrouter_api_key
-   FIRECRAWL_API_KEY=your_firecrawl_api_key
+   SITECRAWL_API_KEY=your_sitecrawl_api_key
    SERP_API_KEY=your_serpapi_key
    ```
 

@@ -1,18 +1,18 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "firecrawl.fullname" . }}-nuq-worker
+  name: {{ include "sitecrawl.fullname" . }}-nuq-worker
   labels:
-    app: {{ include "firecrawl.name" . }}-nuq-worker
+    app: {{ include "sitecrawl.name" . }}-nuq-worker
 spec:
   replicas: {{ .Values.nuqWorker.replicaCount | default 5 }}
   selector:
     matchLabels:
-      app: {{ include "firecrawl.name" . }}-nuq-worker
+      app: {{ include "sitecrawl.name" . }}-nuq-worker
   template:
     metadata:
       labels:
-        app: {{ include "firecrawl.name" . }}-nuq-worker
+        app: {{ include "sitecrawl.name" . }}-nuq-worker
     spec:
       {{- if .Values.image.dockerSecretEnabled }}
       imagePullSecrets:
@@ -38,9 +38,9 @@ spec:
                   fieldPath: metadata.name
           envFrom:
             - configMapRef:
-                name: {{ include "firecrawl.fullname" . }}-config
+                name: {{ include "sitecrawl.fullname" . }}-config
             - secretRef:
-                name: {{ include "firecrawl.fullname" . }}-secret
+                name: {{ include "sitecrawl.fullname" . }}-secret
           {{- if .Values.resources.enabled }}
             {{- if .Values.nuqWorker.resources }}
           resources:

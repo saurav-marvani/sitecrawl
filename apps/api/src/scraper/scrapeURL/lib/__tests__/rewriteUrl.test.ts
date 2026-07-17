@@ -108,7 +108,7 @@ describe("rewriteUrl", () => {
   describe("Non-Google URLs", () => {
     it("should return undefined for non-Google URLs", () => {
       expect(rewriteUrl("https://example.com")).toBeUndefined();
-      expect(rewriteUrl("https://firecrawl.dev")).toBeUndefined();
+      expect(rewriteUrl("https://sitecrawl.dev")).toBeUndefined();
     });
   });
 });

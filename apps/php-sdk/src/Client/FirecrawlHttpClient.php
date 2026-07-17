@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Firecrawl\Client;
+namespace Sitecrawl\Client;
 
-use Firecrawl\Exceptions\AuthenticationException;
-use Firecrawl\Exceptions\FirecrawlException;
-use Firecrawl\Exceptions\RateLimitException;
-use Firecrawl\Version;
+use Sitecrawl\Exceptions\AuthenticationException;
+use Sitecrawl\Exceptions\SitecrawlException;
+use Sitecrawl\Exceptions\RateLimitException;
+use Sitecrawl\Version;
 use GuzzleHttp\Client as GuzzleClient;
 use GuzzleHttp\ClientInterface;
 use GuzzleHttp\Exception\ConnectException;
@@ -17,7 +17,7 @@ use GuzzleHttp\RequestOptions;
 /**
  * @internal
  */
-final class FirecrawlHttpClient
+final class SitecrawlHttpClient
 {
     private readonly ClientInterface $httpClient;
     private readonly string $baseUrl;
@@ -138,7 +138,7 @@ final class FirecrawlHttpClient
     ): array {
         $defaultHeaders = [
             'Accept' => 'application/json',
-            'User-Agent' => 'firecrawl-php/' . Version::SDK_VERSION,
+            'User-Agent' => 'sitecrawl-php/' . Version::SDK_VERSION,
         ];
         // Omit the Authorization header entirely when no key is set so that
         // scrape/search/interact can use the keyless free tier.
@@ -196,7 +196,7 @@ final class FirecrawlHttpClient
                 }
 
                 if ($statusCode >= 400 && $statusCode < 500 && $statusCode !== 408 && $statusCode !== 409) {
-                    throw new FirecrawlException($errorMessage, $statusCode, $errorCode);
+                    throw new SitecrawlException($errorMessage, $statusCode, $errorCode);
                 }
 
                 // Retryable errors: 408, 409, 502, 5xx
@@ -206,8 +206,8 @@ final class FirecrawlHttpClient
                     continue;
                 }
 
-                throw new FirecrawlException($errorMessage, $statusCode, $errorCode);
-            } catch (FirecrawlException $e) {
+                throw new SitecrawlException($errorMessage, $statusCode, $errorCode);
+            } catch (SitecrawlException $e) {
                 throw $e;
             } catch (ConnectException $e) {
                 if ($attempt < $this->maxRetries) {
@@ -215,16 +215,16 @@ final class FirecrawlHttpClient
                     $this->sleepWithBackoff($attempt);
                     continue;
                 }
-                throw new FirecrawlException('Connection failed: ' . $e->getMessage(), previous: $e);
+                throw new SitecrawlException('Connection failed: ' . $e->getMessage(), previous: $e);
             } catch (RequestException $e) {
                 if ($attempt < $this->maxRetries) {
                     $attempt++;
                     $this->sleepWithBackoff($attempt);
                     continue;
                 }
-                throw new FirecrawlException('Request failed: ' . $e->getMessage(), previous: $e);
+                throw new SitecrawlException('Request failed: ' . $e->getMessage(), previous: $e);
             } catch (\JsonException $e) {
-                throw new FirecrawlException('Failed to parse API response: ' . $e->getMessage(), previous: $e);
+                throw new SitecrawlException('Failed to parse API response: ' . $e->getMessage(), previous: $e);
             }
         }
     }

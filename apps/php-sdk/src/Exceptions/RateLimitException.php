@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Firecrawl\Exceptions;
+namespace Sitecrawl\Exceptions;
 
-class RateLimitException extends FirecrawlException
+class RateLimitException extends SitecrawlException
 {
     public function __construct(
         string $message = 'Rate limit exceeded.',

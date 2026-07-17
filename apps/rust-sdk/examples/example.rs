@@ -1,8 +1,8 @@
-//! Example usage of Firecrawl API.
+//! Example usage of Sitecrawl API.
 //!
 //! Run with: cargo run --example example
 
-use firecrawl::{
+use sitecrawl::{
     AgentModel, AgentOptions, BatchScrapeOptions, Client, CrawlOptions, Format, MapOptions,
     ScrapeOptions, SearchOptions, SitemapMode,
 };
@@ -77,10 +77,10 @@ async fn main() {
             if let Some(web) = response.data.web {
                 for item in web {
                     match item {
-                        firecrawl::SearchResultOrDocument::WebResult(r) => {
+                        sitecrawl::SearchResultOrDocument::WebResult(r) => {
                             println!("Result: {} - {}", r.url, r.title.unwrap_or_default());
                         }
-                        firecrawl::SearchResultOrDocument::Document(d) => {
+                        sitecrawl::SearchResultOrDocument::Document(d) => {
                             if let Some(meta) = d.metadata {
                                 println!("Document: {:?}", meta.title);
                             }
@@ -196,7 +196,7 @@ async fn main() {
 
     let result: Result<Option<CompanyInfo>, _> = client
         .agent_with_schema(
-            vec!["https://firecrawl.dev".to_string()],
+            vec!["https://sitecrawl.dev".to_string()],
             "Extract company information from this website",
             schema,
         )

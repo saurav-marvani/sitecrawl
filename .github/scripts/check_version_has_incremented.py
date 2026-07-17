@@ -3,31 +3,31 @@ checks local versions against published versions.
 
 # Usage:
 
-python .github/scripts/check_version_has_incremented.py js ./apps/js-sdk/firecrawl @mendable/firecrawl-js
+python .github/scripts/check_version_has_incremented.py js ./apps/js-sdk/sitecrawl @mendable/sitecrawl-js
 Local version: 0.0.22
 Published version: 0.0.21
 true
 
-python .github/scripts/check_version_has_incremented.py python ./apps/python-sdk/firecrawl firecrawl-py
+python .github/scripts/check_version_has_incremented.py python ./apps/python-sdk/sitecrawl sitecrawl-py
 Local version: 0.0.11
 Published version: 0.0.11
 false
 
-python .github/scripts/check_version_has_incremented.py java ./apps/java-sdk com.firecrawl:firecrawl-java
+python .github/scripts/check_version_has_incremented.py java ./apps/java-sdk com.sitecrawl:sitecrawl-java
 Local version: 1.0.0
 Published version: 0.0.0  (0.0.0 means not yet published on Maven Central)
 true
 
-python .github/scripts/check_version_has_incremented.py ruby ./apps/ruby-sdk firecrawl-sdk
+python .github/scripts/check_version_has_incremented.py ruby ./apps/ruby-sdk sitecrawl-sdk
 Local version: 1.0.0
 Published version: 0.0.0  (0.0.0 means not yet published on RubyGems)
 true
 
-python .github/scripts/check_version_has_incremented.py dotnet ./apps/dot-net-sdk/Firecrawl firecrawl-sdk
+python .github/scripts/check_version_has_incremented.py dotnet ./apps/dot-net-sdk/Sitecrawl sitecrawl-sdk
 Local version: 1.0.0
 Published version: 0.0.0  (0.0.0 means not yet published on NuGet)
 true
-python .github/scripts/check_version_has_incremented.py php ./apps/php-sdk firecrawl/firecrawl-sdk
+python .github/scripts/check_version_has_incremented.py php ./apps/php-sdk sitecrawl/sitecrawl-sdk
 Local version: 1.0.0
 Published version: 0.0.0  (0.0.0 means not yet published on Packagist)
 true
@@ -80,7 +80,7 @@ def get_gradle_version(file_path: str) -> str:
     raise RuntimeError("Unable to find version string in build.gradle.kts.")
 
 def get_ruby_version(file_path: str) -> str:
-    """Extract version string from Ruby version file (lib/firecrawl/version.rb)."""
+    """Extract version string from Ruby version file (lib/sitecrawl/version.rb)."""
     version_file = Path(file_path).read_text()
     version_match = re.search(r'VERSION\s*=\s*["\']([^"\']*)["\']', version_file, re.M)
     if version_match:
@@ -180,7 +180,7 @@ def get_crates_version(package_name: str) -> str:
     """Get latest version of Rust package from crates.io."""
     response = requests.get(
         f"https://crates.io/api/v1/crates/{package_name}",
-        headers={"User-Agent": "firecrawl-version-check"}
+        headers={"User-Agent": "sitecrawl-version-check"}
     )
     if response.status_code == 404:
         return "0.0.0"
@@ -215,8 +215,8 @@ if __name__ == "__main__":
         # Get published version from Maven Central
         published_version = get_maven_central_version(package_name)
     elif package_type == "ruby":
-        # Get current version from lib/firecrawl/version.rb
-        current_version = get_ruby_version(os.path.join(package_path, 'lib', 'firecrawl', 'version.rb'))
+        # Get current version from lib/sitecrawl/version.rb
+        current_version = get_ruby_version(os.path.join(package_path, 'lib', 'sitecrawl', 'version.rb'))
         # Get published version from RubyGems
         published_version = get_rubygems_version(package_name)
     elif package_type == "dotnet":

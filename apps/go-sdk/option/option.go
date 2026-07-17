@@ -1,4 +1,4 @@
-// Package option provides functional options for configuring the Firecrawl client.
+// Package option provides functional options for configuring the Sitecrawl client.
 package option
 
 import (
@@ -19,14 +19,14 @@ type RequestConfig struct {
 	ExtraHeaders  map[string]string
 }
 
-// WithAPIKey sets the API key. Defaults to the FIRECRAWL_API_KEY environment variable.
+// WithAPIKey sets the API key. Defaults to the SITECRAWL_API_KEY environment variable.
 func WithAPIKey(key string) RequestOption {
 	return func(c *RequestConfig) {
 		c.APIKey = key
 	}
 }
 
-// WithAPIURL sets the API base URL. Defaults to https://api.firecrawl.dev.
+// WithAPIURL sets the API base URL. Defaults to https://api.sitecrawl.dev.
 func WithAPIURL(url string) RequestOption {
 	return func(c *RequestConfig) {
 		c.APIURL = url

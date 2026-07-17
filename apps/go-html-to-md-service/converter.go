@@ -1,8 +1,8 @@
 package main
 
 import (
-	md "github.com/firecrawl/html-to-markdown"
-	"github.com/firecrawl/html-to-markdown/plugin"
+	md "github.com/sitecrawl/html-to-markdown"
+	"github.com/sitecrawl/html-to-markdown/plugin"
 )
 
 // Converter handles HTML to Markdown conversion

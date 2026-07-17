@@ -20,7 +20,7 @@ describe.skip("Branding extraction", () => {
       async () => {
         const response = await scrape(
           {
-            url: "https://firecrawl.dev",
+            url: "https://sitecrawl.dev",
             formats: ["branding"],
           },
           identity,
@@ -39,7 +39,7 @@ describe.skip("Branding extraction", () => {
       async () => {
         const response = await scrape(
           {
-            url: "https://firecrawl.dev",
+            url: "https://sitecrawl.dev",
             formats: ["branding"],
           },
           identity,
@@ -63,7 +63,7 @@ describe.skip("Branding extraction", () => {
       async () => {
         const response = await scrape(
           {
-            url: "https://firecrawl.dev",
+            url: "https://sitecrawl.dev",
             formats: ["branding"],
           },
           identity,
@@ -86,7 +86,7 @@ describe.skip("Branding extraction", () => {
       async () => {
         const response = await scrape(
           {
-            url: "https://firecrawl.dev",
+            url: "https://sitecrawl.dev",
             formats: ["branding"],
           },
           identity,
@@ -108,7 +108,7 @@ describe.skip("Branding extraction", () => {
       async () => {
         const response = await scrape(
           {
-            url: "https://firecrawl.dev",
+            url: "https://sitecrawl.dev",
             formats: ["branding"],
           },
           identity,
@@ -141,7 +141,7 @@ describe.skip("Branding extraction", () => {
       async () => {
         const response = await scrape(
           {
-            url: "https://firecrawl.dev",
+            url: "https://sitecrawl.dev",
             formats: ["branding"],
           },
           identity,
@@ -165,7 +165,7 @@ describe.skip("Branding extraction", () => {
       async () => {
         const response = await scrape(
           {
-            url: "https://firecrawl.dev",
+            url: "https://sitecrawl.dev",
             formats: ["branding"],
           },
           identity,
@@ -189,7 +189,7 @@ describe.skip("Branding extraction", () => {
       async () => {
         const response = await scrape(
           {
-            url: "https://firecrawl.dev",
+            url: "https://sitecrawl.dev",
             formats: ["branding"],
           },
           identity,
@@ -213,7 +213,7 @@ describe.skip("Branding extraction", () => {
       async () => {
         const response = await scrape(
           {
-            url: "https://firecrawl.dev",
+            url: "https://sitecrawl.dev",
             formats: ["branding"],
           },
           identity,
@@ -231,7 +231,7 @@ describe.skip("Branding extraction", () => {
       async () => {
         const response = await scrape(
           {
-            url: "https://firecrawl.dev",
+            url: "https://sitecrawl.dev",
             formats: ["branding"],
           },
           identity,
@@ -260,7 +260,7 @@ describe.skip("Branding extraction", () => {
       async () => {
         const response = await scrape(
           {
-            url: "https://firecrawl.dev",
+            url: "https://sitecrawl.dev",
             formats: ["branding"],
           },
           identity,
@@ -281,7 +281,7 @@ describe.skip("Branding extraction", () => {
       async () => {
         const response = await scrape(
           {
-            url: "https://firecrawl.dev",
+            url: "https://sitecrawl.dev",
             formats: ["markdown", "branding"],
           },
           identity,
@@ -300,7 +300,7 @@ describe.skip("Branding extraction", () => {
       async () => {
         const response = await scrape(
           {
-            url: "https://firecrawl.dev",
+            url: "https://sitecrawl.dev",
             formats: ["branding", "screenshot"],
           },
           identity,
@@ -320,7 +320,7 @@ describe.skip("Branding extraction", () => {
       async () => {
         const response = await scrape(
           {
-            url: "https://firecrawl.dev",
+            url: "https://sitecrawl.dev",
             formats: ["branding"],
           },
           identity,

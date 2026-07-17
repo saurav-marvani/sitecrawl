@@ -1,8 +1,8 @@
-package com.firecrawl;
+package com.sitecrawl;
 
-import com.firecrawl.client.FirecrawlClient;
-import com.firecrawl.models.MapData;
-import com.firecrawl.models.MapOptions;
+import com.sitecrawl.client.SitecrawlClient;
+import com.sitecrawl.models.MapData;
+import com.sitecrawl.models.MapOptions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
@@ -15,28 +15,28 @@ import static org.junit.jupiter.api.Assertions.*;
  * Comprehensive Map Tests
  * 
  * Tests the map functionality with various configurations.
- * Based on Node.js SDK patterns and tested against live firecrawl.dev.
+ * Based on Node.js SDK patterns and tested against live sitecrawl.dev.
  * 
- * Run with: FIRECRAWL_API_KEY=fc-xxx gradle test --tests "com.firecrawl.MapTest"
+ * Run with: SITECRAWL_API_KEY=fc-xxx gradle test --tests "com.sitecrawl.MapTest"
  */
 class MapTest {
 
-    private static FirecrawlClient client;
+    private static SitecrawlClient client;
 
     @BeforeAll
     static void setup() {
-        String apiKey = System.getenv("FIRECRAWL_API_KEY");
+        String apiKey = System.getenv("SITECRAWL_API_KEY");
         if (apiKey != null && !apiKey.isBlank()) {
-            client = FirecrawlClient.fromEnv();
+            client = SitecrawlClient.fromEnv();
         }
     }
 
     @Test
-    @EnabledIfEnvironmentVariable(named = "FIRECRAWL_API_KEY", matches = ".*\\S.*")
+    @EnabledIfEnvironmentVariable(named = "SITECRAWL_API_KEY", matches = ".*\\S.*")
     void testMapMinimal() {
         System.out.println("\n=== Test: Map - Minimal Request ===");
         
-        MapData data = client.map("https://docs.firecrawl.dev");
+        MapData data = client.map("https://docs.sitecrawl.dev");
 
         assertNotNull(data, "Map data should not be null");
         assertNotNull(data.getLinks(), "Links should not be null");
@@ -57,11 +57,11 @@ class MapTest {
     }
 
     @Test
-    @EnabledIfEnvironmentVariable(named = "FIRECRAWL_API_KEY", matches = ".*\\S.*")
+    @EnabledIfEnvironmentVariable(named = "SITECRAWL_API_KEY", matches = ".*\\S.*")
     void testMapWithLimit() {
         System.out.println("\n=== Test: Map with Limit ===");
         
-        MapData data = client.map("https://docs.firecrawl.dev",
+        MapData data = client.map("https://docs.sitecrawl.dev",
                 MapOptions.builder()
                         .limit(10)
                         .build());
@@ -76,11 +76,11 @@ class MapTest {
     }
 
     @Test
-    @EnabledIfEnvironmentVariable(named = "FIRECRAWL_API_KEY", matches = ".*\\S.*")
+    @EnabledIfEnvironmentVariable(named = "SITECRAWL_API_KEY", matches = ".*\\S.*")
     void testMapWithSearch() {
         System.out.println("\n=== Test: Map with Search Filter ===");
         
-        MapData data = client.map("https://docs.firecrawl.dev",
+        MapData data = client.map("https://docs.sitecrawl.dev",
                 MapOptions.builder()
                         .search("api")
                         .limit(20)
@@ -103,11 +103,11 @@ class MapTest {
     }
 
     @Test
-    @EnabledIfEnvironmentVariable(named = "FIRECRAWL_API_KEY", matches = ".*\\S.*")
+    @EnabledIfEnvironmentVariable(named = "SITECRAWL_API_KEY", matches = ".*\\S.*")
     void testMapWithSkipSitemap() {
         System.out.println("\n=== Test: Map with Sitemap Skip ===");
         
-        MapData data = client.map("https://firecrawl.dev",
+        MapData data = client.map("https://sitecrawl.dev",
                 MapOptions.builder()
                         .sitemap("skip")
                         .limit(15)
@@ -130,11 +130,11 @@ class MapTest {
     }
 
     @Test
-    @EnabledIfEnvironmentVariable(named = "FIRECRAWL_API_KEY", matches = ".*\\S.*")
+    @EnabledIfEnvironmentVariable(named = "SITECRAWL_API_KEY", matches = ".*\\S.*")
     void testMapWithSitemapOnly() {
         System.out.println("\n=== Test: Map with Sitemap Only ===");
         
-        MapData data = client.map("https://firecrawl.dev",
+        MapData data = client.map("https://sitecrawl.dev",
                 MapOptions.builder()
                         .sitemap("only")
                         .limit(50)
@@ -157,11 +157,11 @@ class MapTest {
     }
 
     @Test
-    @EnabledIfEnvironmentVariable(named = "FIRECRAWL_API_KEY", matches = ".*\\S.*")
+    @EnabledIfEnvironmentVariable(named = "SITECRAWL_API_KEY", matches = ".*\\S.*")
     void testMapWithIncludeSubdomains() {
         System.out.println("\n=== Test: Map with Include Subdomains ===");
         
-        MapData data = client.map("https://firecrawl.dev",
+        MapData data = client.map("https://sitecrawl.dev",
                 MapOptions.builder()
                         .includeSubdomains(true)
                         .limit(20)
@@ -176,9 +176,9 @@ class MapTest {
         boolean hasSubdomains = data.getLinks().stream()
                 .anyMatch(link -> {
                     String url = link.get("url") != null ? link.get("url").toString() : "";
-                    return url.contains("docs.firecrawl.dev") || 
-                           url.contains("api.firecrawl.dev") ||
-                           (url.contains(".firecrawl.dev") && !url.contains("www.firecrawl.dev"));
+                    return url.contains("docs.sitecrawl.dev") || 
+                           url.contains("api.sitecrawl.dev") ||
+                           (url.contains(".sitecrawl.dev") && !url.contains("www.sitecrawl.dev"));
                 });
         
         if (hasSubdomains) {
@@ -187,11 +187,11 @@ class MapTest {
     }
 
     @Test
-    @EnabledIfEnvironmentVariable(named = "FIRECRAWL_API_KEY", matches = ".*\\S.*")
-    void testMapFirecrawlDocs() {
-        System.out.println("\n=== Test: Map Firecrawl Documentation ===");
+    @EnabledIfEnvironmentVariable(named = "SITECRAWL_API_KEY", matches = ".*\\S.*")
+    void testMapSitecrawlDocs() {
+        System.out.println("\n=== Test: Map Sitecrawl Documentation ===");
         
-        MapData data = client.map("https://docs.firecrawl.dev",
+        MapData data = client.map("https://docs.sitecrawl.dev",
                 MapOptions.builder()
                         .limit(50)
                         .build());
@@ -199,7 +199,7 @@ class MapTest {
         assertNotNull(data.getLinks(), "Links should not be null");
         assertFalse(data.getLinks().isEmpty(), "Should find documentation links");
         
-        System.out.println("✓ Mapped Firecrawl documentation");
+        System.out.println("✓ Mapped Sitecrawl documentation");
         System.out.println("  Total links: " + data.getLinks().size());
         
         // Print sample links
@@ -210,11 +210,11 @@ class MapTest {
     }
 
     @Test
-    @EnabledIfEnvironmentVariable(named = "FIRECRAWL_API_KEY", matches = ".*\\S.*")
+    @EnabledIfEnvironmentVariable(named = "SITECRAWL_API_KEY", matches = ".*\\S.*")
     void testMapLinkStructure() {
         System.out.println("\n=== Test: Verify Map Link Structure ===");
         
-        MapData data = client.map("https://firecrawl.dev",
+        MapData data = client.map("https://sitecrawl.dev",
                 MapOptions.builder()
                         .limit(5)
                         .build());
@@ -234,11 +234,11 @@ class MapTest {
     }
 
     @Test
-    @EnabledIfEnvironmentVariable(named = "FIRECRAWL_API_KEY", matches = ".*\\S.*")
+    @EnabledIfEnvironmentVariable(named = "SITECRAWL_API_KEY", matches = ".*\\S.*")
     void testMapWithTimeout() {
         System.out.println("\n=== Test: Map with Timeout ===");
         
-        MapData data = client.map("https://firecrawl.dev",
+        MapData data = client.map("https://sitecrawl.dev",
                 MapOptions.builder()
                         .timeout(15000)  // 15 seconds
                         .limit(10)
@@ -252,11 +252,11 @@ class MapTest {
     }
 
     @Test
-    @EnabledIfEnvironmentVariable(named = "FIRECRAWL_API_KEY", matches = ".*\\S.*")
+    @EnabledIfEnvironmentVariable(named = "SITECRAWL_API_KEY", matches = ".*\\S.*")
     void testMapComprehensive() {
         System.out.println("\n=== Test: Map with All Options ===");
         
-        MapData data = client.map("https://docs.firecrawl.dev",
+        MapData data = client.map("https://docs.sitecrawl.dev",
                 MapOptions.builder()
                         .includeSubdomains(false)
                         .limit(25)

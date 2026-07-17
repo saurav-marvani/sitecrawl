@@ -2,7 +2,7 @@
  * HTTP Client for Search Index Service
  *
  * This client communicates with the standalone search index service
- * (firecrawl-search backend) via HTTP.
+ * (sitecrawl-search backend) via HTTP.
  */
 
 import { logger as _logger } from "./logger";

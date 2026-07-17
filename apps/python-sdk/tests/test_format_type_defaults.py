@@ -2,8 +2,8 @@
 
 import pytest
 
-from firecrawl.v2.types import JsonFormat, ChangeTrackingFormat, ScrapeOptions
-from firecrawl.v2.utils.validation import prepare_scrape_options
+from sitecrawl.v2.types import JsonFormat, ChangeTrackingFormat, ScrapeOptions
+from sitecrawl.v2.utils.validation import prepare_scrape_options
 
 
 class TestJsonFormat:

@@ -1,18 +1,18 @@
 {
   "openapi": "3.0.0",
   "info": {
-    "title": "Firecrawl API",
+    "title": "Sitecrawl API",
     "version": "0.0.0",
-    "description": "API for interacting with Firecrawl services to perform web scraping and crawling tasks.",
+    "description": "API for interacting with Sitecrawl services to perform web scraping and crawling tasks.",
     "contact": {
-      "name": "Firecrawl Support",
-      "url": "https://firecrawl.dev/support",
-      "email": "support@firecrawl.dev"
+      "name": "Sitecrawl Support",
+      "url": "https://sitecrawl.dev/support",
+      "email": "support@sitecrawl.dev"
     }
   },
   "servers": [
     {
-      "url": "https://api.firecrawl.dev/v0"
+      "url": "https://api.sitecrawl.dev/v0"
     }
   ],
   "paths": {

@@ -2,51 +2,51 @@
 
 declare(strict_types=1);
 
-namespace Firecrawl\Client;
+namespace Sitecrawl\Client;
 
-use Firecrawl\Exceptions\FirecrawlException;
-use Firecrawl\Version;
-use Firecrawl\Exceptions\JobTimeoutException;
-use Firecrawl\Models\AgentOptions;
-use Firecrawl\Models\AgentResponse;
-use Firecrawl\Models\AgentStatusResponse;
-use Firecrawl\Models\BatchScrapeJob;
-use Firecrawl\Models\BatchScrapeOptions;
-use Firecrawl\Models\BatchScrapeResponse;
-use Firecrawl\Models\BrowserCreateResponse;
-use Firecrawl\Models\BrowserDeleteResponse;
-use Firecrawl\Models\BrowserExecuteResponse;
-use Firecrawl\Models\BrowserListResponse;
-use Firecrawl\Models\ConcurrencyCheck;
-use Firecrawl\Models\CrawlJob;
-use Firecrawl\Models\CrawlOptions;
-use Firecrawl\Models\CrawlResponse;
-use Firecrawl\Models\CreditUsage;
-use Firecrawl\Models\Document;
-use Firecrawl\Models\MapData;
-use Firecrawl\Models\MapOptions;
-use Firecrawl\Models\Monitor;
-use Firecrawl\Models\MonitorCheck;
-use Firecrawl\Models\MonitorCheckDetail;
-use Firecrawl\Models\ParseFile;
-use Firecrawl\Models\ParseOptions;
-use Firecrawl\Models\ScrapeOptions;
-use Firecrawl\Models\SearchData;
-use Firecrawl\Models\SearchOptions;
+use Sitecrawl\Exceptions\SitecrawlException;
+use Sitecrawl\Version;
+use Sitecrawl\Exceptions\JobTimeoutException;
+use Sitecrawl\Models\AgentOptions;
+use Sitecrawl\Models\AgentResponse;
+use Sitecrawl\Models\AgentStatusResponse;
+use Sitecrawl\Models\BatchScrapeJob;
+use Sitecrawl\Models\BatchScrapeOptions;
+use Sitecrawl\Models\BatchScrapeResponse;
+use Sitecrawl\Models\BrowserCreateResponse;
+use Sitecrawl\Models\BrowserDeleteResponse;
+use Sitecrawl\Models\BrowserExecuteResponse;
+use Sitecrawl\Models\BrowserListResponse;
+use Sitecrawl\Models\ConcurrencyCheck;
+use Sitecrawl\Models\CrawlJob;
+use Sitecrawl\Models\CrawlOptions;
+use Sitecrawl\Models\CrawlResponse;
+use Sitecrawl\Models\CreditUsage;
+use Sitecrawl\Models\Document;
+use Sitecrawl\Models\MapData;
+use Sitecrawl\Models\MapOptions;
+use Sitecrawl\Models\Monitor;
+use Sitecrawl\Models\MonitorCheck;
+use Sitecrawl\Models\MonitorCheckDetail;
+use Sitecrawl\Models\ParseFile;
+use Sitecrawl\Models\ParseOptions;
+use Sitecrawl\Models\ScrapeOptions;
+use Sitecrawl\Models\SearchData;
+use Sitecrawl\Models\SearchOptions;
 use GuzzleHttp\ClientInterface;
 
-final class FirecrawlClient
+final class SitecrawlClient
 {
-    private const DEFAULT_API_URL = 'https://api.firecrawl.dev';
+    private const DEFAULT_API_URL = 'https://api.sitecrawl.dev';
     private const DEFAULT_TIMEOUT_SECONDS = 300;
     private const DEFAULT_MAX_RETRIES = 3;
     private const DEFAULT_BACKOFF_FACTOR = 0.5;
     private const DEFAULT_POLL_INTERVAL = 2;
     private const DEFAULT_JOB_TIMEOUT = 300;
 
-    private readonly FirecrawlHttpClient $http;
+    private readonly SitecrawlHttpClient $http;
 
-    private function __construct(FirecrawlHttpClient $http)
+    private function __construct(SitecrawlHttpClient $http)
     {
         $this->http = $http;
     }
@@ -54,7 +54,7 @@ final class FirecrawlClient
     /**
      * Create a client with named parameters.
      *
-     * Uses FIRECRAWL_API_KEY and FIRECRAWL_API_URL environment variables as fallbacks.
+     * Uses SITECRAWL_API_KEY and SITECRAWL_API_URL environment variables as fallbacks.
      */
     public static function create(
         ?string $apiKey = null,
@@ -67,17 +67,17 @@ final class FirecrawlClient
         // An empty key is allowed: scrape, search, and interact fall back to the
         // keyless free tier (rate-limited per IP). Other methods return 401 from
         // the API until a key is provided.
-        $resolvedKey = trim($apiKey ?: (getenv('FIRECRAWL_API_KEY') ?: ''));
+        $resolvedKey = trim($apiKey ?: (getenv('SITECRAWL_API_KEY') ?: ''));
 
-        $resolvedUrl = $apiUrl ?: (getenv('FIRECRAWL_API_URL') ?: self::DEFAULT_API_URL);
+        $resolvedUrl = $apiUrl ?: (getenv('SITECRAWL_API_URL') ?: self::DEFAULT_API_URL);
 
         if (!preg_match('#^https?://#i', $resolvedUrl)) {
-            throw new FirecrawlException(
-                'API URL must be a fully qualified URL including scheme (e.g. https://api.firecrawl.dev).',
+            throw new SitecrawlException(
+                'API URL must be a fully qualified URL including scheme (e.g. https://api.sitecrawl.dev).',
             );
         }
 
-        $http = new FirecrawlHttpClient(
+        $http = new SitecrawlHttpClient(
             $resolvedKey,
             $resolvedUrl,
             $timeoutSeconds,
@@ -90,7 +90,7 @@ final class FirecrawlClient
     }
 
     /**
-     * Create a client from the FIRECRAWL_API_KEY environment variable.
+     * Create a client from the SITECRAWL_API_KEY environment variable.
      */
     public static function fromEnv(): self
     {
@@ -606,7 +606,7 @@ final class FirecrawlClient
         $start = $this->startAgent($options);
 
         if ($start->getId() === null) {
-            throw new FirecrawlException('Agent start did not return a job ID');
+            throw new SitecrawlException('Agent start did not return a job ID');
         }
 
         $this->ensureValidPollInterval($pollIntervalSec);
@@ -737,7 +737,7 @@ final class FirecrawlClient
     private function ensureValidPollInterval(int $pollIntervalSec): void
     {
         if ($pollIntervalSec < 1) {
-            throw new FirecrawlException('Poll interval must be at least 1 second, got ' . $pollIntervalSec);
+            throw new SitecrawlException('Poll interval must be at least 1 second, got ' . $pollIntervalSec);
         }
     }
 
@@ -759,7 +759,7 @@ final class FirecrawlClient
         if (($response['success'] ?? null) === false) {
             $error = $response['error'] ?? null;
 
-            throw new FirecrawlException(is_string($error) && $error !== ''
+            throw new SitecrawlException(is_string($error) && $error !== ''
                 ? $error
                 : 'The API reported the request as unsuccessful.');
         }
@@ -806,7 +806,7 @@ final class FirecrawlClient
         int $timeoutSec,
     ): CrawlJob {
         if ($jobId === null) {
-            throw new FirecrawlException('Crawl start did not return a job ID');
+            throw new SitecrawlException('Crawl start did not return a job ID');
         }
 
         $this->ensureValidPollInterval($pollIntervalSec);
@@ -829,7 +829,7 @@ final class FirecrawlClient
         int $timeoutSec,
     ): BatchScrapeJob {
         if ($jobId === null) {
-            throw new FirecrawlException('Batch scrape start did not return a job ID');
+            throw new SitecrawlException('Batch scrape start did not return a job ID');
         }
 
         $this->ensureValidPollInterval($pollIntervalSec);
@@ -871,7 +871,7 @@ final class FirecrawlClient
             strcasecmp($baseHost, $nextHost) !== 0 ||
             $basePort !== $nextPort
         ) {
-            throw new FirecrawlException(
+            throw new SitecrawlException(
                 'Pagination URL origin does not match the API base URL. Refusing to follow: ' . $url,
             );
         }

@@ -2,22 +2,22 @@
 
 declare(strict_types=1);
 
-namespace Firecrawl\Laravel\Tools;
+namespace Sitecrawl\Laravel\Tools;
 
-use Firecrawl\Models\ScrapeOptions;
+use Sitecrawl\Models\ScrapeOptions;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Ai\Tools\Request;
 
-class FirecrawlScrape extends FirecrawlTool
+class SitecrawlScrape extends SitecrawlTool
 {
     public function name(): string
     {
-        return 'firecrawl_scrape';
+        return 'sitecrawl_scrape';
     }
 
     public function description(): string
     {
-        return 'Scrape a single web page with Firecrawl and return its content as clean markdown. '
+        return 'Scrape a single web page with Sitecrawl and return its content as clean markdown. '
             . 'Use this when you already know the URL of the page you need to read. '
             . 'Handles JavaScript-rendered pages, PDFs, and pages behind anti-bot protection.';
     }

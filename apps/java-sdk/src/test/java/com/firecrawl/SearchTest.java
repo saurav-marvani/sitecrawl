@@ -1,7 +1,7 @@
-package com.firecrawl;
+package com.sitecrawl;
 
-import com.firecrawl.client.FirecrawlClient;
-import com.firecrawl.models.*;
+import com.sitecrawl.client.SitecrawlClient;
+import com.sitecrawl.models.*;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
@@ -15,28 +15,28 @@ import static org.junit.jupiter.api.Assertions.*;
  * Comprehensive Search Tests
  * 
  * Tests the search functionality with various configurations.
- * Based on Node.js SDK patterns and tested against live firecrawl.dev.
+ * Based on Node.js SDK patterns and tested against live sitecrawl.dev.
  * 
- * Run with: FIRECRAWL_API_KEY=fc-xxx gradle test --tests "com.firecrawl.SearchTest"
+ * Run with: SITECRAWL_API_KEY=fc-xxx gradle test --tests "com.sitecrawl.SearchTest"
  */
 class SearchTest {
 
-    private static FirecrawlClient client;
+    private static SitecrawlClient client;
 
     @BeforeAll
     static void setup() {
-        String apiKey = System.getenv("FIRECRAWL_API_KEY");
+        String apiKey = System.getenv("SITECRAWL_API_KEY");
         if (apiKey != null && !apiKey.isBlank()) {
-            client = FirecrawlClient.fromEnv();
+            client = SitecrawlClient.fromEnv();
         }
     }
 
     @Test
-    @EnabledIfEnvironmentVariable(named = "FIRECRAWL_API_KEY", matches = ".*\\S.*")
+    @EnabledIfEnvironmentVariable(named = "SITECRAWL_API_KEY", matches = ".*\\S.*")
     void testSearchMinimal() {
         System.out.println("\n=== Test: Search - Minimal Request ===");
         
-        SearchData results = client.search("What is Firecrawl?");
+        SearchData results = client.search("What is Sitecrawl?");
 
         assertNotNull(results, "Search results should not be null");
         assertNotNull(results.getWeb(), "Web results should not be null");
@@ -57,7 +57,7 @@ class SearchTest {
     }
 
     @Test
-    @EnabledIfEnvironmentVariable(named = "FIRECRAWL_API_KEY", matches = ".*\\S.*")
+    @EnabledIfEnvironmentVariable(named = "SITECRAWL_API_KEY", matches = ".*\\S.*")
     void testSearchWithLimit() {
         System.out.println("\n=== Test: Search with Limit ===");
         
@@ -76,11 +76,11 @@ class SearchTest {
     }
 
     @Test
-    @EnabledIfEnvironmentVariable(named = "FIRECRAWL_API_KEY", matches = ".*\\S.*")
+    @EnabledIfEnvironmentVariable(named = "SITECRAWL_API_KEY", matches = ".*\\S.*")
     void testSearchWithMultipleSources() {
         System.out.println("\n=== Test: Search with Multiple Sources ===");
         
-        SearchData results = client.search("Firecrawl web scraping",
+        SearchData results = client.search("Sitecrawl web scraping",
                 SearchOptions.builder()
                         .sources(List.of("web", "news"))
                         .limit(3)
@@ -99,7 +99,7 @@ class SearchTest {
     }
 
     @Test
-    @EnabledIfEnvironmentVariable(named = "FIRECRAWL_API_KEY", matches = ".*\\S.*")
+    @EnabledIfEnvironmentVariable(named = "SITECRAWL_API_KEY", matches = ".*\\S.*")
     void testSearchResultStructure() {
         System.out.println("\n=== Test: Verify Search Result Structure ===");
         
@@ -136,7 +136,7 @@ class SearchTest {
     }
 
     @Test
-    @EnabledIfEnvironmentVariable(named = "FIRECRAWL_API_KEY", matches = ".*\\S.*")
+    @EnabledIfEnvironmentVariable(named = "SITECRAWL_API_KEY", matches = ".*\\S.*")
     void testSearchWithLocation() {
         System.out.println("\n=== Test: Search with Location ===");
         
@@ -154,7 +154,7 @@ class SearchTest {
     }
 
     @Test
-    @EnabledIfEnvironmentVariable(named = "FIRECRAWL_API_KEY", matches = ".*\\S.*")
+    @EnabledIfEnvironmentVariable(named = "SITECRAWL_API_KEY", matches = ".*\\S.*")
     void testSearchWithTimeFilter() {
         System.out.println("\n=== Test: Search with Time Filter ===");
         
@@ -172,11 +172,11 @@ class SearchTest {
     }
 
     @Test
-    @EnabledIfEnvironmentVariable(named = "FIRECRAWL_API_KEY", matches = ".*\\S.*")
+    @EnabledIfEnvironmentVariable(named = "SITECRAWL_API_KEY", matches = ".*\\S.*")
     void testSearchWithScrapeOptions() {
         System.out.println("\n=== Test: Search with Scrape Options ===");
         
-        SearchData results = client.search("Firecrawl documentation",
+        SearchData results = client.search("Sitecrawl documentation",
                 SearchOptions.builder()
                         .limit(2)
                         .scrapeOptions(ScrapeOptions.builder()
@@ -201,20 +201,20 @@ class SearchTest {
     }
 
     @Test
-    @EnabledIfEnvironmentVariable(named = "FIRECRAWL_API_KEY", matches = ".*\\S.*")
-    void testSearchFirecrawlSpecific() {
-        System.out.println("\n=== Test: Search for Firecrawl ===");
+    @EnabledIfEnvironmentVariable(named = "SITECRAWL_API_KEY", matches = ".*\\S.*")
+    void testSearchSitecrawlSpecific() {
+        System.out.println("\n=== Test: Search for Sitecrawl ===");
         
-        SearchData results = client.search("Firecrawl web scraping API",
+        SearchData results = client.search("Sitecrawl web scraping API",
                 SearchOptions.builder()
                         .limit(10)
                         .build());
 
         assertNotNull(results.getWeb(), "Web results should not be null");
-        assertFalse(results.getWeb().isEmpty(), "Should find Firecrawl results");
+        assertFalse(results.getWeb().isEmpty(), "Should find Sitecrawl results");
         
-        // Verify results contain Firecrawl-related content
-        boolean hasFirecrawlContent = results.getWeb().stream()
+        // Verify results contain Sitecrawl-related content
+        boolean hasSitecrawlContent = results.getWeb().stream()
                 .anyMatch(result -> {
                     String url = result.get("url").toString().toLowerCase();
                     String title = result.get("title") != null ?
@@ -222,16 +222,16 @@ class SearchTest {
                     String desc = result.get("description") != null ?
                             result.get("description").toString().toLowerCase() : "";
                     
-                    return url.contains("firecrawl") ||
-                           title.contains("firecrawl") ||
-                           desc.contains("firecrawl");
+                    return url.contains("sitecrawl") ||
+                           title.contains("sitecrawl") ||
+                           desc.contains("sitecrawl");
                 });
         
-        assertTrue(hasFirecrawlContent, "Results should mention Firecrawl");
+        assertTrue(hasSitecrawlContent, "Results should mention Sitecrawl");
         
-        System.out.println("✓ Firecrawl search completed");
+        System.out.println("✓ Sitecrawl search completed");
         System.out.println("  Total results: " + results.getWeb().size());
-        System.out.println("  Results mentioning Firecrawl: ✓");
+        System.out.println("  Results mentioning Sitecrawl: ✓");
         
         // Print sample results
         System.out.println("  Sample results:");
@@ -244,7 +244,7 @@ class SearchTest {
     }
 
     @Test
-    @EnabledIfEnvironmentVariable(named = "FIRECRAWL_API_KEY", matches = ".*\\S.*")
+    @EnabledIfEnvironmentVariable(named = "SITECRAWL_API_KEY", matches = ".*\\S.*")
     void testSearchComprehensive() {
         System.out.println("\n=== Test: Search with All Options ===");
         
@@ -278,7 +278,7 @@ class SearchTest {
     }
 
     @Test
-    @EnabledIfEnvironmentVariable(named = "FIRECRAWL_API_KEY", matches = ".*\\S.*")
+    @EnabledIfEnvironmentVariable(named = "SITECRAWL_API_KEY", matches = ".*\\S.*")
     void testSearchContentVerification() {
         System.out.println("\n=== Test: Search Content Verification ===");
         
@@ -309,7 +309,7 @@ class SearchTest {
     }
 
     @Test
-    @EnabledIfEnvironmentVariable(named = "FIRECRAWL_API_KEY", matches = ".*\\S.*")
+    @EnabledIfEnvironmentVariable(named = "SITECRAWL_API_KEY", matches = ".*\\S.*")
     void testSearchIgnoreInvalidURLs() {
         System.out.println("\n=== Test: Search with Ignore Invalid URLs ===");
         

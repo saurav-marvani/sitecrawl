@@ -1,8 +1,8 @@
 ---
-title: "Open Researcher, our AI Agent That Uses Firecrawl Tools During Research"
-description: "We built a research agent using Anthropic's interleaved thinking and Firecrawl. No orchestration needed."
+title: "Open Researcher, our AI Agent That Uses Sitecrawl Tools During Research"
+description: "We built a research agent using Anthropic's interleaved thinking and Sitecrawl. No orchestration needed."
 pubDate: "Jul 01, 2025"
-heroImage: "../../assets/blog/or_firecrawl.webp"
+heroImage: "../../assets/blog/or_sitecrawl.webp"
 category: "updates"
 ---
 
@@ -23,10 +23,10 @@ Anthropic released a feature where AI can insert thinking blocks between actions
 Here’s what it looks like in practice:
 
 ```
-Thinking Block #1: They're asking about the 3rd blog post on firecrawl.dev.
+Thinking Block #1: They're asking about the 3rd blog post on sitecrawl.dev.
 I need to find the blog listing first to count posts chronologically.
 
-Thinking Block #2: I should search for 'site:firecrawl.dev/blog' to get
+Thinking Block #2: I should search for 'site:sitecrawl.dev/blog' to get
 all blog posts. Then I can identify which one is third.
 
 Thinking Block #3: Actually, I might need to scrape the blog index page
@@ -40,7 +40,7 @@ The AI reasons through each step before taking action. No predefined workflow ne
 Open Researcher combines:
 
 - Anthropic’s interleaved thinking for reasoning
-- Firecrawl for web data extraction
+- Sitecrawl for web data extraction
 - Basic search capabilities
 
 That’s it. No complex orchestration layer. The AI decides which tools to use based on its reasoning.
@@ -71,7 +71,7 @@ Is it perfect? No. Sometimes it takes longer routes than necessary. Sometimes th
 
 Open Researcher is open source. The core logic is surprisingly simple - most of the complexity is handled by the AI’s reasoning.
 
-Clone it: [github.com/firecrawl/open-researcher](https://github.com/firecrawl/open-researcher)
+Clone it: [github.com/sitecrawl/open-researcher](https://github.com/sitecrawl/open-researcher)
 
 Try it on your own research problems. The thinking blocks make it easy to debug when something goes wrong. You can see exactly why it made each decision.
 

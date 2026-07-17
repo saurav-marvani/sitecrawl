@@ -17,7 +17,7 @@ describeIf(TEST_PRODUCTION)("V2 Scrape Default maxAge", () => {
     "should use default maxAge of 4 hours when not specified",
     async () => {
       const id = crypto.randomUUID();
-      const url = "https://firecrawl.dev/?testId=" + id;
+      const url = "https://sitecrawl.dev/?testId=" + id;
 
       // First scrape to populate cache
       const data1 = await scrape(
@@ -52,7 +52,7 @@ describeIf(TEST_PRODUCTION)("V2 Scrape Default maxAge", () => {
     "should respect explicitly set maxAge of 0",
     async () => {
       const id = crypto.randomUUID();
-      const url = "https://firecrawl.dev/?testId=" + id;
+      const url = "https://sitecrawl.dev/?testId=" + id;
 
       // First scrape to populate cache
       const data1 = await scrape(
@@ -87,7 +87,7 @@ describeIf(TEST_PRODUCTION)("V2 Scrape Default maxAge", () => {
     "should respect custom maxAge value",
     async () => {
       const id = crypto.randomUUID();
-      const url = "https://firecrawl.dev/?testId=" + id;
+      const url = "https://sitecrawl.dev/?testId=" + id;
 
       // First scrape to populate cache
       const data1 = await scrape(
@@ -124,7 +124,7 @@ describeIf(TEST_PRODUCTION)("V2 Scrape Default maxAge", () => {
     "should return error if cached data does not meet minAge requirement",
     async () => {
       const id = crypto.randomUUID();
-      const url = "https://firecrawl.dev/?testId=" + id;
+      const url = "https://sitecrawl.dev/?testId=" + id;
 
       // First scrape to populate cache
       const data1 = await scrape(
@@ -160,7 +160,7 @@ describeIf(TEST_PRODUCTION)("V2 Scrape Default maxAge", () => {
     "should return cached data if it meets minAge requirement",
     async () => {
       const id = crypto.randomUUID();
-      const url = "https://firecrawl.dev/?testId=" + id;
+      const url = "https://sitecrawl.dev/?testId=" + id;
 
       // First scrape to populate cache
       const data1 = await scrape(

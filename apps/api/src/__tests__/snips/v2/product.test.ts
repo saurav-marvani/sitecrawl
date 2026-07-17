@@ -45,7 +45,7 @@ describeIf(ALLOW_TEST_SUITE_WEBSITE && HAS_PRODUCT_SERVICE)(
         );
 
         expect(response.product).toBeDefined();
-        expect(response.product?.title).toBe("Firecrawl Test Widget");
+        expect(response.product?.title).toBe("Sitecrawl Test Widget");
         // Canonical shape: price/availability live on variants, not top-level.
         const variant = response.product?.variants?.[0];
         expect(variant).toBeDefined();

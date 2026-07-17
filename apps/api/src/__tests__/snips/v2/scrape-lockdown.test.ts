@@ -19,7 +19,7 @@ describeIf(TEST_PRODUCTION)("V2 Scrape Lockdown Mode", () => {
     "should hit cache with lockdown: true after a prior non-lockdown scrape seeded the index",
     async () => {
       const id = crypto.randomUUID();
-      const url = "https://firecrawl.dev/?testId=" + id;
+      const url = "https://sitecrawl.dev/?testId=" + id;
 
       // Seed the cache with a normal scrape
       const seed = await scrape(
@@ -56,7 +56,7 @@ describeIf(TEST_PRODUCTION)("V2 Scrape Lockdown Mode", () => {
     "should return SCRAPE_LOCKDOWN_CACHE_MISS when nothing is cached",
     async () => {
       const id = crypto.randomUUID();
-      const url = "https://firecrawl.dev/?lockdownMiss=" + id;
+      const url = "https://sitecrawl.dev/?lockdownMiss=" + id;
 
       const response = await scrapeRaw(
         {
@@ -77,7 +77,7 @@ describeIf(TEST_PRODUCTION)("V2 Scrape Lockdown Mode", () => {
     "should treat lockdown as ZDR — no URL in DB, no GCS blob",
     async () => {
       const id = crypto.randomUUID();
-      const url = "https://firecrawl.dev/?lockdownZdr=" + id;
+      const url = "https://sitecrawl.dev/?lockdownZdr=" + id;
 
       const seed = await scrape({ url }, identity);
       expect(seed).toBeDefined();
@@ -102,7 +102,7 @@ describeIf(TEST_PRODUCTION)("V2 Scrape Lockdown Mode", () => {
     "should serve cache and skip media fetch even when audio and video formats are requested",
     async () => {
       const id = crypto.randomUUID();
-      const url = "https://firecrawl.dev/?testMediaGate=" + id;
+      const url = "https://sitecrawl.dev/?testMediaGate=" + id;
 
       const seed = await scrape({ url }, identity);
       expect(seed).toBeDefined();
@@ -111,7 +111,7 @@ describeIf(TEST_PRODUCTION)("V2 Scrape Lockdown Mode", () => {
       await new Promise(resolve => setTimeout(resolve, 20000));
 
       // Without the lockdown media gate this would either throw an unsupported
-      // media URL error (firecrawl.dev is not an avgrab source) or
+      // media URL error (sitecrawl.dev is not an avgrab source) or
       // POST to AVGRAB_SERVICE_URL with the target URL. Success here implies
       // the gate short-circuited before any outbound call.
       const data = await scrape(

@@ -2,9 +2,9 @@
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: {{ include "firecrawl.fullname" . }}-nuq-postgres-pvc
+  name: {{ include "sitecrawl.fullname" . }}-nuq-postgres-pvc
   labels:
-    app: {{ include "firecrawl.name" . }}-nuq-postgres
+    app: {{ include "sitecrawl.name" . }}-nuq-postgres
 spec:
   accessModes:
     - ReadWriteOnce

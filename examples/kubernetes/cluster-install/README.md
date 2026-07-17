@@ -1,4 +1,4 @@
-# Install Firecrawl on a Kubernetes Cluster (Simple Version)
+# Install Sitecrawl on a Kubernetes Cluster (Simple Version)
 # Before installing
 1. Set [secret.yaml](secret.yaml) and [configmap.yaml](configmap.yaml) and do not check in secrets
    - **Note**: If `REDIS_PASSWORD` is configured in the secret, please modify the ConfigMap to reflect the following format for `REDIS_URL` and `REDIS_RATE_LIMIT_URL`:
@@ -26,7 +26,7 @@ kubectl apply -f redis.yaml
 kubectl port-forward svc/api 3002:3002 -n dev
 ```
 
-# Delete Firecrawl
+# Delete Sitecrawl
 ```bash
 kubectl delete -f configmap.yaml
 kubectl delete -f secret.yaml

@@ -2,22 +2,22 @@
 
 declare(strict_types=1);
 
-namespace Firecrawl\Laravel\Tools;
+namespace Sitecrawl\Laravel\Tools;
 
-use Firecrawl\Models\MapOptions;
+use Sitecrawl\Models\MapOptions;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Ai\Tools\Request;
 
-class FirecrawlMap extends FirecrawlTool
+class SitecrawlMap extends SitecrawlTool
 {
     public function name(): string
     {
-        return 'firecrawl_map';
+        return 'sitecrawl_map';
     }
 
     public function description(): string
     {
-        return 'Map a website with Firecrawl to discover the URLs it contains, returned as a JSON '
+        return 'Map a website with Sitecrawl to discover the URLs it contains, returned as a JSON '
             . 'array of {url, title} objects. Use this to find pages on a specific site, optionally '
             . 'filtered by a search term, before scraping or crawling them.';
     }

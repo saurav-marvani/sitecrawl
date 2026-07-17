@@ -1,18 +1,18 @@
 {
   "openapi": "3.0.0",
   "info": {
-    "title": "Firecrawl API",
+    "title": "Sitecrawl API",
     "version": "v1",
-    "description": "API for interacting with Firecrawl services to perform web scraping and crawling tasks.",
+    "description": "API for interacting with Sitecrawl services to perform web scraping and crawling tasks.",
     "contact": {
-      "name": "Firecrawl Support",
-      "url": "https://firecrawl.dev/support",
-      "email": "support@firecrawl.dev"
+      "name": "Sitecrawl Support",
+      "url": "https://sitecrawl.dev/support",
+      "email": "support@sitecrawl.dev"
     }
   },
   "servers": [
     {
-      "url": "https://api.firecrawl.dev/v1"
+      "url": "https://api.sitecrawl.dev/v1"
     }
   ],
   "paths": {
@@ -737,14 +737,14 @@
                     "items": {
                       "type": "string"
                     },
-                    "description": "URL pathname regex patterns that exclude matching URLs from the crawl. For example, if you set \"excludePaths\": [\"blog/.*\"] for the base URL firecrawl.dev, any results matching that pattern will be excluded, such as https://www.firecrawl.dev/blog/firecrawl-launch-week-1-recap."
+                    "description": "URL pathname regex patterns that exclude matching URLs from the crawl. For example, if you set \"excludePaths\": [\"blog/.*\"] for the base URL sitecrawl.dev, any results matching that pattern will be excluded, such as https://www.sitecrawl.dev/blog/sitecrawl-launch-week-1-recap."
                   },
                   "includePaths": {
                     "type": "array",
                     "items": {
                       "type": "string"
                     },
-                    "description": "URL pathname regex patterns that include matching URLs in the crawl. Only the paths that match the specified patterns will be included in the response. For example, if you set \"includePaths\": [\"blog/.*\"] for the base URL firecrawl.dev, only results matching that pattern will be included, such as https://www.firecrawl.dev/blog/firecrawl-launch-week-1-recap."
+                    "description": "URL pathname regex patterns that include matching URLs in the crawl. Only the paths that match the specified patterns will be included in the response. For example, if you set \"includePaths\": [\"blog/.*\"] for the base URL sitecrawl.dev, only results matching that pattern will be included, such as https://www.sitecrawl.dev/blog/sitecrawl-launch-week-1-recap."
                   },
                   "maxDepth": {
                     "type": "integer",
@@ -1745,7 +1745,7 @@
                   },
                   "ignoreInvalidURLs": {
                     "type": "boolean",
-                    "description": "Excludes URLs from the search results that are invalid for other Firecrawl endpoints. This helps reduce errors if you are piping data from search into other Firecrawl API endpoints.",
+                    "description": "Excludes URLs from the search results that are invalid for other Sitecrawl endpoints. This helps reduce errors if you are piping data from search into other Sitecrawl API endpoints.",
                     "default": false
                   },
                   "scrapeOptions": {
@@ -2367,7 +2367,7 @@
           "proxy": {
             "type": "string",
             "enum": ["basic", "enhanced", "auto"],
-            "description": "Specifies the type of proxy to use.\n\n - **basic**: Proxies for scraping sites with none to basic anti-bot solutions. Fast and usually works.\n - **enhanced**: Enhanced proxies for scraping sites with advanced anti-bot solutions. Slower, but more reliable on certain sites. Costs up to 5 credits per request.\n - **auto**: Firecrawl will automatically retry scraping with enhanced proxies if the basic proxy fails. If the retry with enhanced is successful, 5 credits will be billed for the scrape. If the first attempt with basic is successful, only the regular cost will be billed.\n\nIf you do not specify a proxy, Firecrawl will default to basic."
+            "description": "Specifies the type of proxy to use.\n\n - **basic**: Proxies for scraping sites with none to basic anti-bot solutions. Fast and usually works.\n - **enhanced**: Enhanced proxies for scraping sites with advanced anti-bot solutions. Slower, but more reliable on certain sites. Costs up to 5 credits per request.\n - **auto**: Sitecrawl will automatically retry scraping with enhanced proxies if the basic proxy fails. If the retry with enhanced is successful, 5 credits will be billed for the scrape. If the first attempt with basic is successful, only the regular cost will be billed.\n\nIf you do not specify a proxy, Sitecrawl will default to basic."
           },
           "changeTrackingOptions": {
             "type": "object",
@@ -2399,7 +2399,7 @@
           },
           "storeInCache": {
             "type": "boolean",
-            "description": "If true, the page will be stored in the Firecrawl index and cache. Setting this to false is useful if your scraping activity may have data protection concerns. Using some parameters associated with sensitive scraping (actions, headers) will force this parameter to be false.",
+            "description": "If true, the page will be stored in the Sitecrawl index and cache. Setting this to false is useful if your scraping activity may have data protection concerns. Using some parameters associated with sensitive scraping (actions, headers) will force this parameter to be false.",
             "default": true
           }
         }

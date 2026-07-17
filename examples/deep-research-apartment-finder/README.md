@@ -1,6 +1,6 @@
 # Apartment Finder CLI
 
-A command-line tool that uses Firecrawl's Deep Research API and Anthropic's Claude 3.7 to find and analyze apartment listings based on your preferences.
+A command-line tool that uses Sitecrawl's Deep Research API and Anthropic's Claude 3.7 to find and analyze apartment listings based on your preferences.
 
 ## Features
 
@@ -28,7 +28,7 @@ A command-line tool that uses Firecrawl's Deep Research API and Anthropic's Clau
 
 3. Set up API keys:
    - Copy `.env.example` to `.env`
-   - Fill in your Firecrawl API key from [firecrawl.dev](https://firecrawl.dev)
+   - Fill in your Sitecrawl API key from [sitecrawl.dev](https://sitecrawl.dev)
    - Fill in your Anthropic API key from [console.anthropic.com](https://console.anthropic.com)
 
 ## Usage
@@ -52,4 +52,4 @@ After searching and analyzing, the tool will display the top apartment options a
 
 - The search process may take a few minutes due to the deep research API.
 - Results will vary based on available apartment listings at the time of search.
-- API usage may incur costs depending on your Firecrawl and Anthropic subscription plans.
+- API usage may incur costs depending on your Sitecrawl and Anthropic subscription plans.

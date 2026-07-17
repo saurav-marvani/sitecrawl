@@ -1,10 +1,10 @@
-//! Map endpoint for Firecrawl API v2.
+//! Map endpoint for Sitecrawl API v2.
 
 use serde::{Deserialize, Serialize};
 
 use crate::client::Client;
 use crate::types::{LocationConfig, SearchResultWeb, SitemapMode};
-use crate::FirecrawlError;
+use crate::SitecrawlError;
 
 /// Options for mapping a URL.
 #[serde_with::skip_serializing_none]
@@ -75,7 +75,7 @@ impl Client {
     /// # Example
     ///
     /// ```no_run
-    /// use firecrawl::{Client, MapOptions, SitemapMode};
+    /// use sitecrawl::{Client, MapOptions, SitemapMode};
     ///
     /// #[tokio::main]
     /// async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -105,7 +105,7 @@ impl Client {
         &self,
         url: impl AsRef<str>,
         options: impl Into<Option<MapOptions>>,
-    ) -> Result<MapResponse, FirecrawlError> {
+    ) -> Result<MapResponse, SitecrawlError> {
         let body = MapRequest {
             url: url.as_ref().to_string(),
             options: options.into().unwrap_or_default(),
@@ -120,7 +120,7 @@ impl Client {
             .json(&body)
             .send()
             .await
-            .map_err(|e| FirecrawlError::HttpError(format!("Mapping {:?}", url.as_ref()), e))?;
+            .map_err(|e| SitecrawlError::HttpError(format!("Mapping {:?}", url.as_ref()), e))?;
 
         self.handle_response(response, "map").await
     }
@@ -141,7 +141,7 @@ impl Client {
     /// # Example
     ///
     /// ```no_run
-    /// use firecrawl::Client;
+    /// use sitecrawl::Client;
     ///
     /// #[tokio::main]
     /// async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -159,7 +159,7 @@ impl Client {
         &self,
         url: impl AsRef<str>,
         options: impl Into<Option<MapOptions>>,
-    ) -> Result<Vec<String>, FirecrawlError> {
+    ) -> Result<Vec<String>, SitecrawlError> {
         let response = self.map(url, options).await?;
         Ok(response.links.into_iter().map(|link| link.url).collect())
     }

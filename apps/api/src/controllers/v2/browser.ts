@@ -199,7 +199,7 @@ export async function browserCreateController(
   //   return res.status(403).json({
   //     success: false,
   //     error:
-  //       "Browser is currently in beta. Please contact support@firecrawl.com to request access.",
+  //       "Browser is currently in beta. Please contact support@sitecrawl.com to request access.",
   //   });
   // }
 
@@ -251,7 +251,7 @@ export async function browserCreateController(
     });
     return res.status(402).json({
       success: false,
-      error: `Insufficient credits for a ${ttl}s browser session (requires ~${estimatedCredits} credits). For more credits, you can upgrade your plan at https://firecrawl.dev/pricing.`,
+      error: `Insufficient credits for a ${ttl}s browser session (requires ~${estimatedCredits} credits). For more credits, you can upgrade your plan at https://sitecrawl.dev/pricing.`,
     });
   }
 
@@ -416,7 +416,7 @@ export async function browserExecuteController(
   //   return res.status(403).json({
   //     success: false,
   //     error:
-  //       "Browser is currently in beta. Please contact support@firecrawl.com to request access.",
+  //       "Browser is currently in beta. Please contact support@sitecrawl.com to request access.",
   //   });
   // }
 
@@ -515,7 +515,7 @@ export async function browserDeleteController(
   //   return res.status(403).json({
   //     success: false,
   //     error:
-  //       "Browser is currently in beta. Please contact support@firecrawl.com to request access.",
+  //       "Browser is currently in beta. Please contact support@sitecrawl.com to request access.",
   //   });
   // }
 
@@ -637,7 +637,7 @@ export async function browserListController(
   //   return res.status(403).json({
   //     success: false,
   //     error:
-  //       "Browser is currently in beta. Please contact support@firecrawl.com to request access.",
+  //       "Browser is currently in beta. Please contact support@sitecrawl.com to request access.",
   //   });
   // }
 

@@ -130,7 +130,7 @@ export async function smartScrape({
         costTracking.addCall({
           type: "smartScrape",
           cost: (errorResponse as any).tokenUsage,
-          model: "firecrawl/smart-scrape",
+          model: "sitecrawl/smart-scrape",
           metadata: {
             module: "smartScrape",
             method: "smartScrape",
@@ -163,7 +163,7 @@ export async function smartScrape({
     costTracking.addCall({
       type: "smartScrape",
       cost: response.tokenUsage,
-      model: "firecrawl/smart-scrape",
+      model: "sitecrawl/smart-scrape",
       metadata: {
         module: "smartScrape",
         method: "smartScrape",
@@ -193,7 +193,7 @@ export async function smartScrape({
           costTracking.addCall({
             type: "smartScrape",
             cost: json.tokenUsage,
-            model: "firecrawl/smart-scrape",
+            model: "sitecrawl/smart-scrape",
             metadata: {
               module: "smartScrape",
               method: "smartScrape",

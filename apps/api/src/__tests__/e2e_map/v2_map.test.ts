@@ -12,7 +12,7 @@ describe("E2E Tests for Map V2 API Routes", () => {
         .set("Authorization", `Bearer ${config.TEST_API_KEY}`)
         .set("Content-Type", "application/json")
         .send({
-          url: "https://firecrawl-test-site.vercel.app",
+          url: "https://sitecrawl-test-site.vercel.app",
           limit: 10,
         });
 
@@ -48,7 +48,7 @@ describe("E2E Tests for Map V2 API Routes", () => {
         .set("Authorization", `Bearer ${config.TEST_API_KEY}`)
         .set("Content-Type", "application/json")
         .send({
-          url: "https://firecrawl.dev",
+          url: "https://sitecrawl.dev",
           sitemapOnly: true,
           limit: 10,
         });
@@ -69,7 +69,7 @@ describe("E2E Tests for Map V2 API Routes", () => {
         .set("Authorization", `Bearer ${config.TEST_API_KEY}`)
         .set("Content-Type", "application/json")
         .send({
-          url: "https://firecrawl.dev",
+          url: "https://sitecrawl.dev",
           ignoreSitemap: true,
           limit: 10,
         });
@@ -89,7 +89,7 @@ describe("E2E Tests for Map V2 API Routes", () => {
         .set("Authorization", `Bearer ${config.TEST_API_KEY}`)
         .set("Content-Type", "application/json")
         .send({
-          url: "https://firecrawl.dev",
+          url: "https://sitecrawl.dev",
           search: "pricing",
           limit: 5,
         });
@@ -111,7 +111,7 @@ describe("E2E Tests for Map V2 API Routes", () => {
         .set("Authorization", `Bearer ${config.TEST_API_KEY}`)
         .set("Content-Type", "application/json")
         .send({
-          url: "https://firecrawl.dev",
+          url: "https://sitecrawl.dev",
           timeout: 1, // 1ms timeout
         });
 

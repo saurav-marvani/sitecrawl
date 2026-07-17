@@ -1,4 +1,4 @@
-//! Agent endpoint for Firecrawl API v2.
+//! Agent endpoint for Sitecrawl API v2.
 //!
 //! The Agent endpoint provides autonomous web browsing capabilities using AI
 //! to accomplish complex tasks that may require multiple page interactions.
@@ -8,7 +8,7 @@ use serde_json::Value;
 
 use crate::client::Client;
 use crate::types::{AgentModel, AgentWebhookConfig};
-use crate::FirecrawlError;
+use crate::SitecrawlError;
 
 /// Options for running an agent task.
 #[serde_with::skip_serializing_none]
@@ -111,7 +111,7 @@ impl Client {
     /// # Example
     ///
     /// ```no_run
-    /// use firecrawl::{Client, AgentOptions};
+    /// use sitecrawl::{Client, AgentOptions};
     ///
     /// #[tokio::main]
     /// async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -132,7 +132,7 @@ impl Client {
     pub async fn start_agent(
         &self,
         options: AgentOptions,
-    ) -> Result<AgentResponse, FirecrawlError> {
+    ) -> Result<AgentResponse, SitecrawlError> {
         let headers = self.prepare_headers(None);
 
         let response = self
@@ -142,7 +142,7 @@ impl Client {
             .json(&options)
             .send()
             .await
-            .map_err(|e| FirecrawlError::HttpError("Starting agent task".to_string(), e))?;
+            .map_err(|e| SitecrawlError::HttpError("Starting agent task".to_string(), e))?;
 
         self.handle_response(response, "start agent").await
     }
@@ -160,7 +160,7 @@ impl Client {
     /// # Example
     ///
     /// ```no_run
-    /// use firecrawl::Client;
+    /// use sitecrawl::Client;
     ///
     /// #[tokio::main]
     /// async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -179,7 +179,7 @@ impl Client {
     pub async fn get_agent_status(
         &self,
         id: impl AsRef<str>,
-    ) -> Result<AgentStatusResponse, FirecrawlError> {
+    ) -> Result<AgentStatusResponse, SitecrawlError> {
         let response = self
             .client
             .get(self.url(&format!("/agent/{}", id.as_ref())))
@@ -187,7 +187,7 @@ impl Client {
             .send()
             .await
             .map_err(|e| {
-                FirecrawlError::HttpError(format!("Getting agent status {}", id.as_ref()), e)
+                SitecrawlError::HttpError(format!("Getting agent status {}", id.as_ref()), e)
             })?;
 
         self.handle_response(response, format!("agent status {}", id.as_ref()))
@@ -209,7 +209,7 @@ impl Client {
     /// # Example
     ///
     /// ```no_run
-    /// use firecrawl::{Client, AgentOptions, AgentModel};
+    /// use sitecrawl::{Client, AgentOptions, AgentModel};
     /// use serde_json::json;
     ///
     /// #[tokio::main]
@@ -253,7 +253,7 @@ impl Client {
     pub async fn agent(
         &self,
         options: AgentOptions,
-    ) -> Result<AgentStatusResponse, FirecrawlError> {
+    ) -> Result<AgentStatusResponse, SitecrawlError> {
         let poll_interval = options.poll_interval.unwrap_or(2000);
         let timeout = options.timeout;
 
@@ -268,7 +268,7 @@ impl Client {
         id: &str,
         poll_interval: u64,
         timeout: Option<u64>,
-    ) -> Result<AgentStatusResponse, FirecrawlError> {
+    ) -> Result<AgentStatusResponse, SitecrawlError> {
         let start = std::time::Instant::now();
 
         loop {
@@ -305,7 +305,7 @@ impl Client {
     /// # Example
     ///
     /// ```no_run
-    /// use firecrawl::Client;
+    /// use sitecrawl::Client;
     ///
     /// #[tokio::main]
     /// async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -317,7 +317,7 @@ impl Client {
     ///     Ok(())
     /// }
     /// ```
-    pub async fn cancel_agent(&self, id: impl AsRef<str>) -> Result<bool, FirecrawlError> {
+    pub async fn cancel_agent(&self, id: impl AsRef<str>) -> Result<bool, SitecrawlError> {
         let response = self
             .client
             .delete(self.url(&format!("/agent/{}", id.as_ref())))
@@ -325,7 +325,7 @@ impl Client {
             .send()
             .await
             .map_err(|e| {
-                FirecrawlError::HttpError(format!("Cancelling agent {}", id.as_ref()), e)
+                SitecrawlError::HttpError(format!("Cancelling agent {}", id.as_ref()), e)
             })?;
 
         #[derive(Deserialize)]
@@ -358,7 +358,7 @@ impl Client {
     /// # Example
     ///
     /// ```no_run
-    /// use firecrawl::Client;
+    /// use sitecrawl::Client;
     /// use serde::Deserialize;
     /// use serde_json::json;
     ///
@@ -401,7 +401,7 @@ impl Client {
         urls: Vec<String>,
         prompt: impl AsRef<str>,
         schema: Value,
-    ) -> Result<Option<T>, FirecrawlError> {
+    ) -> Result<Option<T>, SitecrawlError> {
         let options = AgentOptions {
             urls: Some(urls),
             prompt: prompt.as_ref().to_string(),
@@ -418,7 +418,7 @@ impl Client {
         match result.data {
             Some(data) => {
                 let typed: T =
-                    serde_json::from_value(data).map_err(FirecrawlError::ResponseParseError)?;
+                    serde_json::from_value(data).map_err(SitecrawlError::ResponseParseError)?;
                 Ok(Some(typed))
             }
             None => Ok(None),

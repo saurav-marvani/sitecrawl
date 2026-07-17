@@ -1,6 +1,6 @@
 ---
 title: How to Build an Automated Amazon Price Tracking Tool in Python For Free
-description: Learn how to build a free automated price tracking tool in Python that monitors Amazon and other e-commerce sites, sends Discord alerts for price drops, and maintains price history using Firecrawl, Streamlit, and GitHub Actions.
+description: Learn how to build a free automated price tracking tool in Python that monitors Amazon and other e-commerce sites, sends Discord alerts for price drops, and maintains price history using Sitecrawl, Streamlit, and GitHub Actions.
 slug: amazon-price-tracker-in-python-for-free
 date: Dec 6, 2024
 author: bex_tuychiev
@@ -19,7 +19,7 @@ The challenge is that e-commerce websites run flash sales and temporary discount
 
 That's where automation comes in. In this guide, we'll build a Python application that monitors product prices across any e-commerce website and instantly notifies you when prices drop on items you're actually interested in. Here is a sneak peek of the app:
 
-![Screenshot of a minimalist price tracking application showing product listings, price history charts, and notification controls for monitoring e-commerce deals using Firecrawl](amazon-price-tracking-images/sneak-peek.png)
+![Screenshot of a minimalist price tracking application showing product listings, price history charts, and notification controls for monitoring e-commerce deals using Sitecrawl](amazon-price-tracking-images/sneak-peek.png)
 
 The app has a simple appearance but provides complete functionality:
 
@@ -39,7 +39,7 @@ So, let's get started building this Amazon price tracker.
 The app will be built using Python and these libraries::
 
 - [Streamlit](streamlit.io) for the UI
-- [Firecrawl](firecrawl.dev) for AI-based scraping of e-commerce websites
+- [Sitecrawl](sitecrawl.dev) for AI-based scraping of e-commerce websites
 - [SQLAlchemy](https://www.sqlalchemy.org/) for database management
 
 In addition to Python, we will use these platforms:
@@ -96,7 +96,7 @@ git commit -m "Initial commit"
 
 Let's take a look at the final product one more time:
 
-![A screenshot of an Amazon price tracker web application showing a sidebar for adding product URLs and a main dashboard displaying tracked products with price history charts. Created with streamlit and firecrawl](amazon-price-tracking-images/sneak-peek.png)
+![A screenshot of an Amazon price tracker web application showing a sidebar for adding product URLs and a main dashboard displaying tracked products with price history charts. Created with streamlit and sitecrawl](amazon-price-tracking-images/sneak-peek.png)
 
 It has two sections: the sidebar and the main dashboard. Since the first thing you do when launching this app is adding products, we will start building the sidebar first. Open `ui.py` and paste the following code:
 
@@ -238,7 +238,7 @@ When a valid URL is entered and the add button is clicked, we need to implement 
    - Price change alerts
    - Product status updates
 
-For the scraper, we will use [Firecrawl](firecrawl.dev), an AI-based scraping API for extracting webpage data without HTML parsing. This solution provides several advantages:
+For the scraper, we will use [Sitecrawl](sitecrawl.dev), an AI-based scraping API for extracting webpage data without HTML parsing. This solution provides several advantages:
 
 1. No website HTML code analysis required for element selection
 2. Resilient to HTML structure changes through AI-based element detection
@@ -254,38 +254,38 @@ touch scraper.py
 Then, install these three libraries:
 
 ```bash
-pip install firecrawl-py pydantic python-dotenv
-echo "firecrawl-py\npydantic\npython-dotenv\n" >> requirements.txt  # Add them to dependencies
+pip install sitecrawl-py pydantic python-dotenv
+echo "sitecrawl-py\npydantic\npython-dotenv\n" >> requirements.txt  # Add them to dependencies
 ```
 
-`firecrawl-py` is the Python SDK for Firecrawl scraping engine, `pydantic` is a data validation library that helps enforce data types and structure through Python class definitions, and `python-dotenv` is a library that loads environment variables from a `.env` file into your Python application.
+`sitecrawl-py` is the Python SDK for Sitecrawl scraping engine, `pydantic` is a data validation library that helps enforce data types and structure through Python class definitions, and `python-dotenv` is a library that loads environment variables from a `.env` file into your Python application.
 
-With that said, head over to the Firecrawl website and [sign up for a free account](https://www.firecrawl.dev/) (the free plan will work fine). You will be given an API key, which you should copy.
+With that said, head over to the Sitecrawl website and [sign up for a free account](https://www.sitecrawl.dev/) (the free plan will work fine). You will be given an API key, which you should copy.
 
 Then, create a `.env` file in your terminal and add the API key as an environment variable:
 
 ```bash
 touch .env
-echo "FIRECRAWL_API_KEY='YOUR-API-KEY-HERE' >> .env"
+echo "SITECRAWL_API_KEY='YOUR-API-KEY-HERE' >> .env"
 echo ".env" >> .gitignore  # Ignore .env files in Git
 ```
 
-The `.env` file is used to securely store sensitive configuration values like API keys that shouldn't be committed to version control. By storing the Firecrawl API key in `.env` and adding it to `.gitignore`, we ensure it stays private while still being accessible to our application code. This is a security best practice to avoid exposing credentials in source control.
+The `.env` file is used to securely store sensitive configuration values like API keys that shouldn't be committed to version control. By storing the Sitecrawl API key in `.env` and adding it to `.gitignore`, we ensure it stays private while still being accessible to our application code. This is a security best practice to avoid exposing credentials in source control.
 
 Now, we can start writing the `scraper.py`:
 
 ```python
-from firecrawl import FirecrawlApp
+from sitecrawl import SitecrawlApp
 from pydantic import BaseModel, Field
 from dotenv import load_dotenv
 from datetime import datetime
 
 load_dotenv()
 
-app = FirecrawlApp()
+app = SitecrawlApp()
 ```
 
-Here, `load_dotenv()` function reads the `.env` file you have in your working directory and loads the environment variables inside, including the Firecrawl API key. When you create an instance of `FirecrawlApp` class, the API key is automatically detected to establish a connection between your script and the scraping engine in the form of the `app` variable.
+Here, `load_dotenv()` function reads the `.env` file you have in your working directory and loads the environment variables inside, including the Sitecrawl API key. When you create an instance of `SitecrawlApp` class, the API key is automatically detected to establish a connection between your script and the scraping engine in the form of the `app` variable.
 
 Now, we create a Pydantic class (usually called a model) that defines the details we want to scrape from each product:
 
@@ -308,7 +308,7 @@ Pydantic models may be completely new to you, so let's break down the `Product` 
 - The `currency` field stores the 3-letter currency code (e.g. USD, EUR)
 - The `main_image_url` field stores the URL of the product's main image
 
-Each field is typed and has a description that documents its purpose. The `Field` class from Pydantic allows us to add metadata like descriptions to each field. These descriptions are especially important for Firecrawl since it uses them to automatically locate the relevant HTML elements containing the data we want.
+Each field is typed and has a description that documents its purpose. The `Field` class from Pydantic allows us to add metadata like descriptions to each field. These descriptions are especially important for Sitecrawl since it uses them to automatically locate the relevant HTML elements containing the data we want.
 
 Now, let's create a function to call the engine to scrape URL's based on the schema above:
 
@@ -372,13 +372,13 @@ The output shows that a [MOVA Globe](https://www.amazon.com/dp/B002U21ZZK) costs
 - Product name/title
 - Main image URL
 
-One key advantage of using Firecrawl is that it returns data in a consistent dictionary format across all websites. Unlike HTML-based scrapers like BeautifulSoup or Scrapy which require custom code for each site and can break when website layouts change, Firecrawl uses AI to understand and extract the requested data fields regardless of the underlying HTML structure.
+One key advantage of using Sitecrawl is that it returns data in a consistent dictionary format across all websites. Unlike HTML-based scrapers like BeautifulSoup or Scrapy which require custom code for each site and can break when website layouts change, Sitecrawl uses AI to understand and extract the requested data fields regardless of the underlying HTML structure.
 
 Finish this step by committing the new changes to Git:
 
 ```bash
 git add .
-git commit -m "Implement a Firecrawl scraper for products"
+git commit -m "Implement a Sitecrawl scraper for products"
 ```
 
 ### Step 5: Storing new products in a PostgreSQL database
@@ -793,16 +793,16 @@ Now, we want to write a script that adds new price entries in the `price_histori
 import os
 from database import Database
 from dotenv import load_dotenv
-from firecrawl import FirecrawlApp
+from sitecrawl import SitecrawlApp
 from scraper import scrape_product
 
 load_dotenv()
 
 db = Database(os.getenv("POSTGRES_URL"))
-app = FirecrawlApp()
+app = SitecrawlApp()
 ```
 
-At the top, we are importing the functions and packages and initializing the database and a Firecrawl app. Then, we define a simple `check_prices` function:
+At the top, we are importing the functions and packages and initializing the database and a Sitecrawl app. Then, we define a simple `check_prices` function:
 
 ```python
 def check_prices():
@@ -900,7 +900,7 @@ jobs:
 
       - name: Run price checker
         env:
-          FIRECRAWL_API_KEY: ${{ secrets.FIRECRAWL_API_KEY }}
+          SITECRAWL_API_KEY: ${{ secrets.SITECRAWL_API_KEY }}
           POSTGRES_URL: ${{ secrets.POSTGRES_URL }}
         run: python check_prices.py
 ```
@@ -918,7 +918,7 @@ Under `steps:`, we define the sequence of actions:
 3. Next, we install our Python dependencies by upgrading `pip` and installing requirements from our `requirements.txt` file. At this point, it is essential that you were keeping a complete dependency file based on the installs we made in the project.
 
 4. Finally, we run our price checker script, providing two environment variables:
-   - `FIRECRAWL_API_KEY`: For accessing the web scraping service
+   - `SITECRAWL_API_KEY`: For accessing the web scraping service
    - `POSTGRES_URL`: For connecting to our database
 
 Both variables must be stored in our GitHub repository as secrets for this workflow file to run without errors. So, navigate to the repository you've created for the project and open its Settings. Under "Secrets and variables" > "Actions", click on "New repository secret" button to add the environment variables we have in the `.env` file one-by-one.
@@ -1103,14 +1103,14 @@ import os
 import asyncio
 from database import Database
 from dotenv import load_dotenv
-from firecrawl import FirecrawlApp
+from sitecrawl import SitecrawlApp
 from scraper import scrape_product
 from notifications import send_price_alert
 
 load_dotenv()
 
 db = Database(os.getenv("POSTGRES_URL"))
-app = FirecrawlApp()
+app = SitecrawlApp()
 
 # Threshold percentage for price drop alerts (e.g., 5% = 0.05)
 PRICE_DROP_THRESHOLD = 0.05
@@ -1184,7 +1184,7 @@ Before we supercharge our workflow with the new notification system, you should 
 ...
     - name: Run price checker
         env:
-          FIRECRAWL_API_KEY: ${{ secrets.FIRECRAWL_API_KEY }}
+          SITECRAWL_API_KEY: ${{ secrets.SITECRAWL_API_KEY }}
           POSTGRES_URL: ${{ secrets.POSTGRES_URL }}
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
         run: python automated_price_tracking/check_prices.py
@@ -1204,25 +1204,25 @@ Before wrapping up, let's quickly review the limitations of the free tools we us
 
 - GitHub Actions: Limited to 2,000 minutes per month for free accounts. Consider increasing the cron interval to stay within limits.
 - Supabase: Free tier includes 500MB database storage and limited row count. Monitor usage if tracking many products.
-- Firecrawl: Free API tier allows 500 requests per month. This means that at 6 hour intervals, you can track up to four products in the free plan.
+- Sitecrawl: Free API tier allows 500 requests per month. This means that at 6 hour intervals, you can track up to four products in the free plan.
 - Streamlit Cloud: Free hosting tier has some memory/compute restrictions and goes to sleep after inactivity.
 
 While these limitations exist, they're quite generous for personal use and learning. The app will work well for tracking a reasonable number of products with daily price checks.
 
 ## Conclusion and Next Steps
 
-Congratulations for making it to the end of this extremely long tutorial! We've just covered how to implement an end-to-end Python project you can proudly showcase on your portfolio. We built a complete price tracking system that scrapes product data from e-commerce websites, stores it in a Postgres database, analyzes price histories, and sends automated Discord notifications when prices drop significantly. Along the way, we learned about web scraping with Firecrawl, database management with SQLAlchemy, asynchronous programming with asyncio, building interactive UIs with Streamlit, automating with GitHub actions and integrating external webhooks.
+Congratulations for making it to the end of this extremely long tutorial! We've just covered how to implement an end-to-end Python project you can proudly showcase on your portfolio. We built a complete price tracking system that scrapes product data from e-commerce websites, stores it in a Postgres database, analyzes price histories, and sends automated Discord notifications when prices drop significantly. Along the way, we learned about web scraping with Sitecrawl, database management with SQLAlchemy, asynchronous programming with asyncio, building interactive UIs with Streamlit, automating with GitHub actions and integrating external webhooks.
 
 However, the project is far from perfect. Since we took a top-down approach to building this app, our project code is scattered across multiple files and often doesn't follow programming best practices. For this reason, I've recreated the same project in a much more sophisticated manner with production-level features. [This new version on GitHub](https://github.com/BexTuychiev/automated-price-tracking) implements proper database session management, faster operations and overall smoother user experience. Also, this version includes buttons for removing products from the database and visiting them through the app.
 
-If you decide to stick with the basic version, you can find the full project code and notebook in [the official Firecrawl GitHub repository's example projects](https://github.com/firecrawl/firecrawl/tree/main/examples/automated_price_tracking). I also recommend that you [deploy your Streamlit app to Streamlit Cloud](https://share.streamlit.io) so that you have a functional app accessible everywhere you go.
+If you decide to stick with the basic version, you can find the full project code and notebook in [the official Sitecrawl GitHub repository's example projects](https://github.com/sitecrawl/sitecrawl/tree/main/examples/automated_price_tracking). I also recommend that you [deploy your Streamlit app to Streamlit Cloud](https://share.streamlit.io) so that you have a functional app accessible everywhere you go.
 
 Here are some further improvements you might consider for the app:
 
 - Improve the price comparison logic: the app compares the current price to the oldest recorded price, which might not be ideal. You may want to compare against recent price trends instead.
 - No handling of currency conversion if products use different currencies.
 - The Discord notification system doesn't handle rate limits or potential webhook failures gracefully.
-- No error handling for Firecrawl scraper - what happens if the scraping fails?
+- No error handling for Sitecrawl scraper - what happens if the scraping fails?
 - No consistent usage of logging to help track issues in production.
 - No input URL sanitization before scraping.
 
@@ -1230,8 +1230,8 @@ Some of these features are implemented in [the advanced version of the project](
 
 Here are some more guides from our blog if you are interested:
 
-- [How to Run Web Scrapers on Schedule](https://www.firecrawl.dev/blog/automated-web-scraping-free-2025)
-- [More about using Firecrawl's `scrape_url` function](https://www.firecrawl.dev/blog/mastering-firecrawl-scrape-endpoint)
-- [Scraping entire websites with Firecrawl in a single command - the /crawl endpoint](https://www.firecrawl.dev/blog/mastering-the-crawl-endpoint-in-firecrawl)
+- [How to Run Web Scrapers on Schedule](https://www.sitecrawl.dev/blog/automated-web-scraping-free-2025)
+- [More about using Sitecrawl's `scrape_url` function](https://www.sitecrawl.dev/blog/mastering-sitecrawl-scrape-endpoint)
+- [Scraping entire websites with Sitecrawl in a single command - the /crawl endpoint](https://www.sitecrawl.dev/blog/mastering-the-crawl-endpoint-in-sitecrawl)
 
 Thank you for reading!

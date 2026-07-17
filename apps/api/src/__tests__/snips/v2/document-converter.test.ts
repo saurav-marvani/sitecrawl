@@ -1,12 +1,12 @@
 import path from "path";
 import fs from "fs";
-import { DocumentConverter, DocumentType } from "@mendable/firecrawl-rs";
+import { DocumentConverter, DocumentType } from "@mendable/sitecrawl-rs";
 
 describe("Document Converter tests", () => {
   const samplesDir = path.join(process.cwd(), "samples");
 
   const expectedHtmlBase = (documentText: string) =>
-    `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Document</title></head><body><main><p><strong>Hello!</strong></p><p>${documentText} file to test the Firecrawl Document Converter.</p><p><em>Italic</em></p><p><strong>Bold</strong></p><p>Underlined</p><p><del>Strikethrough</del></p><table><tbody><tr><td>Header 1</td><td>Header 2</td></tr><tr><td>Value 1</td><td>Value 2</td></tr></tbody></table></main></body></html>`;
+    `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Document</title></head><body><main><p><strong>Hello!</strong></p><p>${documentText} file to test the Sitecrawl Document Converter.</p><p><em>Italic</em></p><p><strong>Bold</strong></p><p>Underlined</p><p><del>Strikethrough</del></p><table><tbody><tr><td>Header 1</td><td>Header 2</td></tr><tr><td>Value 1</td><td>Value 2</td></tr></tbody></table></main></body></html>`;
 
   const sampleFiles = [
     { file: "sample.docx", type: DocumentType.Docx, name: "DOCX" },

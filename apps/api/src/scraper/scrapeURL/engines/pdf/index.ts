@@ -21,7 +21,7 @@ import {
   getFirePdfAsync,
 } from "../../../../controllers/v2/types";
 import type { PDFMode } from "../../../../controllers/v2/types";
-import { processPdf, detectPdf } from "@mendable/firecrawl-rs";
+import { processPdf, detectPdf } from "@mendable/sitecrawl-rs";
 import {
   FIRE_PDF_MAX_FILE_SIZE,
   MAX_FILE_SIZE,

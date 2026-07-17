@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: firecrawl-config
+  name: sitecrawl-config
 data:
   HOST: "0.0.0.0"
   REDIS_URL: "redis://redis:6379"

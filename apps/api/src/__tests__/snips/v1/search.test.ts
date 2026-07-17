@@ -18,7 +18,7 @@ describeIf(TEST_PRODUCTION || HAS_SEARCH || HAS_PROXY)("Search tests", () => {
     async () => {
       await search(
         {
-          query: "firecrawl",
+          query: "sitecrawl",
         },
         identity,
       );
@@ -31,7 +31,7 @@ describeIf(TEST_PRODUCTION || HAS_SEARCH || HAS_PROXY)("Search tests", () => {
     async () => {
       const res = await search(
         {
-          query: "firecrawl",
+          query: "sitecrawl",
           limit: 5,
           scrapeOptions: {
             formats: ["markdown"],
@@ -53,7 +53,7 @@ describeIf(TEST_PRODUCTION || HAS_SEARCH || HAS_PROXY)("Search tests", () => {
     async () => {
       const res = await search(
         {
-          query: "firecrawl",
+          query: "sitecrawl",
           limit: 3,
         },
         identity,
@@ -70,7 +70,7 @@ describeIf(TEST_PRODUCTION || HAS_SEARCH || HAS_PROXY)("Search tests", () => {
     async () => {
       const res = await search(
         {
-          query: "firecrawl",
+          query: "sitecrawl",
           limit: 20,
         },
         identity,
@@ -86,7 +86,7 @@ describeIf(TEST_PRODUCTION || HAS_SEARCH || HAS_PROXY)("Search tests", () => {
     async () => {
       const raw = await searchRaw(
         {
-          query: "firecrawl",
+          query: "sitecrawl",
           limit: 200,
         } as any,
         identity,
@@ -103,7 +103,7 @@ describeIf(TEST_PRODUCTION || HAS_SEARCH || HAS_PROXY)("Search tests", () => {
     async () => {
       const res = await search(
         {
-          query: "firecrawl",
+          query: "sitecrawl",
           location: "San Francisco",
         },
         identity,

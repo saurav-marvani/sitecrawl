@@ -2,18 +2,18 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "firecrawl.fullname" . }}-nuq-prefetch-worker
+  name: {{ include "sitecrawl.fullname" . }}-nuq-prefetch-worker
   labels:
-    app: {{ include "firecrawl.name" . }}-nuq-prefetch-worker
+    app: {{ include "sitecrawl.name" . }}-nuq-prefetch-worker
 spec:
   replicas: {{ .Values.nuqPrefetchWorker.replicaCount | default 1 }}
   selector:
     matchLabels:
-      app: {{ include "firecrawl.name" . }}-nuq-prefetch-worker
+      app: {{ include "sitecrawl.name" . }}-nuq-prefetch-worker
   template:
     metadata:
       labels:
-        app: {{ include "firecrawl.name" . }}-nuq-prefetch-worker
+        app: {{ include "sitecrawl.name" . }}-nuq-prefetch-worker
     spec:
       {{- if .Values.image.dockerSecretEnabled }}
       imagePullSecrets:
@@ -41,9 +41,9 @@ spec:
                   fieldPath: metadata.name
           envFrom:
             - configMapRef:
-                name: {{ include "firecrawl.fullname" . }}-config
+                name: {{ include "sitecrawl.fullname" . }}-config
             - secretRef:
-                name: {{ include "firecrawl.fullname" . }}-secret
+                name: {{ include "sitecrawl.fullname" . }}-secret
           {{- if and .Values.resources.enabled .Values.nuqPrefetchWorker.resources }}
           resources:
             {{- toYaml .Values.nuqPrefetchWorker.resources | nindent 12 }}

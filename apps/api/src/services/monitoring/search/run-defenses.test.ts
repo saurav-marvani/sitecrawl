@@ -32,8 +32,8 @@ const logger = {
 const verdict = (over: Partial<SearchVerdict> = {}): SearchVerdict => ({
   relevant: true,
   alertAction: "alert",
-  concept: "Firecrawl product launch",
-  rationale: "Firecrawl announced a new product today.",
+  concept: "Sitecrawl product launch",
+  rationale: "Sitecrawl announced a new product today.",
   ...over,
 });
 
@@ -45,14 +45,14 @@ function runParams(
     monitor: {
       id: "mon_1",
       teamId: "team_1",
-      goal: "Alert me when Firecrawl launches a new product",
-      subject: "Firecrawl",
+      goal: "Alert me when Sitecrawl launches a new product",
+      subject: "Sitecrawl",
       judgeEnabled: true,
       ...monitorOver,
     },
     target: {
       id: "tgt_1",
-      queries: ["Firecrawl launch"],
+      queries: ["Sitecrawl launch"],
       searchWindow: "24h",
       alertMode: "first_match" as const,
       maxResults: 10,
@@ -91,8 +91,8 @@ beforeEach(() => {
 
 const serpRow = (n: number) => ({
   url: `https://news${n}.example.com/story`,
-  title: `Firecrawl launches product ${n}`,
-  description: `Firecrawl announced product ${n} today.`,
+  title: `Sitecrawl launches product ${n}`,
+  description: `Sitecrawl announced product ${n} today.`,
 });
 
 describe("deep mode (scrape every selected candidate)", () => {
@@ -123,7 +123,7 @@ describe("alert boundary (the per-page JSON verdict is the gate)", () => {
       success: true,
       document: {
         json: verdict(),
-        markdown: "Firecrawl announced a new product today in prose.",
+        markdown: "Sitecrawl announced a new product today in prose.",
         metadata: {},
       },
     });
@@ -138,7 +138,7 @@ describe("alert boundary (the per-page JSON verdict is the gate)", () => {
       success: true,
       document: {
         json: verdict({ alertAction: "watch" }),
-        markdown: "Firecrawl announced a new product today in prose.",
+        markdown: "Sitecrawl announced a new product today in prose.",
         metadata: {},
       },
     });
@@ -171,7 +171,7 @@ describe("event state stamps + judgment on alert pages", () => {
       success: true,
       document: {
         json: verdict(),
-        markdown: "Firecrawl announced a new product today in prose.",
+        markdown: "Sitecrawl announced a new product today in prose.",
         metadata: {},
       },
     });
@@ -184,7 +184,7 @@ describe("event state stamps + judgment on alert pages", () => {
     expect(alertUpsert.judgment).toMatchObject({
       meaningful: true,
       confidence: "high",
-      reason: "Firecrawl announced a new product today.",
+      reason: "Sitecrawl announced a new product today.",
     });
   });
 
@@ -194,7 +194,7 @@ describe("event state stamps + judgment on alert pages", () => {
       success: true,
       document: {
         json: verdict(),
-        markdown: "Firecrawl announced a new product today in prose.",
+        markdown: "Sitecrawl announced a new product today in prose.",
         metadata: {},
       },
     });
@@ -204,7 +204,7 @@ describe("event state stamps + judgment on alert pages", () => {
       knownEvents: [
         {
           key: canonicalizeUrl(serpRow(1).url),
-          label: "Firecrawl product launch",
+          label: "Sitecrawl product launch",
           satisfiedAt: "2026-06-01T00:00:00Z",
           alertCount: 2,
         },
@@ -261,7 +261,7 @@ describe("judgeEnabled gates the LLM judge", () => {
       success: true,
       document: {
         json: verdict(),
-        markdown: "Firecrawl announced a new product today in prose.",
+        markdown: "Sitecrawl announced a new product today in prose.",
         metadata: {},
       },
     });

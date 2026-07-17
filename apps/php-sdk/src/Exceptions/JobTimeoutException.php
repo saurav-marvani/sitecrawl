@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Firecrawl\Exceptions;
+namespace Sitecrawl\Exceptions;
 
-class JobTimeoutException extends FirecrawlException
+class JobTimeoutException extends SitecrawlException
 {
     public function __construct(
         private readonly string $jobId,

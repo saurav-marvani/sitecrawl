@@ -1,6 +1,6 @@
 ---
 title: "Announcing FIRE-1, Our Web Action Agent: Launch Week III - Day 2"
-description: "Firecrawl's new FIRE-1 AI Agent enhances web scraping capabilities by intelligently navigating and interacting with web pages."
+description: "Sitecrawl's new FIRE-1 AI Agent enhances web scraping capabilities by intelligently navigating and interacting with web pages."
 pubDate: "Apr 15, 2025"
 heroImage: "../../assets/blog/lw3-d2-3.webp"
 category: "updates"
@@ -10,7 +10,7 @@ category: "updates"
 
 ## Meet FIRE-1: Intelligent Navigation and Interaction
 
-FIRE-1 brings a new level of intelligence to Firecrawl, enhancing your scraping tasks by navigating complex website structures, interacting with dynamic content, and more. This powerful AI agent ensures comprehensive data extraction beyond traditional scraping methods.
+FIRE-1 brings a new level of intelligence to Sitecrawl, enhancing your scraping tasks by navigating complex website structures, interacting with dynamic content, and more. This powerful AI agent ensures comprehensive data extraction beyond traditional scraping methods.
 
 This agent doesn’t just scrape — it **takes actions** to uncover the data you need, even when it’s hidden behind interactions like logins, button clicks, or modal windows.
 
@@ -39,7 +39,7 @@ _Note:_ The `prompt` field is required for scrape requests, instructing FIRE-1 p
 Here’s a quick example using FIRE-1 with the scrape endpoint to paginate through product listings:
 
 ```bash
-curl -X POST https://api.firecrawl.dev/v1/scrape \
+curl -X POST https://api.sitecrawl.dev/v1/scrape \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer YOUR_API_KEY' \
   -d '{
@@ -47,7 +47,7 @@ curl -X POST https://api.firecrawl.dev/v1/scrape \
     "formats": ["markdown"],
     "agent": {
       "model": "FIRE-1",
-      "prompt": "Search for firecrawl and go to the company page."
+      "prompt": "Search for sitecrawl and go to the company page."
     }
   }'
 ```
@@ -64,7 +64,7 @@ In this scenario, FIRE-1 intelligently fills out search forms and clicks around 
 Experience the future of web scraping today:
 
 - **Try FIRE-1:** Integrate intelligent navigation into your scraping and extracting workflows.
-- **Explore the docs:** Learn more in our [comprehensive documentation](https://docs.firecrawl.dev/agents/fire-1).
-- **Need help?** Join our [Discord community](https://discord.gg/S7Enyh9Abh) or email [help@firecrawl.com](mailto:help@firecrawl.com).
+- **Explore the docs:** Learn more in our [comprehensive documentation](https://docs.sitecrawl.dev/agents/fire-1).
+- **Need help?** Join our [Discord community](https://discord.gg/S7Enyh9Abh) or email [help@sitecrawl.com](mailto:help@sitecrawl.com).
 
-**Ready to leverage AI-powered scraping?** [Sign up for Firecrawl](https://firecrawl.dev/signup) and start with FIRE-1 today.
+**Ready to leverage AI-powered scraping?** [Sign up for Sitecrawl](https://sitecrawl.dev/signup) and start with FIRE-1 today.

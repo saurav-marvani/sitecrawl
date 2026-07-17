@@ -1,7 +1,7 @@
 import { Meta } from "../..";
 import { EngineScrapeResult } from "..";
 import { fetchFileToBuffer } from "../utils/downloadFile";
-import { DocumentConverter, DocumentType } from "@mendable/firecrawl-rs";
+import { DocumentConverter, DocumentType } from "@mendable/sitecrawl-rs";
 import type { Response } from "undici";
 import { DocumentAntibotError, DocumentPrefetchFailed } from "../../error";
 import { readFile, unlink } from "node:fs/promises";

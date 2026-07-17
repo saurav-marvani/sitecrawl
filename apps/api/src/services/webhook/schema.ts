@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-const BLACKLISTED_WEBHOOK_HEADERS = ["x-firecrawl-signature"];
+const BLACKLISTED_WEBHOOK_HEADERS = ["x-sitecrawl-signature"];
 
 export function createWebhookSchema<T extends [string, ...string[]]>(
   events: T,

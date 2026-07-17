@@ -1,5 +1,5 @@
 import os
-from firecrawl import FirecrawlApp
+from sitecrawl import SitecrawlApp
 import json
 from dotenv import load_dotenv
 import anthropic
@@ -20,12 +20,12 @@ class Colors:
 load_dotenv()
 
 # Retrieve API keys from environment variables
-firecrawl_api_key = os.getenv("FIRECRAWL_API_KEY")
+sitecrawl_api_key = os.getenv("SITECRAWL_API_KEY")
 anthropic_api_key = os.getenv("ANTHROPIC_API_KEY")
 e2b_api_key = os.getenv("E2B_API_KEY")
 
-# Initialize the FirecrawlApp and Anthropic client
-app = FirecrawlApp(api_key=firecrawl_api_key)
+# Initialize the SitecrawlApp and Anthropic client
+app = SitecrawlApp(api_key=sitecrawl_api_key)
 client = anthropic.Anthropic(api_key=anthropic_api_key)
 sandbox = Sandbox(api_key=e2b_api_key)
 

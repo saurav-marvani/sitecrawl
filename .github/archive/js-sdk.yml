@@ -47,7 +47,7 @@ jobs:
         working-directory: ./apps/api
       - name: Install dependencies for JavaScript SDK
         run: pnpm install
-        working-directory: ./apps/js-sdk/firecrawl
+        working-directory: ./apps/js-sdk/sitecrawl
       - name: Run E2E tests for JavaScript SDK
         run: npm run test
-        working-directory: ./apps/js-sdk/firecrawl
+        working-directory: ./apps/js-sdk/sitecrawl

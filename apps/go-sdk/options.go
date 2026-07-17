@@ -1,4 +1,4 @@
-package firecrawl
+package sitecrawl
 
 import "encoding/json"
 

@@ -7,7 +7,7 @@ import type { Logger } from "winston";
 import { stat } from "fs/promises";
 import { HTML_TO_MARKDOWN_PATH } from "../natives";
 import { convertHTMLToMarkdownWithHttpService } from "./html-to-markdown-client";
-import { postProcessMarkdown } from "@mendable/firecrawl-rs";
+import { postProcessMarkdown } from "@mendable/sitecrawl-rs";
 
 // TODO: add a timeout to the Go parser
 

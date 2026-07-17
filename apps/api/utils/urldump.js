@@ -1,6 +1,6 @@
 require("dotenv").config();
 
-//const baseUrl = "https://api.firecrawl.dev";
+//const baseUrl = "https://api.sitecrawl.dev";
 const baseUrl = "http://localhost:3002";
 const crawlId = process.argv[2];
 

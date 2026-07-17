@@ -15,7 +15,7 @@ import type { ThreatDecision, ThreatProtectionPolicy } from "./types";
 // ThreatProtectionPolicy — or null, meaning the feature is off for this
 // request (the enforcement hot path then does zero extra work).
 
-const SUPPORT_EMAIL = "support@firecrawl.com";
+const SUPPORT_EMAIL = "support@sitecrawl.com";
 
 export const THREAT_PROTECTION_NOT_ENABLED_MESSAGE = `Threat protection is an enterprise feature and is not enabled for your team. Contact ${SUPPORT_EMAIL} to explore whether it can be enabled for your team.`;
 

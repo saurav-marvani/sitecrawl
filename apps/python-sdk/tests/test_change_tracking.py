@@ -2,7 +2,7 @@ import unittest
 from unittest.mock import patch, MagicMock
 import json
 import os
-from firecrawl import FirecrawlApp
+from sitecrawl import SitecrawlApp
 
 class TestChangeTracking(unittest.TestCase):
     @patch('requests.post')
@@ -22,7 +22,7 @@ class TestChangeTracking(unittest.TestCase):
         }
         mock_post.return_value = mock_response
 
-        app = FirecrawlApp(api_key=os.environ.get('TEST_API_KEY', 'dummy-api-key-for-testing'))
+        app = SitecrawlApp(api_key=os.environ.get('TEST_API_KEY', 'dummy-api-key-for-testing'))
         result = app.scrape_url('https://example.com', {
             'formats': ['markdown', 'changeTracking']
         })
@@ -80,7 +80,7 @@ class TestChangeTracking(unittest.TestCase):
         }
         mock_post.return_value = mock_response
 
-        app = FirecrawlApp(api_key=os.environ.get('TEST_API_KEY', 'dummy-api-key-for-testing'))
+        app = SitecrawlApp(api_key=os.environ.get('TEST_API_KEY', 'dummy-api-key-for-testing'))
         result = app.scrape_url('https://example.com', {
             'formats': ['markdown', 'changeTracking'],
             'changeTrackingOptions': {

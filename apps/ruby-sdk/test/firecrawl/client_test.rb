@@ -4,11 +4,11 @@ require_relative "../test_helper"
 
 class ClientTest < Minitest::Test
   API_KEY = "fc-test-key"
-  BASE_URL = "https://api.firecrawl.dev"
+  BASE_URL = "https://api.sitecrawl.dev"
 
   def setup
     WebMock.reset!
-    @client = Firecrawl::Client.new(api_key: API_KEY)
+    @client = Sitecrawl::Client.new(api_key: API_KEY)
   end
 
   # ================================================================
@@ -16,50 +16,50 @@ class ClientTest < Minitest::Test
   # ================================================================
 
   def test_allows_no_api_key_for_keyless_endpoints
-    ENV.delete("FIRECRAWL_API_KEY")
-    assert_instance_of Firecrawl::Client, Firecrawl::Client.new
+    ENV.delete("SITECRAWL_API_KEY")
+    assert_instance_of Sitecrawl::Client, Sitecrawl::Client.new
   end
 
   def test_allows_whitespace_only_api_key_for_keyless_endpoints
-    ENV.delete("FIRECRAWL_API_KEY")
-    assert_instance_of Firecrawl::Client, Firecrawl::Client.new(api_key: "   ")
+    ENV.delete("SITECRAWL_API_KEY")
+    assert_instance_of Sitecrawl::Client, Sitecrawl::Client.new(api_key: "   ")
   end
 
   def test_raises_when_api_url_not_http
-    assert_raises(Firecrawl::FirecrawlError) { Firecrawl::Client.new(api_key: API_KEY, api_url: "ftp://bad.host") }
+    assert_raises(Sitecrawl::SitecrawlError) { Sitecrawl::Client.new(api_key: API_KEY, api_url: "ftp://bad.host") }
   end
 
   def test_raises_when_api_url_has_no_scheme
-    assert_raises(Firecrawl::FirecrawlError) { Firecrawl::Client.new(api_key: API_KEY, api_url: "not-a-url") }
+    assert_raises(Sitecrawl::SitecrawlError) { Sitecrawl::Client.new(api_key: API_KEY, api_url: "not-a-url") }
   end
 
   def test_from_env_with_env_var
-    ENV["FIRECRAWL_API_KEY"] = "fc-env-key"
-    client = Firecrawl::Client.from_env
-    assert_instance_of Firecrawl::Client, client
+    ENV["SITECRAWL_API_KEY"] = "fc-env-key"
+    client = Sitecrawl::Client.from_env
+    assert_instance_of Sitecrawl::Client, client
   ensure
-    ENV.delete("FIRECRAWL_API_KEY")
+    ENV.delete("SITECRAWL_API_KEY")
   end
 
   def test_custom_api_url
     stub_request(:post, "https://custom.api.dev/v2/scrape")
       .to_return(status: 200, body: '{"data":{"markdown":"# Hi"}}', headers: { "Content-Type" => "application/json" })
 
-    client = Firecrawl::Client.new(api_key: API_KEY, api_url: "https://custom.api.dev")
+    client = Sitecrawl::Client.new(api_key: API_KEY, api_url: "https://custom.api.dev")
     doc = client.scrape("https://example.com")
     assert_equal "# Hi", doc.markdown
   end
 
   def test_custom_api_url_from_env
-    ENV["FIRECRAWL_API_URL"] = "https://env-custom.api.dev"
+    ENV["SITECRAWL_API_URL"] = "https://env-custom.api.dev"
     stub_request(:post, "https://env-custom.api.dev/v2/scrape")
       .to_return(status: 200, body: '{"data":{"markdown":"# Env"}}', headers: { "Content-Type" => "application/json" })
 
-    client = Firecrawl::Client.new(api_key: API_KEY)
+    client = Sitecrawl::Client.new(api_key: API_KEY)
     doc = client.scrape("https://example.com")
     assert_equal "# Env", doc.markdown
   ensure
-    ENV.delete("FIRECRAWL_API_URL")
+    ENV.delete("SITECRAWL_API_URL")
   end
 
   # ================================================================
@@ -69,19 +69,19 @@ class ClientTest < Minitest::Test
   def test_scrape_basic
     stub_request(:post, "#{BASE_URL}/v2/scrape")
       .with(
-        body: { url: "https://example.com", origin: "ruby-sdk@#{Firecrawl::VERSION}" }.to_json,
+        body: { url: "https://example.com", origin: "ruby-sdk@#{Sitecrawl::VERSION}" }.to_json,
         headers: { "Authorization" => "Bearer #{API_KEY}", "Content-Type" => "application/json" }
       )
       .to_return(
         status: 200,
-        body: JSON.generate(data: { markdown: "# Hello", video: "https://storage.googleapis.com/firecrawl/video.mp4", metadata: { title: "Example", sourceURL: "https://example.com" } }),
+        body: JSON.generate(data: { markdown: "# Hello", video: "https://storage.googleapis.com/sitecrawl/video.mp4", metadata: { title: "Example", sourceURL: "https://example.com" } }),
         headers: { "Content-Type" => "application/json" }
       )
 
     doc = @client.scrape("https://example.com")
-    assert_instance_of Firecrawl::Models::Document, doc
+    assert_instance_of Sitecrawl::Models::Document, doc
     assert_equal "# Hello", doc.markdown
-    assert_equal "https://storage.googleapis.com/firecrawl/video.mp4", doc.video
+    assert_equal "https://storage.googleapis.com/sitecrawl/video.mp4", doc.video
     assert_equal "Example", doc.metadata["title"]
   end
 
@@ -94,7 +94,7 @@ class ClientTest < Minitest::Test
         headers: { "Content-Type" => "application/json" }
       )
 
-    options = Firecrawl::Models::ScrapeOptions.new(formats: ["markdown", "html"], only_main_content: true)
+    options = Sitecrawl::Models::ScrapeOptions.new(formats: ["markdown", "html"], only_main_content: true)
     doc = @client.scrape("https://example.com", options)
     assert_equal "# Test", doc.markdown
     assert_equal "<h1>Test</h1>", doc.html
@@ -142,7 +142,7 @@ class ClientTest < Minitest::Test
 
     doc = @client.scrape("https://example.com/widget")
     product = doc.product
-    assert_instance_of Firecrawl::Models::ProductProfile, product
+    assert_instance_of Sitecrawl::Models::ProductProfile, product
     assert_equal "Acme Widget", product.title
     assert_equal "Acme", product.brand
     assert_equal "Gadgets", product.category
@@ -244,7 +244,7 @@ class ClientTest < Minitest::Test
 
     doc = @client.scrape("https://example.com/menu")
     menu = doc.menu
-    assert_instance_of Firecrawl::Models::MenuProfile, menu
+    assert_instance_of Sitecrawl::Models::MenuProfile, menu
     assert_equal true, menu.is_menu
     assert_in_delta 0.92, menu.confidence, 0.0001
     assert_equal "USD", menu.currency
@@ -317,12 +317,12 @@ class ClientTest < Minitest::Test
     stub_request(:post, "#{BASE_URL}/v2/crawl")
       .to_return(
         status: 200,
-        body: JSON.generate(id: "crawl-123", url: "https://api.firecrawl.dev/v2/crawl/crawl-123"),
+        body: JSON.generate(id: "crawl-123", url: "https://api.sitecrawl.dev/v2/crawl/crawl-123"),
         headers: { "Content-Type" => "application/json" }
       )
 
     response = @client.start_crawl("https://example.com")
-    assert_instance_of Firecrawl::Models::CrawlResponse, response
+    assert_instance_of Sitecrawl::Models::CrawlResponse, response
     assert_equal "crawl-123", response.id
   end
 
@@ -335,7 +335,7 @@ class ClientTest < Minitest::Test
       )
 
     job = @client.get_crawl_status("crawl-123")
-    assert_instance_of Firecrawl::Models::CrawlJob, job
+    assert_instance_of Sitecrawl::Models::CrawlJob, job
     assert_equal "completed", job.status
     assert job.done?
   end
@@ -378,7 +378,7 @@ class ClientTest < Minitest::Test
         headers: { "Content-Type" => "application/json" }
       )
 
-    options = Firecrawl::Models::CrawlOptions.new(limit: 10, exclude_paths: ["/private"])
+    options = Sitecrawl::Models::CrawlOptions.new(limit: 10, exclude_paths: ["/private"])
     job = @client.crawl("https://example.com", options, poll_interval: 0, timeout: 10)
     assert_equal "completed", job.status
   end
@@ -403,12 +403,12 @@ class ClientTest < Minitest::Test
     stub_request(:post, "#{BASE_URL}/v2/batch/scrape")
       .to_return(
         status: 200,
-        body: JSON.generate(id: "batch-123", url: "https://api.firecrawl.dev/v2/batch/scrape/batch-123"),
+        body: JSON.generate(id: "batch-123", url: "https://api.sitecrawl.dev/v2/batch/scrape/batch-123"),
         headers: { "Content-Type" => "application/json" }
       )
 
     response = @client.start_batch_scrape(["https://a.com", "https://b.com"])
-    assert_instance_of Firecrawl::Models::BatchScrapeResponse, response
+    assert_instance_of Sitecrawl::Models::BatchScrapeResponse, response
     assert_equal "batch-123", response.id
   end
 
@@ -428,7 +428,7 @@ class ClientTest < Minitest::Test
         headers: { "Content-Type" => "application/json" }
       )
 
-    options = Firecrawl::Models::BatchScrapeOptions.new(idempotency_key: "my-key")
+    options = Sitecrawl::Models::BatchScrapeOptions.new(idempotency_key: "my-key")
     job = @client.batch_scrape(["https://a.com"], options, poll_interval: 0, timeout: 10)
     assert_equal "completed", job.status
   end
@@ -446,7 +446,7 @@ class ClientTest < Minitest::Test
       )
 
     result = @client.map("https://example.com")
-    assert_instance_of Firecrawl::Models::MapData, result
+    assert_instance_of Sitecrawl::Models::MapData, result
     assert_equal 2, result.links.size
     assert_equal "https://example.com/a", result.links.first["url"]
   end
@@ -473,7 +473,7 @@ class ClientTest < Minitest::Test
         headers: { "Content-Type" => "application/json" }
       )
 
-    options = Firecrawl::Models::MapOptions.new(limit: 50, search: "blog")
+    options = Sitecrawl::Models::MapOptions.new(limit: 50, search: "blog")
     result = @client.map("https://example.com", options)
     assert_equal 0, result.links.size
   end
@@ -491,7 +491,7 @@ class ClientTest < Minitest::Test
       )
 
     result = @client.search("test query")
-    assert_instance_of Firecrawl::Models::SearchData, result
+    assert_instance_of Sitecrawl::Models::SearchData, result
     assert_equal 1, result.web.size
     assert_equal "https://example.com", result.web.first["url"]
   end
@@ -505,7 +505,7 @@ class ClientTest < Minitest::Test
         headers: { "Content-Type" => "application/json" }
       )
 
-    options = Firecrawl::Models::SearchOptions.new(limit: 5, location: "US")
+    options = Sitecrawl::Models::SearchOptions.new(limit: 5, location: "US")
     result = @client.search("test query", options)
     assert_equal 0, result.web.size
   end
@@ -522,9 +522,9 @@ class ClientTest < Minitest::Test
         headers: { "Content-Type" => "application/json" }
       )
 
-    options = Firecrawl::Models::AgentOptions.new(prompt: "Find pricing info")
+    options = Sitecrawl::Models::AgentOptions.new(prompt: "Find pricing info")
     response = @client.start_agent(options)
-    assert_instance_of Firecrawl::Models::AgentResponse, response
+    assert_instance_of Sitecrawl::Models::AgentResponse, response
     assert_equal "agent-123", response.id
     assert_equal true, response.success
   end
@@ -543,15 +543,15 @@ class ClientTest < Minitest::Test
         { status: 200, body: JSON.generate(status: "completed", data: { result: "found" }), headers: { "Content-Type" => "application/json" } }
       )
 
-    options = Firecrawl::Models::AgentOptions.new(prompt: "Find pricing info")
+    options = Sitecrawl::Models::AgentOptions.new(prompt: "Find pricing info")
     status = @client.agent(options, poll_interval: 0, timeout: 10)
     assert_equal "completed", status.status
     assert_equal({ "result" => "found" }, status.data)
   end
 
   def test_agent_options_require_prompt
-    assert_raises(ArgumentError) { Firecrawl::Models::AgentOptions.new(prompt: "") }
-    assert_raises(ArgumentError) { Firecrawl::Models::AgentOptions.new }
+    assert_raises(ArgumentError) { Sitecrawl::Models::AgentOptions.new(prompt: "") }
+    assert_raises(ArgumentError) { Sitecrawl::Models::AgentOptions.new }
   end
 
   # ================================================================
@@ -567,7 +567,7 @@ class ClientTest < Minitest::Test
       )
 
     result = @client.get_concurrency
-    assert_instance_of Firecrawl::Models::ConcurrencyCheck, result
+    assert_instance_of Sitecrawl::Models::ConcurrencyCheck, result
     assert_equal 3, result.concurrency
     assert_equal 10, result.max_concurrency
   end
@@ -581,7 +581,7 @@ class ClientTest < Minitest::Test
       )
 
     result = @client.get_credit_usage
-    assert_instance_of Firecrawl::Models::CreditUsage, result
+    assert_instance_of Sitecrawl::Models::CreditUsage, result
     assert_equal 500, result.remaining_credits
     assert_equal 1000, result.plan_credits
   end
@@ -598,7 +598,7 @@ class ClientTest < Minitest::Test
         headers: { "Content-Type" => "application/json" }
       )
 
-    error = assert_raises(Firecrawl::AuthenticationError) { @client.scrape("https://example.com") }
+    error = assert_raises(Sitecrawl::AuthenticationError) { @client.scrape("https://example.com") }
     assert_equal 401, error.status_code
     assert_equal "Invalid API key", error.message
   end
@@ -611,7 +611,7 @@ class ClientTest < Minitest::Test
         headers: { "Content-Type" => "application/json" }
       )
 
-    error = assert_raises(Firecrawl::RateLimitError) { @client.scrape("https://example.com") }
+    error = assert_raises(Sitecrawl::RateLimitError) { @client.scrape("https://example.com") }
     assert_equal 429, error.status_code
   end
 
@@ -623,14 +623,14 @@ class ClientTest < Minitest::Test
         headers: { "Content-Type" => "application/json" }
       )
 
-    error = assert_raises(Firecrawl::FirecrawlError) { @client.scrape("https://example.com") }
+    error = assert_raises(Sitecrawl::SitecrawlError) { @client.scrape("https://example.com") }
     assert_equal 400, error.status_code
     assert_equal "Bad request", error.message
   end
 
   def test_retryable_server_error
     # Client is configured with max_retries=3, but let's use a client with 1 retry for speed
-    client = Firecrawl::Client.new(api_key: API_KEY, max_retries: 1, backoff_factor: 0.0)
+    client = Sitecrawl::Client.new(api_key: API_KEY, max_retries: 1, backoff_factor: 0.0)
 
     stub_request(:post, "#{BASE_URL}/v2/scrape")
       .to_return(
@@ -647,7 +647,7 @@ class ClientTest < Minitest::Test
   # ================================================================
 
   def test_scrape_options_to_h
-    opts = Firecrawl::Models::ScrapeOptions.new(
+    opts = Sitecrawl::Models::ScrapeOptions.new(
       formats: ["markdown", "html"],
       only_main_content: true,
       wait_for: 1000,
@@ -667,27 +667,27 @@ class ClientTest < Minitest::Test
   end
 
   def test_query_format_to_h
-    format = Firecrawl::Models::QueryFormat.new(
-      prompt: "What is Firecrawl?",
-      mode: Firecrawl::Models::QueryFormat::MODE_DIRECT_QUOTE
+    format = Sitecrawl::Models::QueryFormat.new(
+      prompt: "What is Sitecrawl?",
+      mode: Sitecrawl::Models::QueryFormat::MODE_DIRECT_QUOTE
     )
-    opts = Firecrawl::Models::ScrapeOptions.new(formats: [format])
+    opts = Sitecrawl::Models::ScrapeOptions.new(formats: [format])
 
     assert_equal(
-      [{ "type" => "query", "prompt" => "What is Firecrawl?", "mode" => "directQuote" }],
+      [{ "type" => "query", "prompt" => "What is Sitecrawl?", "mode" => "directQuote" }],
       opts.to_h["formats"]
     )
   end
 
   def test_question_and_highlights_format_to_h
-    question = Firecrawl::Models::QuestionFormat.new(question: "What is Firecrawl?")
-    highlights = Firecrawl::Models::HighlightsFormat.new(query: "What is Firecrawl?")
-    opts = Firecrawl::Models::ScrapeOptions.new(formats: [question, highlights])
+    question = Sitecrawl::Models::QuestionFormat.new(question: "What is Sitecrawl?")
+    highlights = Sitecrawl::Models::HighlightsFormat.new(query: "What is Sitecrawl?")
+    opts = Sitecrawl::Models::ScrapeOptions.new(formats: [question, highlights])
 
     assert_equal(
       [
-        { "type" => "question", "question" => "What is Firecrawl?" },
-        { "type" => "highlights", "query" => "What is Firecrawl?" },
+        { "type" => "question", "question" => "What is Sitecrawl?" },
+        { "type" => "highlights", "query" => "What is Sitecrawl?" },
       ],
       opts.to_h["formats"]
     )
@@ -695,24 +695,24 @@ class ClientTest < Minitest::Test
 
   def test_query_format_rejects_invalid_mode
     assert_raises(ArgumentError) do
-      Firecrawl::Models::QueryFormat.new(prompt: "What is Firecrawl?", mode: "quoted")
+      Sitecrawl::Models::QueryFormat.new(prompt: "What is Sitecrawl?", mode: "quoted")
     end
   end
 
   def test_scrape_options_skip_tls_defaults_to_false
-    opts = Firecrawl::Models::ScrapeOptions.new
+    opts = Sitecrawl::Models::ScrapeOptions.new
     assert_equal false, opts.skip_tls_verification
     assert_equal false, opts.to_h["skipTlsVerification"]
   end
 
   def test_scrape_options_skip_tls_can_be_overridden_to_false
-    opts = Firecrawl::Models::ScrapeOptions.new(skip_tls_verification: false)
+    opts = Sitecrawl::Models::ScrapeOptions.new(skip_tls_verification: false)
     assert_equal false, opts.skip_tls_verification
     assert_equal false, opts.to_h["skipTlsVerification"]
   end
 
   def test_crawl_options_to_h
-    opts = Firecrawl::Models::CrawlOptions.new(
+    opts = Sitecrawl::Models::CrawlOptions.new(
       limit: 100,
       exclude_paths: ["/private"],
       max_discovery_depth: 3,
@@ -726,7 +726,7 @@ class ClientTest < Minitest::Test
   end
 
   def test_map_options_to_h
-    opts = Firecrawl::Models::MapOptions.new(
+    opts = Sitecrawl::Models::MapOptions.new(
       search: "blog",
       limit: 50,
       sitemap: "include"
@@ -738,12 +738,12 @@ class ClientTest < Minitest::Test
   end
 
   def test_search_options_to_h
-    opts = Firecrawl::Models::SearchOptions.new(
+    opts = Sitecrawl::Models::SearchOptions.new(
       limit: 10,
       location: "US",
       tbs: "qdr:w",
       highlights: false,
-      include_domains: ["firecrawl.dev"],
+      include_domains: ["sitecrawl.dev"],
       exclude_domains: ["example.com"]
     )
     h = opts.to_h
@@ -751,12 +751,12 @@ class ClientTest < Minitest::Test
     assert_equal "US", h["location"]
     assert_equal "qdr:w", h["tbs"]
     assert_equal false, h["highlights"]
-    assert_equal ["firecrawl.dev"], h["includeDomains"]
+    assert_equal ["sitecrawl.dev"], h["includeDomains"]
     assert_equal ["example.com"], h["excludeDomains"]
   end
 
   def test_agent_options_to_h
-    opts = Firecrawl::Models::AgentOptions.new(
+    opts = Sitecrawl::Models::AgentOptions.new(
       prompt: "Find data",
       urls: ["https://example.com"],
       max_credits: 100,
@@ -770,8 +770,8 @@ class ClientTest < Minitest::Test
   end
 
   def test_batch_scrape_options_to_h
-    scrape_opts = Firecrawl::Models::ScrapeOptions.new(formats: ["markdown"])
-    opts = Firecrawl::Models::BatchScrapeOptions.new(
+    scrape_opts = Sitecrawl::Models::ScrapeOptions.new(formats: ["markdown"])
+    opts = Sitecrawl::Models::BatchScrapeOptions.new(
       options: scrape_opts,
       max_concurrency: 5,
       zero_data_retention: true
@@ -800,12 +800,12 @@ class ClientTest < Minitest::Test
         body: JSON.generate(
           id: "crawl-pag", status: "completed", total: 2, completed: 2,
           data: [{ markdown: "# Page 1" }],
-          next: "https://api.firecrawl.dev/v2/crawl/crawl-pag?skip=1"
+          next: "https://api.sitecrawl.dev/v2/crawl/crawl-pag?skip=1"
         ),
         headers: { "Content-Type" => "application/json" }
       )
 
-    stub_request(:get, "https://api.firecrawl.dev/v2/crawl/crawl-pag?skip=1")
+    stub_request(:get, "https://api.sitecrawl.dev/v2/crawl/crawl-pag?skip=1")
       .to_return(
         status: 200,
         body: JSON.generate(
@@ -840,7 +840,7 @@ class ClientTest < Minitest::Test
         headers: { "Content-Type" => "application/json" }
       )
 
-    assert_raises(Firecrawl::FirecrawlError) do
+    assert_raises(Sitecrawl::SitecrawlError) do
       @client.crawl("https://example.com", nil, poll_interval: 0, timeout: 10)
     end
   end
@@ -868,7 +868,7 @@ class ClientTest < Minitest::Test
   # ================================================================
 
   def test_parse_options_to_h
-    opts = Firecrawl::Models::ParseOptions.new(
+    opts = Sitecrawl::Models::ParseOptions.new(
       formats: ["markdown"],
       only_main_content: true,
       timeout: 30000,
@@ -885,37 +885,37 @@ class ClientTest < Minitest::Test
 
   def test_parse_options_rejects_unsupported_format
     assert_raises(ArgumentError) do
-      Firecrawl::Models::ParseOptions.new(formats: ["screenshot"])
+      Sitecrawl::Models::ParseOptions.new(formats: ["screenshot"])
     end
   end
 
   def test_parse_options_rejects_video_format
     assert_raises(ArgumentError) do
-      Firecrawl::Models::ParseOptions.new(formats: ["video"])
+      Sitecrawl::Models::ParseOptions.new(formats: ["video"])
     end
   end
 
   def test_parse_options_rejects_product_format
     assert_raises(ArgumentError) do
-      Firecrawl::Models::ParseOptions.new(formats: ["product"])
+      Sitecrawl::Models::ParseOptions.new(formats: ["product"])
     end
   end
 
   def test_parse_options_rejects_menu_format
     assert_raises(ArgumentError) do
-      Firecrawl::Models::ParseOptions.new(formats: ["menu"])
+      Sitecrawl::Models::ParseOptions.new(formats: ["menu"])
     end
   end
 
   def test_parse_options_rejects_invalid_proxy
     assert_raises(ArgumentError) do
-      Firecrawl::Models::ParseOptions.new(proxy: "stealth")
+      Sitecrawl::Models::ParseOptions.new(proxy: "stealth")
     end
   end
 
   def test_parse_file_rejects_empty_content
     assert_raises(ArgumentError) do
-      Firecrawl::Models::ParseFile.new(filename: "doc.pdf", content: "")
+      Sitecrawl::Models::ParseFile.new(filename: "doc.pdf", content: "")
     end
   end
 
@@ -933,12 +933,12 @@ class ClientTest < Minitest::Test
         headers: { "Content-Type" => "application/json" }
       )
 
-    file = Firecrawl::Models::ParseFile.new(
+    file = Sitecrawl::Models::ParseFile.new(
       filename: "doc.html",
       content: "<html>hi</html>",
       content_type: "text/html"
     )
-    doc = @client.parse(file, Firecrawl::Models::ParseOptions.new(formats: ["markdown"]))
+    doc = @client.parse(file, Sitecrawl::Models::ParseOptions.new(formats: ["markdown"]))
     assert_equal "# Parsed", doc.markdown
   end
 
@@ -958,9 +958,9 @@ class ClientTest < Minitest::Test
 
     search_target = {
       "type" => "search",
-      "queries" => ["firecrawl launch"],
+      "queries" => ["sitecrawl launch"],
       "searchWindow" => "24h",
-      "includeDomains" => ["firecrawl.dev"],
+      "includeDomains" => ["sitecrawl.dev"],
       "excludeDomains" => ["spam.com"],
       "maxResults" => 20,
     }
@@ -981,7 +981,7 @@ class ClientTest < Minitest::Test
   end
 
   def test_monitor_search_target_model_to_h
-    target = Firecrawl::Models::MonitorTarget.new(
+    target = Sitecrawl::Models::MonitorTarget.new(
       "type" => "search",
       "queries" => ["a", "b"],
       "searchWindow" => "1h",
@@ -1008,7 +1008,7 @@ class ClientTest < Minitest::Test
   end
 
   def test_monitor_search_target_result_model
-    result = Firecrawl::Models::MonitorTargetResult.new(
+    result = Sitecrawl::Models::MonitorTargetResult.new(
       "targetId" => "tgt_1",
       "type" => "search",
       "searchCompleted" => true,

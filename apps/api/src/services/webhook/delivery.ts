@@ -165,7 +165,7 @@ export class WebhookSender {
     if (this.secret) {
       const hmac = createHmac("sha256", this.secret);
       hmac.update(payloadString);
-      headers["X-Firecrawl-Signature"] = `sha256=${hmac.digest("hex")}`;
+      headers["X-Sitecrawl-Signature"] = `sha256=${hmac.digest("hex")}`;
     }
 
     const abortController = new AbortController();

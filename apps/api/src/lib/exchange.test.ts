@@ -361,7 +361,7 @@ describe("Exchange routing", () => {
       }),
     ).resolves.toBe(false);
 
-    // minAge asks for Firecrawl-cached data, which the Exchange never has.
+    // minAge asks for Sitecrawl-cached data, which the Exchange never has.
     await expect(
       canUseExchangeForRequest({
         url: "https://profiles.example/person/example-person",

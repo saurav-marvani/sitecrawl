@@ -413,9 +413,9 @@ app.get("/liveness", (req, res) => {
   _logger.info("Liveness endpoint hit");
   if (config.USE_DB_AUTHENTICATION && config.NUQ_RABBITMQ_URL) {
     // networking check for Kubernetes environments
-    const host = config.FIRECRAWL_APP_HOST;
-    const port = config.FIRECRAWL_APP_PORT;
-    const scheme = config.FIRECRAWL_APP_SCHEME;
+    const host = config.SITECRAWL_APP_HOST;
+    const port = config.SITECRAWL_APP_PORT;
+    const scheme = config.SITECRAWL_APP_SCHEME;
 
     robustFetch({
       url: `${scheme}://${host}:${port}`,

@@ -1,14 +1,14 @@
 // Placeholder v1 example (TypeScript)
 // Mirrors the older SDK usage. Replace with your API key before running.
 
-// import { Firecrawl } from 'firecrawl';
-import Firecrawl from './firecrawl/src/index'
+// import { Sitecrawl } from 'sitecrawl';
+import Sitecrawl from './sitecrawl/src/index'
 
 async function main() {
-  const app = new Firecrawl({ apiKey: process.env.FIRECRAWL_API_KEY || 'fc-YOUR_API_KEY' });
+  const app = new Sitecrawl({ apiKey: process.env.SITECRAWL_API_KEY || 'fc-YOUR_API_KEY' });
 
   // Scrape a website (v1 style):
-  const scrape = await app.v1.scrapeUrl('firecrawl.dev');
+  const scrape = await app.v1.scrapeUrl('sitecrawl.dev');
   if ((scrape as any).success) console.log((scrape as any).markdown);
 
   // Crawl a website (v1 style):

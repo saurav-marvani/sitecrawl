@@ -49,13 +49,13 @@ export async function crawlMonitorController(
     team_id: req.auth.team_id,
     origin: "api",
     integration: null,
-    target_hint: "https://firecrawl.dev",
+    target_hint: "https://sitecrawl.dev",
     zeroDataRetention: false,
     api_key_id: req.acuc?.api_key_id ?? null,
   });
 
   const sc: StoredCrawl = {
-    originUrl: "https://firecrawl.dev",
+    originUrl: "https://sitecrawl.dev",
     crawlerOptions: toV0CrawlerOptions(crawlerOptions.parse({ limit: 2 })),
     scrapeOptions: scrapeOptions.parse({}),
     internalOptions: {
@@ -98,7 +98,7 @@ export async function crawlMonitorController(
 
   await _addScrapeJobToBullMQ(
     {
-      url: "https://firecrawl.dev",
+      url: "https://sitecrawl.dev",
       mode: "kickoff" as const,
       team_id: req.auth.team_id,
       crawlerOptions: crawlerOptions.parse({ limit: 2 }),

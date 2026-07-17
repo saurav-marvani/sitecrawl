@@ -25,11 +25,11 @@ if not openai_api_key:
     print(f"{Colors.RED}Error: OPENAI_API_KEY not found in environment variables{Colors.RESET}")
     
 client = OpenAI(api_key=openai_api_key)
-firecrawl_api_key = os.getenv("FIRECRAWL_API_KEY")
+sitecrawl_api_key = os.getenv("SITECRAWL_API_KEY")
 serp_api_key = os.getenv("SERP_API_KEY")
 
-if not firecrawl_api_key:
-    print(f"{Colors.RED}Warning: FIRECRAWL_API_KEY not found in environment variables{Colors.RESET}")
+if not sitecrawl_api_key:
+    print(f"{Colors.RED}Warning: SITECRAWL_API_KEY not found in environment variables{Colors.RESET}")
 
 if not serp_api_key:
     print(f"{Colors.RED}Error: SERP_API_KEY not found in environment variables{Colors.RESET}")
@@ -213,8 +213,8 @@ def select_urls_with_gpt(company, objective, serp_results):
         return []
 
 def extract_company_info(urls, prompt, company, api_key):
-    """Use requests to call Firecrawl's extract endpoint with selected URLs."""
-    print(f"{Colors.YELLOW}Extracting structured data from the provided URLs using Firecrawl...{Colors.RESET}")
+    """Use requests to call Sitecrawl's extract endpoint with selected URLs."""
+    print(f"{Colors.YELLOW}Extracting structured data from the provided URLs using Sitecrawl...{Colors.RESET}")
     
     headers = {
         'Content-Type': 'application/json',
@@ -236,7 +236,7 @@ def extract_company_info(urls, prompt, company, api_key):
     
     try:
         response = requests.post(
-            "https://api.firecrawl.dev/v1/extract",
+            "https://api.sitecrawl.dev/v1/extract",
             headers=headers,
             json=payload,
             timeout=120
@@ -257,7 +257,7 @@ def extract_company_info(urls, prompt, company, api_key):
             print(f"{Colors.RED}No extraction ID found in response.{Colors.RESET}")
             return None
 
-        return poll_firecrawl_result(extraction_id, api_key, interval=5, max_attempts=120)
+        return poll_sitecrawl_result(extraction_id, api_key, interval=5, max_attempts=120)
 
     except requests.exceptions.Timeout:
         print(f"{Colors.RED}Request timed out. The operation might still be processing in the background.{Colors.RESET}")
@@ -273,9 +273,9 @@ def extract_company_info(urls, prompt, company, api_key):
         print(f"{Colors.RED}Failed to extract data: {e}{Colors.RESET}")
         return None
 
-def poll_firecrawl_result(extraction_id, api_key, interval=10, max_attempts=60):
-    """Poll Firecrawl API to get the extraction result."""
-    url = f"https://api.firecrawl.dev/v1/extract/{extraction_id}"
+def poll_sitecrawl_result(extraction_id, api_key, interval=10, max_attempts=60):
+    """Poll Sitecrawl API to get the extraction result."""
+    url = f"https://api.sitecrawl.dev/v1/extract/{extraction_id}"
     headers = {
         'Authorization': f'Bearer {api_key}'
     }
@@ -409,7 +409,7 @@ def main():
         print(f"{Colors.RED}No URLs were selected.{Colors.RESET}")
         return
     
-    raw_data = extract_company_info(selected_urls, objective, company, firecrawl_api_key)
+    raw_data = extract_company_info(selected_urls, objective, company, sitecrawl_api_key)
     
     if raw_data:
         deduped_data = deduplicate_data(raw_data)

@@ -1,35 +1,35 @@
 <h3 align="center">
   <a name="readme-top"></a>
   <img
-    src="https://raw.githubusercontent.com/firecrawl/firecrawl/main/img/firecrawl_logo.png"
+    src="https://raw.githubusercontent.com/sitecrawl/sitecrawl/main/img/sitecrawl_logo.png"
     height="200"
   >
 </h3>
 
 <div align="center">
-  <a href="https://github.com/firecrawl/firecrawl/blob/main/LICENSE">
-    <img src="https://img.shields.io/github/license/firecrawl/firecrawl" alt="License">
+  <a href="https://github.com/sitecrawl/sitecrawl/blob/main/LICENSE">
+    <img src="https://img.shields.io/github/license/sitecrawl/sitecrawl" alt="License">
   </a>
-  <a href="https://pepy.tech/project/firecrawl-py">
-    <img src="https://static.pepy.tech/badge/firecrawl-py" alt="Downloads">
+  <a href="https://pepy.tech/project/sitecrawl-py">
+    <img src="https://static.pepy.tech/badge/sitecrawl-py" alt="Downloads">
   </a>
-  <a href="https://GitHub.com/firecrawl/firecrawl/graphs/contributors">
-    <img src="https://img.shields.io/github/contributors/firecrawl/firecrawl.svg" alt="GitHub Contributors">
+  <a href="https://GitHub.com/sitecrawl/sitecrawl/graphs/contributors">
+    <img src="https://img.shields.io/github/contributors/sitecrawl/sitecrawl.svg" alt="GitHub Contributors">
   </a>
-  <a href="https://firecrawl.dev">
-    <img src="https://img.shields.io/badge/Visit-firecrawl.dev-orange" alt="Visit firecrawl.dev">
+  <a href="https://sitecrawl.dev">
+    <img src="https://img.shields.io/badge/Visit-sitecrawl.dev-orange" alt="Visit sitecrawl.dev">
   </a>
 </div>
 
 <div>
   <p align="center">
-    <a href="https://twitter.com/firecrawl">
+    <a href="https://twitter.com/sitecrawl">
       <img src="https://img.shields.io/badge/Follow%20on%20X-000000?style=for-the-badge&logo=x&logoColor=white" alt="Follow on X" />
     </a>
     <a href="https://www.linkedin.com/company/104100957">
       <img src="https://img.shields.io/badge/Follow%20on%20LinkedIn-0077B5?style=for-the-badge&logo=linkedin&logoColor=white" alt="Follow on LinkedIn" />
     </a>
-    <a href="https://discord.gg/firecrawl">
+    <a href="https://discord.gg/sitecrawl">
       <img src="https://img.shields.io/badge/Join%20our%20Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Join our Discord" />
     </a>
   </p>
@@ -37,28 +37,28 @@
 
 ---
 
-# **🔥 Firecrawl**
+# **🔥 Sitecrawl**
 
-**The API to search, scrape, and interact with the web at scale. 🔥** The web context API to find sources, extract content, and turn it into clean Markdown or structured data your agents can ship with. Open source and available as a [hosted service](https://firecrawl.dev/?ref=github).
+**The API to search, scrape, and interact with the web at scale. 🔥** The web context API to find sources, extract content, and turn it into clean Markdown or structured data your agents can ship with. Open source and available as a [hosted service](https://sitecrawl.dev/?ref=github).
 
 _Pst. Hey, you, join our stargazers :)_
 
-<a href="https://github.com/firecrawl/firecrawl">
-  <img src="https://img.shields.io/github/stars/firecrawl/firecrawl.svg?style=social&label=Star&maxAge=2592000" alt="GitHub stars">
+<a href="https://github.com/sitecrawl/sitecrawl">
+  <img src="https://img.shields.io/github/stars/sitecrawl/sitecrawl.svg?style=social&label=Star&maxAge=2592000" alt="GitHub stars">
 </a>
 
 ---
 
-## Why Firecrawl?
+## Why Sitecrawl?
 
-- **Industry-leading reliability**: Covers 96% of the web, including JS-heavy pages — no proxy headaches, just clean data ([see benchmarks](https://www.firecrawl.dev/blog/the-worlds-best-web-data-api-v25))
+- **Industry-leading reliability**: Covers 96% of the web, including JS-heavy pages — no proxy headaches, just clean data ([see benchmarks](https://www.sitecrawl.dev/blog/the-worlds-best-web-data-api-v25))
 - **Blazingly fast**: P95 latency of 3.4s across millions of pages, built for real-time agents and dynamic apps
 - **LLM-ready output**: Clean markdown, structured JSON, screenshots, and more — spend fewer tokens, build better AI apps
 - **We handle the hard stuff**: Rotating proxies, orchestration, rate limits, JS-blocked content, and more — zero configuration
-- **Agent ready**: Connect Firecrawl to any AI agent or MCP client with a single command
+- **Agent ready**: Connect Sitecrawl to any AI agent or MCP client with a single command
 - **Media parsing**: Parse and extract content from web-hosted PDFs, DOCX, and more
 - **Actions**: Click, scroll, write, wait, and press before extracting content
-- **Open source**: Developed transparently and collaboratively — [join our community](https://github.com/firecrawl/firecrawl)
+- **Open source**: Developed transparently and collaboratively — [join our community](https://github.com/sitecrawl/sitecrawl)
 
 ---
 
@@ -85,18 +85,18 @@ _Pst. Hey, you, join our stargazers :)_
 
 ## Quick Start
 
-Sign up at [firecrawl.dev](https://firecrawl.dev) to get your API key. Try the [playground](https://firecrawl.dev/playground) to test it out.
+Sign up at [sitecrawl.dev](https://sitecrawl.dev) to get your API key. Try the [playground](https://sitecrawl.dev/playground) to test it out.
 
 ### Search
 
 Search the web and get full content from results.
 
 ```python
-from firecrawl import Firecrawl
+from sitecrawl import Sitecrawl
 
-app = Firecrawl(api_key="fc-YOUR_API_KEY")
+app = Sitecrawl(api_key="fc-YOUR_API_KEY")
 
-search_result = app.search("firecrawl", limit=5)
+search_result = app.search("sitecrawl", limit=5)
 ```
 
 <details>
@@ -104,27 +104,27 @@ search_result = app.search("firecrawl", limit=5)
 
 **Node.js**
 ```javascript
-import { Firecrawl } from 'firecrawl';
+import { Sitecrawl } from 'sitecrawl';
 
-const app = new Firecrawl({apiKey: "fc-YOUR_API_KEY"});
+const app = new Sitecrawl({apiKey: "fc-YOUR_API_KEY"});
 
-app.search("firecrawl", { limit: 5 })
+app.search("sitecrawl", { limit: 5 })
 ```
 
 **cURL**
 ```bash
-curl -X POST 'https://api.firecrawl.dev/v2/search' \
+curl -X POST 'https://api.sitecrawl.dev/v2/search' \
 -H 'Authorization: Bearer fc-YOUR_API_KEY' \
 -H 'Content-Type: application/json' \
 -d '{
-  "query": "firecrawl",
+  "query": "sitecrawl",
   "limit": 5
 }'
 ```
 
 **CLI**
 ```bash
-firecrawl search "firecrawl" --limit 5
+sitecrawl search "sitecrawl" --limit 5
 ```
 </details>
 
@@ -132,13 +132,13 @@ Output:
 ```json
 [
   {
-    "url": "https://firecrawl.dev",
-    "title": "Firecrawl",
+    "url": "https://sitecrawl.dev",
+    "title": "Sitecrawl",
     "markdown": "Turn websites into..."
   },
   {
-    "url": "https://docs.firecrawl.dev",
-    "title": "Firecrawl Docs",
+    "url": "https://docs.sitecrawl.dev",
+    "title": "Sitecrawl Docs",
     "markdown": "# Getting Started..."
   }
 ]
@@ -149,11 +149,11 @@ Output:
 Get LLM-ready data from any website — markdown, JSON, screenshots, and more.
 
 ```python
-from firecrawl import Firecrawl
+from sitecrawl import Sitecrawl
 
-app = Firecrawl(api_key="fc-YOUR_API_KEY")
+app = Sitecrawl(api_key="fc-YOUR_API_KEY")
 
-result = app.scrape('firecrawl.dev')
+result = app.scrape('sitecrawl.dev')
 ```
 
 <details>
@@ -161,35 +161,35 @@ result = app.scrape('firecrawl.dev')
 
 **Node.js**
 ```javascript
-import { Firecrawl } from 'firecrawl';
+import { Sitecrawl } from 'sitecrawl';
 
-const app = new Firecrawl({ apiKey: "fc-YOUR_API_KEY" });
+const app = new Sitecrawl({ apiKey: "fc-YOUR_API_KEY" });
 
-app.scrape('firecrawl.dev')
+app.scrape('sitecrawl.dev')
 ```
 
 **cURL**
 ```bash
-curl -X POST 'https://api.firecrawl.dev/v2/scrape' \
+curl -X POST 'https://api.sitecrawl.dev/v2/scrape' \
 -H 'Authorization: Bearer fc-YOUR_API_KEY' \
 -H 'Content-Type: application/json' \
 -d '{
-  "url": "firecrawl.dev"
+  "url": "sitecrawl.dev"
 }'
 ```
 
 **CLI**
 ```bash
-firecrawl scrape https://firecrawl.dev
-firecrawl https://firecrawl.dev --only-main-content
+sitecrawl scrape https://sitecrawl.dev
+sitecrawl https://sitecrawl.dev --only-main-content
 ```
 </details>
 
 Output:
 ```
-# Firecrawl
+# Sitecrawl
 
-Firecrawl helps AI systems search, scrape, and interact with the web.
+Sitecrawl helps AI systems search, scrape, and interact with the web.
 
 ## Features
 - Search: Find information across the web
@@ -203,9 +203,9 @@ Firecrawl helps AI systems search, scrape, and interact with the web.
 Scrape a page, then interact with it using AI prompts or code.
 
 ```python
-from firecrawl import Firecrawl
+from sitecrawl import Sitecrawl
 
-app = Firecrawl(api_key="fc-YOUR_API_KEY")
+app = Sitecrawl(api_key="fc-YOUR_API_KEY")
 
 result = app.scrape("https://amazon.com")
 scrape_id = result.metadata.scrape_id
@@ -219,9 +219,9 @@ app.interact(scrape_id, prompt="Click the first result")
 
 **Node.js**
 ```javascript
-import { Firecrawl } from 'firecrawl';
+import { Sitecrawl } from 'sitecrawl';
 
-const app = new Firecrawl({apiKey: "fc-YOUR_API_KEY"});
+const app = new Sitecrawl({apiKey: "fc-YOUR_API_KEY"});
 
 const result = await app.scrape("https://amazon.com");
 
@@ -236,13 +236,13 @@ await app.interact(result.metadata.scrapeId, {
 **cURL**
 ```bash
 # 1. Scrape the page
-curl -X POST 'https://api.firecrawl.dev/v2/scrape' \
+curl -X POST 'https://api.sitecrawl.dev/v2/scrape' \
 -H 'Authorization: Bearer fc-YOUR_API_KEY' \
 -H 'Content-Type: application/json' \
 -d '{"url": "https://amazon.com"}'
 
 # 2. Interact with the page (use scrapeId from step 1)
-curl -X POST 'https://api.firecrawl.dev/v2/scrape/SCRAPE_ID/interact' \
+curl -X POST 'https://api.sitecrawl.dev/v2/scrape/SCRAPE_ID/interact' \
 -H 'Authorization: Bearer fc-YOUR_API_KEY' \
 -H 'Content-Type: application/json' \
 -d '{"prompt": "Search for mechanical keyboard"}'
@@ -250,9 +250,9 @@ curl -X POST 'https://api.firecrawl.dev/v2/scrape/SCRAPE_ID/interact' \
 
 **CLI**
 ```bash
-firecrawl scrape https://amazon.com
-firecrawl interact exec --prompt "Search for 'mechanical keyboard'"
-firecrawl interact exec --prompt "Click the first result"
+sitecrawl scrape https://amazon.com
+sitecrawl interact exec --prompt "Search for 'mechanical keyboard'"
+sitecrawl interact exec --prompt "Click the first result"
 ```
 </details>
 
@@ -261,7 +261,7 @@ Output:
 {
   "success": true,
   "output": "Keyboard available at $100",
-  "liveViewUrl": "https://liveview.firecrawl.dev/..."
+  "liveViewUrl": "https://liveview.sitecrawl.dev/..."
 }
 ```
 
@@ -269,14 +269,14 @@ Output:
 
 ## Power Your Agent
 
-Connect Firecrawl to any AI agent or MCP client in minutes.
+Connect Sitecrawl to any AI agent or MCP client in minutes.
 
 ### Skill
 
 Give your agent easy access to real-time web data with one command.
 
 ```bash
-npx -y firecrawl-cli@latest init --all --browser
+npx -y sitecrawl-cli@latest init --all --browser
 ```
 
 Restart your agent after installing. Works with [Claude Code](https://claude.ai/code), [Antigravity](https://antigravity.google), [OpenCode](https://opencode.ai), and more.
@@ -288,11 +288,11 @@ Connect any MCP-compatible client to the web in seconds.
 ```json
 {
   "mcpServers": {
-    "firecrawl-mcp": {
+    "sitecrawl-mcp": {
       "command": "npx",
-      "args": ["-y", "firecrawl-mcp"],
+      "args": ["-y", "sitecrawl-mcp"],
       "env": {
-        "FIRECRAWL_API_KEY": "fc-YOUR_API_KEY"
+        "SITECRAWL_API_KEY": "fc-YOUR_API_KEY"
       }
     }
   }
@@ -301,13 +301,13 @@ Connect any MCP-compatible client to the web in seconds.
 
 ### Agent Onboarding
 
-Are you an AI agent? Fetch this skill to sign up your user, get an API key, and start building with Firecrawl.
+Are you an AI agent? Fetch this skill to sign up your user, get an API key, and start building with Sitecrawl.
 
 ```bash
-curl -s https://firecrawl.dev/agent-onboarding/SKILL.md
+curl -s https://sitecrawl.dev/agent-onboarding/SKILL.md
 ```
 
-See the [Skill + CLI documentation](https://docs.firecrawl.dev/sdks/cli) for all available commands. For MCP, see [firecrawl-mcp-server](https://github.com/firecrawl/firecrawl-mcp-server).
+See the [Skill + CLI documentation](https://docs.sitecrawl.dev/sdks/cli) for all available commands. For MCP, see [sitecrawl-mcp-server](https://github.com/sitecrawl/sitecrawl-mcp-server).
 
 ---
 
@@ -319,7 +319,7 @@ See the [Skill + CLI documentation](https://docs.firecrawl.dev/sdks/cli) for all
 
 Agent is the evolution of our `/extract` endpoint: faster, more reliable, and doesn't require you to know the URLs upfront.
 ```bash
-curl -X POST 'https://api.firecrawl.dev/v2/agent' \
+curl -X POST 'https://api.sitecrawl.dev/v2/agent' \
   -H 'Authorization: Bearer fc-YOUR_API_KEY' \
   -H 'Content-Type: application/json' \
   -d '{
@@ -342,11 +342,11 @@ Response:
 
 Use a schema to get structured data:
 ```python
-from firecrawl import Firecrawl
+from sitecrawl import Sitecrawl
 from pydantic import BaseModel, Field
 from typing import List, Optional
 
-app = Firecrawl(api_key="fc-YOUR_API_KEY")
+app = Sitecrawl(api_key="fc-YOUR_API_KEY")
 
 class Founder(BaseModel):
     name: str = Field(description="Full name of the founder")
@@ -356,7 +356,7 @@ class FoundersSchema(BaseModel):
     founders: List[Founder] = Field(description="List of founders")
 
 result = app.agent(
-    prompt="Find the founders of Firecrawl",
+    prompt="Find the founders of Sitecrawl",
     schema=FoundersSchema
 )
 
@@ -377,7 +377,7 @@ print(result.data)
 Focus the agent on specific pages:
 ```python
 result = app.agent(
-    urls=["https://docs.firecrawl.dev", "https://firecrawl.dev/pricing"],
+    urls=["https://docs.sitecrawl.dev", "https://sitecrawl.dev/pricing"],
     prompt="Compare the features and pricing information"
 )
 ```
@@ -392,7 +392,7 @@ Choose between two models based on your needs:
 | `spark-1-pro` | Standard | Complex research, critical data gathering |
 ```python
 result = app.agent(
-    prompt="Compare enterprise features across Firecrawl, Apify, and ScrapingBee",
+    prompt="Compare enterprise features across Sitecrawl, Apify, and ScrapingBee",
     model="spark-1-pro"
 )
 ```
@@ -404,17 +404,17 @@ result = app.agent(
 - Research tasks where the agent needs to explore multiple paths
 - Critical data where accuracy is paramount
 
-Learn more about Spark models in our [Agent documentation](https://docs.firecrawl.dev/features/agent).
+Learn more about Spark models in our [Agent documentation](https://docs.sitecrawl.dev/features/agent).
 
 ### Crawl
 
 Crawl an entire website and get content from all pages.
 ```bash
-curl -X POST 'https://api.firecrawl.dev/v2/crawl' \
+curl -X POST 'https://api.sitecrawl.dev/v2/crawl' \
   -H 'Authorization: Bearer fc-YOUR_API_KEY' \
   -H 'Content-Type: application/json' \
   -d '{
-    "url": "https://docs.firecrawl.dev",
+    "url": "https://docs.sitecrawl.dev",
     "limit": 100,
     "scrapeOptions": {
       "formats": ["markdown"]
@@ -427,13 +427,13 @@ Returns a job ID:
 {
   "success": true,
   "id": "123-456-789",
-  "url": "https://api.firecrawl.dev/v2/crawl/123-456-789"
+  "url": "https://api.sitecrawl.dev/v2/crawl/123-456-789"
 }
 ```
 
 #### Check Crawl Status
 ```bash
-curl -X GET 'https://api.firecrawl.dev/v2/crawl/123-456-789' \
+curl -X GET 'https://api.sitecrawl.dev/v2/crawl/123-456-789' \
   -H 'Authorization: Bearer fc-YOUR_API_KEY'
 ```
 ```json
@@ -457,10 +457,10 @@ curl -X GET 'https://api.firecrawl.dev/v2/crawl/123-456-789' \
 
 Discover all URLs on a website instantly.
 ```bash
-curl -X POST 'https://api.firecrawl.dev/v2/map' \
+curl -X POST 'https://api.sitecrawl.dev/v2/map' \
   -H 'Authorization: Bearer fc-YOUR_API_KEY' \
   -H 'Content-Type: application/json' \
-  -d '{"url": "https://firecrawl.dev"}'
+  -d '{"url": "https://sitecrawl.dev"}'
 ```
 
 Response:
@@ -468,9 +468,9 @@ Response:
 {
   "success": true,
   "links": [
-    {"url": "https://firecrawl.dev", "title": "Firecrawl", "description": "Turn websites into LLM-ready data"},
-    {"url": "https://firecrawl.dev/pricing", "title": "Pricing", "description": "Firecrawl pricing plans"},
-    {"url": "https://firecrawl.dev/blog", "title": "Blog", "description": "Firecrawl blog"}
+    {"url": "https://sitecrawl.dev", "title": "Sitecrawl", "description": "Turn websites into LLM-ready data"},
+    {"url": "https://sitecrawl.dev/pricing", "title": "Pricing", "description": "Sitecrawl pricing plans"},
+    {"url": "https://sitecrawl.dev/blog", "title": "Blog", "description": "Sitecrawl blog"}
   ]
 }
 ```
@@ -479,11 +479,11 @@ Response:
 
 Find specific URLs within a site:
 ```python
-from firecrawl import Firecrawl
+from sitecrawl import Sitecrawl
 
-app = Firecrawl(api_key="fc-YOUR_API_KEY")
+app = Sitecrawl(api_key="fc-YOUR_API_KEY")
 
-result = app.map("https://firecrawl.dev", search="pricing")
+result = app.map("https://sitecrawl.dev", search="pricing")
 # Returns URLs ordered by relevance to "pricing"
 ```
 
@@ -491,14 +491,14 @@ result = app.map("https://firecrawl.dev", search="pricing")
 
 Scrape multiple URLs at once:
 ```python
-from firecrawl import Firecrawl
+from sitecrawl import Sitecrawl
 
-app = Firecrawl(api_key="fc-YOUR_API_KEY")
+app = Sitecrawl(api_key="fc-YOUR_API_KEY")
 
 job = app.batch_scrape([
-    "https://firecrawl.dev",
-    "https://docs.firecrawl.dev",
-    "https://firecrawl.dev/pricing"
+    "https://sitecrawl.dev",
+    "https://docs.sitecrawl.dev",
+    "https://sitecrawl.dev/pricing"
 ], formats=["markdown"])
 
 for doc in job.data:
@@ -509,21 +509,21 @@ for doc in job.data:
 
 ## SDKs
 
-Our SDKs provide a convenient way to use all Firecrawl features and automatically handle polling for async operations.
+Our SDKs provide a convenient way to use all Sitecrawl features and automatically handle polling for async operations.
 
 ### Python
 
 Install the SDK:
 ```bash
-pip install firecrawl-py
+pip install sitecrawl-py
 ```
 ```python
-from firecrawl import Firecrawl
+from sitecrawl import Sitecrawl
 
-app = Firecrawl(api_key="fc-YOUR_API_KEY")
+app = Sitecrawl(api_key="fc-YOUR_API_KEY")
 
 # Scrape a single URL
-doc = app.scrape("https://firecrawl.dev", formats=["markdown"])
+doc = app.scrape("https://sitecrawl.dev", formats=["markdown"])
 print(doc.markdown)
 
 # Use the Agent for autonomous data gathering
@@ -531,7 +531,7 @@ result = app.agent(prompt="Find the founders of Stripe")
 print(result.data)
 
 # Crawl a website (automatically waits for completion)
-docs = app.crawl("https://docs.firecrawl.dev", limit=50)
+docs = app.crawl("https://docs.sitecrawl.dev", limit=50)
 for doc in docs.data:
     print(doc.metadata.source_url, doc.markdown[:100])
 
@@ -544,15 +544,15 @@ print(results)
 
 Install the SDK:
 ```bash
-npm install firecrawl
+npm install sitecrawl
 ```
 ```javascript
-import { Firecrawl } from 'firecrawl';
+import { Sitecrawl } from 'sitecrawl';
 
-const app = new Firecrawl({ apiKey: 'fc-YOUR_API_KEY' });
+const app = new Sitecrawl({ apiKey: 'fc-YOUR_API_KEY' });
 
 // Scrape a single URL
-const doc = await app.scrape('https://firecrawl.dev', { formats: ['markdown'] });
+const doc = await app.scrape('https://sitecrawl.dev', { formats: ['markdown'] });
 console.log(doc.markdown);
 
 // Use the Agent for autonomous data gathering
@@ -560,7 +560,7 @@ const result = await app.agent({ prompt: 'Find the founders of Stripe' });
 console.log(result.data);
 
 // Crawl a website (automatically waits for completion)
-const docs = await app.crawl('https://docs.firecrawl.dev', { limit: 50 });
+const docs = await app.crawl('https://docs.sitecrawl.dev', { limit: 50 });
 docs.data.forEach(doc => {
     console.log(doc.metadata.sourceURL, doc.markdown.substring(0, 100));
 });
@@ -576,7 +576,7 @@ results.data.web.forEach(result => {
 
 Install the SDK:
 ```bash
-go get github.com/firecrawl/firecrawl/apps/go-sdk
+go get github.com/sitecrawl/sitecrawl/apps/go-sdk
 ```
 ```go
 package main
@@ -586,13 +586,13 @@ import (
 	"fmt"
 	"log"
 
-	firecrawl "github.com/firecrawl/firecrawl/apps/go-sdk"
-	"github.com/firecrawl/firecrawl/apps/go-sdk/option"
+	sitecrawl "github.com/sitecrawl/sitecrawl/apps/go-sdk"
+	"github.com/sitecrawl/sitecrawl/apps/go-sdk/option"
 )
 
 func main() {
-	// Create a client (reads FIRECRAWL_API_KEY from environment)
-	client, err := firecrawl.NewClient(option.WithAPIKey("fc-YOUR_API_KEY"))
+	// Create a client (reads SITECRAWL_API_KEY from environment)
+	client, err := sitecrawl.NewClient(option.WithAPIKey("fc-YOUR_API_KEY"))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -600,7 +600,7 @@ func main() {
 	ctx := context.Background()
 
 	// Scrape a single URL
-	doc, err := client.Scrape(ctx, "https://firecrawl.dev", &firecrawl.ScrapeOptions{
+	doc, err := client.Scrape(ctx, "https://sitecrawl.dev", &sitecrawl.ScrapeOptions{
 		Formats: []string{"markdown"},
 	})
 	if err != nil {
@@ -609,7 +609,7 @@ func main() {
 	fmt.Println(doc.Markdown)
 
 	// Use the Agent for autonomous data gathering
-	agent, err := client.Agent(ctx, &firecrawl.AgentOptions{
+	agent, err := client.Agent(ctx, &sitecrawl.AgentOptions{
 		Prompt: "Find the founders of Stripe",
 	})
 	if err != nil {
@@ -618,8 +618,8 @@ func main() {
 	fmt.Println(agent.Data)
 
 	// Crawl a website (automatically waits for completion)
-	job, err := client.Crawl(ctx, "https://docs.firecrawl.dev", &firecrawl.CrawlOptions{
-		Limit: firecrawl.Int(50),
+	job, err := client.Crawl(ctx, "https://docs.sitecrawl.dev", &sitecrawl.CrawlOptions{
+		Limit: sitecrawl.Int(50),
 	})
 	if err != nil {
 		log.Fatal(err)
@@ -627,8 +627,8 @@ func main() {
 	fmt.Printf("Crawled %d pages\n", len(job.Data))
 
 	// Search the web
-	results, err := client.Search(ctx, "best AI data tools 2024", &firecrawl.SearchOptions{
-		Limit: firecrawl.Int(10),
+	results, err := client.Search(ctx, "best AI data tools 2024", &sitecrawl.SearchOptions{
+		Limit: sitecrawl.Int(10),
 	})
 	if err != nil {
 		log.Fatal(err)
@@ -639,7 +639,7 @@ func main() {
 
 ### Java
 
-Add the dependency ([Gradle/Maven](https://docs.firecrawl.dev/sdks/java#installation)):
+Add the dependency ([Gradle/Maven](https://docs.sitecrawl.dev/sdks/java#installation)):
 ```groovy
 repositories {
     mavenCentral()
@@ -647,21 +647,21 @@ repositories {
 }
 
 dependencies {
-    implementation 'com.github.firecrawl:firecrawl-java-sdk:2.0'
+    implementation 'com.github.sitecrawl:sitecrawl-java-sdk:2.0'
 }
 ```
 ```java
-import dev.firecrawl.client.FirecrawlClient;
-import dev.firecrawl.model.*;
+import dev.sitecrawl.client.SitecrawlClient;
+import dev.sitecrawl.model.*;
 
-FirecrawlClient client = new FirecrawlClient(
-    System.getenv("FIRECRAWL_API_KEY"), null, null
+SitecrawlClient client = new SitecrawlClient(
+    System.getenv("SITECRAWL_API_KEY"), null, null
 );
 
 // Scrape a single URL
 ScrapeParams scrapeParams = new ScrapeParams();
 scrapeParams.setFormats(new String[]{"markdown"});
-FirecrawlDocument doc = client.scrapeURL("https://firecrawl.dev", scrapeParams);
+SitecrawlDocument doc = client.scrapeURL("https://sitecrawl.dev", scrapeParams);
 System.out.println(doc.getMarkdown());
 
 // Use the Agent for autonomous data gathering
@@ -673,8 +673,8 @@ System.out.println(result.getData());
 // Crawl a website (polls until completion)
 CrawlParams crawlParams = new CrawlParams();
 crawlParams.setLimit(50);
-CrawlStatusResponse job = client.crawlURL("https://docs.firecrawl.dev", crawlParams, null, 10);
-for (FirecrawlDocument page : job.getData()) {
+CrawlStatusResponse job = client.crawlURL("https://docs.sitecrawl.dev", crawlParams, null, 10);
+for (SitecrawlDocument page : job.getData()) {
     System.out.println(page.getMetadata().get("sourceURL"));
 }
 
@@ -693,31 +693,31 @@ Add the dependency:
 ```elixir
 def deps do
   [
-    {:firecrawl, "~> 1.0"}
+    {:sitecrawl, "~> 1.0"}
   ]
 end
 ```
 ```elixir
 # Scrape a URL
-{:ok, response} = Firecrawl.scrape_and_extract_from_url(
-  url: "https://firecrawl.dev",
+{:ok, response} = Sitecrawl.scrape_and_extract_from_url(
+  url: "https://sitecrawl.dev",
   formats: ["markdown"]
 )
 
 # Crawl a website
-{:ok, response} = Firecrawl.crawl_urls(
-  url: "https://docs.firecrawl.dev",
+{:ok, response} = Sitecrawl.crawl_urls(
+  url: "https://docs.sitecrawl.dev",
   limit: 50
 )
 
 # Search the web
-{:ok, response} = Firecrawl.search_and_scrape(
+{:ok, response} = Sitecrawl.search_and_scrape(
   query: "best AI data tools 2024",
   limit: 10
 )
 
 # Map URLs
-{:ok, response} = Firecrawl.map_urls(url: "https://example.com")
+{:ok, response} = Sitecrawl.map_urls(url: "https://example.com")
 ```
 
 ### Rust
@@ -725,18 +725,18 @@ end
 Add the dependency:
 ```toml
 [dependencies]
-firecrawl = "2"
+sitecrawl = "2"
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 ```
 ```rust
-use firecrawl::{Client, ScrapeOptions, Format, CrawlOptions};
+use sitecrawl::{Client, ScrapeOptions, Format, CrawlOptions};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let client = Client::new("fc-YOUR_API_KEY")?;
 
     // Scrape a URL
-    let document = client.scrape("https://firecrawl.dev", None).await?;
+    let document = client.scrape("https://sitecrawl.dev", None).await?;
     println!("{:?}", document.markdown);
 
     // Crawl a website
@@ -744,7 +744,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         limit: Some(50),
         ..Default::default()
     };
-    let result = client.crawl("https://docs.firecrawl.dev", options).await?;
+    let result = client.crawl("https://docs.sitecrawl.dev", options).await?;
     println!("Crawled {} pages", result.data.len());
 
     // Search the web
@@ -759,31 +759,31 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 Install the SDK:
 ```bash
-gem install firecrawl-sdk
+gem install sitecrawl-sdk
 ```
 ```ruby
-require "firecrawl"
+require "sitecrawl"
 
-client = Firecrawl::Client.new(api_key: "fc-YOUR_API_KEY")
+client = Sitecrawl::Client.new(api_key: "fc-YOUR_API_KEY")
 
 # Scrape a single URL
-doc = client.scrape("https://firecrawl.dev",
-  Firecrawl::Models::ScrapeOptions.new(formats: ["markdown"]))
+doc = client.scrape("https://sitecrawl.dev",
+  Sitecrawl::Models::ScrapeOptions.new(formats: ["markdown"]))
 puts doc.markdown
 
 # Use the Agent for autonomous data gathering
 result = client.agent(
-  Firecrawl::Models::AgentOptions.new(prompt: "Find the founders of Stripe"))
+  Sitecrawl::Models::AgentOptions.new(prompt: "Find the founders of Stripe"))
 puts result.data
 
 # Crawl a website (automatically waits for completion)
-job = client.crawl("https://docs.firecrawl.dev",
-  Firecrawl::Models::CrawlOptions.new(limit: 50))
+job = client.crawl("https://docs.sitecrawl.dev",
+  Sitecrawl::Models::CrawlOptions.new(limit: 50))
 job.data.each { |d| puts d.metadata.source_url }
 
 # Search the web
 results = client.search("best AI data tools 2024",
-  Firecrawl::Models::SearchOptions.new(limit: 10))
+  Sitecrawl::Models::SearchOptions.new(limit: 10))
 puts results
 ```
 
@@ -791,21 +791,21 @@ puts results
 
 Install the SDK:
 ```bash
-dotnet add package firecrawl-sdk
+dotnet add package sitecrawl-sdk
 ```
 ```csharp
-using Firecrawl;
-using Firecrawl.Models;
+using Sitecrawl;
+using Sitecrawl.Models;
 
-var client = new FirecrawlClient("fc-YOUR_API_KEY");
+var client = new SitecrawlClient("fc-YOUR_API_KEY");
 
 // Scrape a single URL
-var doc = await client.ScrapeAsync("https://firecrawl.dev",
+var doc = await client.ScrapeAsync("https://sitecrawl.dev",
     new ScrapeOptions { Formats = new List<object> { "markdown" } });
 Console.WriteLine(doc.Markdown);
 
 // Crawl a website (automatically waits for completion)
-var job = await client.CrawlAsync("https://docs.firecrawl.dev",
+var job = await client.CrawlAsync("https://docs.sitecrawl.dev",
     new CrawlOptions { Limit = 50 });
 Console.WriteLine($"Crawled {job.Data.Count} pages");
 
@@ -819,26 +819,26 @@ Console.WriteLine(results);
 
 Install the SDK:
 ```bash
-composer require firecrawl/firecrawl-sdk
+composer require sitecrawl/sitecrawl-sdk
 ```
 ```php
 <?php
 
-use Firecrawl\Client\FirecrawlClient;
-use Firecrawl\Models\ScrapeOptions;
-use Firecrawl\Models\CrawlOptions;
-use Firecrawl\Models\SearchOptions;
+use Sitecrawl\Client\SitecrawlClient;
+use Sitecrawl\Models\ScrapeOptions;
+use Sitecrawl\Models\CrawlOptions;
+use Sitecrawl\Models\SearchOptions;
 
-$client = FirecrawlClient::create(apiKey: 'fc-YOUR_API_KEY');
+$client = SitecrawlClient::create(apiKey: 'fc-YOUR_API_KEY');
 
 // Scrape a single URL
-$doc = $client->scrape('https://firecrawl.dev', ScrapeOptions::with(
+$doc = $client->scrape('https://sitecrawl.dev', ScrapeOptions::with(
     formats: ['markdown'],
 ));
 echo $doc->getMarkdown();
 
 // Crawl a website (automatically waits for completion)
-$job = $client->crawl('https://docs.firecrawl.dev', CrawlOptions::with(limit: 50));
+$job = $client->crawl('https://docs.sitecrawl.dev', CrawlOptions::with(limit: 50));
 foreach ($job->getData() as $page) {
     echo $page->getMetadata()['sourceURL'] . "\n";
 }
@@ -853,49 +853,49 @@ print_r($results);
 ## Integrations
 
 **Agents & AI Tools**
-- [Firecrawl Skill](https://docs.firecrawl.dev/sdks/cli)
-- [Firecrawl CLI Skills](https://github.com/firecrawl/cli#agent-skills)
-- [Firecrawl Workflows](https://github.com/firecrawl/firecrawl-workflows)
-- [Firecrawl MCP](https://github.com/mendableai/firecrawl-mcp-server)
+- [Sitecrawl Skill](https://docs.sitecrawl.dev/sdks/cli)
+- [Sitecrawl CLI Skills](https://github.com/sitecrawl/cli#agent-skills)
+- [Sitecrawl Workflows](https://github.com/sitecrawl/sitecrawl-workflows)
+- [Sitecrawl MCP](https://github.com/mendableai/sitecrawl-mcp-server)
 
 **Platforms**
-- [Lovable](https://docs.lovable.dev/integrations/firecrawl)
-- [Zapier](https://zapier.com/apps/firecrawl/integrations)
-- [n8n](https://n8n.io/integrations/firecrawl/)
+- [Lovable](https://docs.lovable.dev/integrations/sitecrawl)
+- [Zapier](https://zapier.com/apps/sitecrawl/integrations)
+- [n8n](https://n8n.io/integrations/sitecrawl/)
 
-[View all integrations →](https://www.firecrawl.dev/integrations)
+[View all integrations →](https://www.sitecrawl.dev/integrations)
 
-**Missing your favorite tool?** [Open an issue](https://github.com/mendableai/firecrawl/issues) and let us know!
+**Missing your favorite tool?** [Open an issue](https://github.com/mendableai/sitecrawl/issues) and let us know!
 
 ---
 
 ## Resources
 
-- [Documentation](https://docs.firecrawl.dev)
-- [API Reference](https://docs.firecrawl.dev/api-reference/introduction)
-- [Playground](https://firecrawl.dev/playground)
-- [Changelog](https://firecrawl.dev/changelog)
+- [Documentation](https://docs.sitecrawl.dev)
+- [API Reference](https://docs.sitecrawl.dev/api-reference/introduction)
+- [Playground](https://sitecrawl.dev/playground)
+- [Changelog](https://sitecrawl.dev/changelog)
 
 ---
 
 ## Open Source vs Cloud
 
-Firecrawl is open source under the AGPL-3.0 license. The cloud version at [firecrawl.dev](https://firecrawl.dev) includes additional features:
+Sitecrawl is open source under the AGPL-3.0 license. The cloud version at [sitecrawl.dev](https://sitecrawl.dev) includes additional features:
 
-![Open Source vs Cloud](https://raw.githubusercontent.com/firecrawl/firecrawl/main/img/open-source-cloud.png)
+![Open Source vs Cloud](https://raw.githubusercontent.com/sitecrawl/sitecrawl/main/img/open-source-cloud.png)
 
-To run locally, see the [Contributing Guide](https://github.com/firecrawl/firecrawl/blob/main/CONTRIBUTING.md). To self-host, see [Self-Hosting Guide](https://docs.firecrawl.dev/contributing/self-host).
+To run locally, see the [Contributing Guide](https://github.com/sitecrawl/sitecrawl/blob/main/CONTRIBUTING.md). To self-host, see [Self-Hosting Guide](https://docs.sitecrawl.dev/contributing/self-host).
 
 ---
 
 ## Contributing
 
-We love contributions! Please read our [Contributing Guide](https://github.com/firecrawl/firecrawl/blob/main/CONTRIBUTING.md) before submitting a pull request.
+We love contributions! Please read our [Contributing Guide](https://github.com/sitecrawl/sitecrawl/blob/main/CONTRIBUTING.md) before submitting a pull request.
 
 ### Contributors
 
-<a href="https://github.com/firecrawl/firecrawl/graphs/contributors">
-  <img alt="contributors" src="https://contrib.rocks/image?repo=firecrawl/firecrawl"/>
+<a href="https://github.com/sitecrawl/sitecrawl/graphs/contributors">
+  <img alt="contributors" src="https://contrib.rocks/image?repo=sitecrawl/sitecrawl"/>
 </a>
 
 ---
@@ -906,7 +906,7 @@ This project is primarily licensed under the GNU Affero General Public License v
 
 ---
 
-**It is the sole responsibility of end users to respect websites' policies when scraping.** Users are advised to adhere to applicable privacy policies and terms of use. By default, Firecrawl respects robots.txt directives. By using Firecrawl, you agree to comply with these conditions.
+**It is the sole responsibility of end users to respect websites' policies when scraping.** Users are advised to adhere to applicable privacy policies and terms of use. By default, Sitecrawl respects robots.txt directives. By using Sitecrawl, you agree to comply with these conditions.
 
 <p align="right" style="font-size: 14px; color: #555; margin-top: 20px;">
   <a href="#readme-top" style="text-decoration: none; color: #007bff; font-weight: bold;">

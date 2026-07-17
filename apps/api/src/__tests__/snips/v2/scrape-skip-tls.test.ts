@@ -145,7 +145,7 @@ describe("V2 Scrape skipTlsVerification Default", () => {
       );
 
       expect(data).toBeDefined();
-      expect(data.markdown).toContain("Firecrawl");
+      expect(data.markdown).toContain("Sitecrawl");
     },
     scrapeTimeout,
   );

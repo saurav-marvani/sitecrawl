@@ -1,8 +1,8 @@
-package com.firecrawl;
+package com.sitecrawl;
 
-import com.firecrawl.client.FirecrawlClient;
-import com.firecrawl.errors.FirecrawlException;
-import com.firecrawl.models.*;
+import com.sitecrawl.client.SitecrawlClient;
+import com.sitecrawl.errors.SitecrawlException;
+import com.sitecrawl.models.*;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
@@ -16,28 +16,28 @@ import static org.junit.jupiter.api.Assertions.*;
  * Comprehensive Crawl Tests
  * 
  * Tests the crawl functionality with various configurations.
- * Based on Node.js SDK patterns and tested against live firecrawl.dev.
+ * Based on Node.js SDK patterns and tested against live sitecrawl.dev.
  * 
- * Run with: FIRECRAWL_API_KEY=fc-xxx gradle test --tests "com.firecrawl.CrawlTest"
+ * Run with: SITECRAWL_API_KEY=fc-xxx gradle test --tests "com.sitecrawl.CrawlTest"
  */
 class CrawlTest {
 
-    private static FirecrawlClient client;
+    private static SitecrawlClient client;
 
     @BeforeAll
     static void setup() {
-        String apiKey = System.getenv("FIRECRAWL_API_KEY");
+        String apiKey = System.getenv("SITECRAWL_API_KEY");
         if (apiKey != null && !apiKey.isBlank()) {
-            client = FirecrawlClient.fromEnv();
+            client = SitecrawlClient.fromEnv();
         }
     }
 
     @Test
-    @EnabledIfEnvironmentVariable(named = "FIRECRAWL_API_KEY", matches = ".*\\S.*")
+    @EnabledIfEnvironmentVariable(named = "SITECRAWL_API_KEY", matches = ".*\\S.*")
     void testStartCrawlMinimal() {
         System.out.println("\n=== Test: Start Crawl - Minimal Request ===");
         
-        CrawlResponse response = client.startCrawl("https://docs.firecrawl.dev",
+        CrawlResponse response = client.startCrawl("https://docs.sitecrawl.dev",
                 CrawlOptions.builder()
                         .limit(3)
                         .build());
@@ -52,11 +52,11 @@ class CrawlTest {
     }
 
     @Test
-    @EnabledIfEnvironmentVariable(named = "FIRECRAWL_API_KEY", matches = ".*\\S.*")
+    @EnabledIfEnvironmentVariable(named = "SITECRAWL_API_KEY", matches = ".*\\S.*")
     void testStartCrawlWithOptions() {
         System.out.println("\n=== Test: Start Crawl - With Options ===");
         
-        CrawlResponse response = client.startCrawl("https://docs.firecrawl.dev",
+        CrawlResponse response = client.startCrawl("https://docs.sitecrawl.dev",
                 CrawlOptions.builder()
                         .limit(5)
                         .maxDiscoveryDepth(2)
@@ -72,12 +72,12 @@ class CrawlTest {
     }
 
     @Test
-    @EnabledIfEnvironmentVariable(named = "FIRECRAWL_API_KEY", matches = ".*\\S.*")
+    @EnabledIfEnvironmentVariable(named = "SITECRAWL_API_KEY", matches = ".*\\S.*")
     void testGetCrawlStatus() {
         System.out.println("\n=== Test: Get Crawl Status ===");
         
         // Start a crawl
-        CrawlResponse start = client.startCrawl("https://docs.firecrawl.dev",
+        CrawlResponse start = client.startCrawl("https://docs.sitecrawl.dev",
                 CrawlOptions.builder()
                         .limit(3)
                         .build());
@@ -107,11 +107,11 @@ class CrawlTest {
     }
 
     @Test
-    @EnabledIfEnvironmentVariable(named = "FIRECRAWL_API_KEY", matches = ".*\\S.*")
+    @EnabledIfEnvironmentVariable(named = "SITECRAWL_API_KEY", matches = ".*\\S.*")
     void testCancelCrawl() {
         System.out.println("\n=== Test: Cancel Crawl ===");
         
-        CrawlResponse start = client.startCrawl("https://docs.firecrawl.dev",
+        CrawlResponse start = client.startCrawl("https://docs.sitecrawl.dev",
                 CrawlOptions.builder()
                         .limit(10)
                         .build());
@@ -125,11 +125,11 @@ class CrawlTest {
     }
 
     @Test
-    @EnabledIfEnvironmentVariable(named = "FIRECRAWL_API_KEY", matches = ".*\\S.*")
+    @EnabledIfEnvironmentVariable(named = "SITECRAWL_API_KEY", matches = ".*\\S.*")
     void testCrawlWithWait() {
         System.out.println("\n=== Test: Crawl with Wait (Blocking) ===");
         
-        CrawlJob job = client.crawl("https://firecrawl.dev",
+        CrawlJob job = client.crawl("https://sitecrawl.dev",
                 CrawlOptions.builder()
                         .limit(3)
                         .maxDiscoveryDepth(1)
@@ -157,11 +157,11 @@ class CrawlTest {
     }
 
     @Test
-    @EnabledIfEnvironmentVariable(named = "FIRECRAWL_API_KEY", matches = ".*\\S.*")
+    @EnabledIfEnvironmentVariable(named = "SITECRAWL_API_KEY", matches = ".*\\S.*")
     void testCrawlWithScrapeOptions() {
         System.out.println("\n=== Test: Crawl with Scrape Options ===");
         
-        CrawlResponse response = client.startCrawl("https://docs.firecrawl.dev",
+        CrawlResponse response = client.startCrawl("https://docs.sitecrawl.dev",
                 CrawlOptions.builder()
                         .limit(2)
                         .scrapeOptions(ScrapeOptions.builder()
@@ -179,11 +179,11 @@ class CrawlTest {
     }
 
     @Test
-    @EnabledIfEnvironmentVariable(named = "FIRECRAWL_API_KEY", matches = ".*\\S.*")
+    @EnabledIfEnvironmentVariable(named = "SITECRAWL_API_KEY", matches = ".*\\S.*")
     void testCrawlWithExcludePaths() {
         System.out.println("\n=== Test: Crawl with Exclude Paths ===");
         
-        CrawlResponse response = client.startCrawl("https://docs.firecrawl.dev",
+        CrawlResponse response = client.startCrawl("https://docs.sitecrawl.dev",
                 CrawlOptions.builder()
                         .limit(5)
                         .excludePaths(List.of("/blog/*", "/admin/*"))
@@ -197,11 +197,11 @@ class CrawlTest {
     }
 
     @Test
-    @EnabledIfEnvironmentVariable(named = "FIRECRAWL_API_KEY", matches = ".*\\S.*")
+    @EnabledIfEnvironmentVariable(named = "SITECRAWL_API_KEY", matches = ".*\\S.*")
     void testCrawlWithIncludePaths() {
         System.out.println("\n=== Test: Crawl with Include Paths ===");
         
-        CrawlResponse response = client.startCrawl("https://docs.firecrawl.dev",
+        CrawlResponse response = client.startCrawl("https://docs.sitecrawl.dev",
                 CrawlOptions.builder()
                         .limit(5)
                         .includePaths(List.of("/docs/*"))
@@ -215,11 +215,11 @@ class CrawlTest {
     }
 
     @Test
-    @EnabledIfEnvironmentVariable(named = "FIRECRAWL_API_KEY", matches = ".*\\S.*")
+    @EnabledIfEnvironmentVariable(named = "SITECRAWL_API_KEY", matches = ".*\\S.*")
     void testCrawlWithAllowExternalLinks() {
         System.out.println("\n=== Test: Crawl with Allow External Links ===");
         
-        CrawlResponse response = client.startCrawl("https://docs.firecrawl.dev",
+        CrawlResponse response = client.startCrawl("https://docs.sitecrawl.dev",
                 CrawlOptions.builder()
                         .limit(5)
                         .allowExternalLinks(true)
@@ -232,13 +232,13 @@ class CrawlTest {
     }
 
     @Test
-    @EnabledIfEnvironmentVariable(named = "FIRECRAWL_API_KEY", matches = ".*\\S.*")
+    @EnabledIfEnvironmentVariable(named = "SITECRAWL_API_KEY", matches = ".*\\S.*")
     void testCrawlWithWebhookConfig() {
         System.out.println("\n=== Test: Crawl with Webhook (if available) ===");
         
         try {
             // Using a test webhook URL (requestbin, webhook.site, etc.)
-            CrawlResponse response = client.startCrawl("https://firecrawl.dev",
+            CrawlResponse response = client.startCrawl("https://sitecrawl.dev",
                     CrawlOptions.builder()
                             .limit(2)
                             .webhook(WebhookConfig.builder()
@@ -256,11 +256,11 @@ class CrawlTest {
     }
 
     @Test
-    @EnabledIfEnvironmentVariable(named = "FIRECRAWL_API_KEY", matches = ".*\\S.*")
-    void testCrawlFirecrawlHomepage() {
-        System.out.println("\n=== Test: Crawl Firecrawl.dev Homepage ===");
+    @EnabledIfEnvironmentVariable(named = "SITECRAWL_API_KEY", matches = ".*\\S.*")
+    void testCrawlSitecrawlHomepage() {
+        System.out.println("\n=== Test: Crawl Sitecrawl.dev Homepage ===");
         
-        CrawlJob job = client.crawl("https://firecrawl.dev",
+        CrawlJob job = client.crawl("https://sitecrawl.dev",
                 CrawlOptions.builder()
                         .limit(5)
                         .maxDiscoveryDepth(2)
@@ -277,19 +277,19 @@ class CrawlTest {
         assertTrue(job.getData() != null && !job.getData().isEmpty(),
                 "Should have crawled at least one page");
         
-        // Verify content from Firecrawl site
-        boolean hasFirecrawlContent = job.getData().stream()
+        // Verify content from Sitecrawl site
+        boolean hasSitecrawlContent = job.getData().stream()
                 .anyMatch(doc -> {
                     String markdown = doc.getMarkdown();
                     return markdown != null && 
-                           (markdown.toLowerCase().contains("firecrawl") ||
+                           (markdown.toLowerCase().contains("sitecrawl") ||
                             markdown.toLowerCase().contains("scrape") ||
                             markdown.toLowerCase().contains("crawl"));
                 });
         
-        assertTrue(hasFirecrawlContent, "Should contain Firecrawl-related content");
+        assertTrue(hasSitecrawlContent, "Should contain Sitecrawl-related content");
         
-        System.out.println("✓ Successfully crawled Firecrawl homepage");
+        System.out.println("✓ Successfully crawled Sitecrawl homepage");
         System.out.println("  Pages crawled: " + job.getData().size());
         System.out.println("  Status: " + job.getStatus());
         

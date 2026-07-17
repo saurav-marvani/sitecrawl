@@ -1,29 +1,29 @@
-# Self-hosting Firecrawl
+# Self-hosting Sitecrawl
 
 #### Contributor?
 
-Welcome to [Firecrawl](https://firecrawl.dev) 🔥! Here are some instructions on how to get the project locally so you can run it on your own and contribute.
+Welcome to [Sitecrawl](https://sitecrawl.dev) 🔥! Here are some instructions on how to get the project locally so you can run it on your own and contribute.
 
-If you're contributing, note that the process is similar to other open-source repos, i.e., fork Firecrawl, make changes, run tests, PR.
+If you're contributing, note that the process is similar to other open-source repos, i.e., fork Sitecrawl, make changes, run tests, PR.
 
-If you have any questions or would like help getting on board, join our Discord community [here](https://discord.gg/firecrawl) for more information or submit an issue on Github [here](https://github.com/firecrawl/firecrawl/issues/new/choose)!
+If you have any questions or would like help getting on board, join our Discord community [here](https://discord.gg/sitecrawl) for more information or submit an issue on Github [here](https://github.com/sitecrawl/sitecrawl/issues/new/choose)!
 
 ## Why?
 
-Self-hosting Firecrawl is particularly beneficial for organizations with stringent security policies that require data to remain within controlled environments. Here are some key reasons to consider self-hosting:
+Self-hosting Sitecrawl is particularly beneficial for organizations with stringent security policies that require data to remain within controlled environments. Here are some key reasons to consider self-hosting:
 
-- **Enhanced Security and Compliance:** By self-hosting, you ensure that all data handling and processing complies with internal and external regulations, keeping sensitive information within your secure infrastructure. Note that Firecrawl is a Mendable product and relies on SOC2 Type2 certification, which means that the platform adheres to high industry standards for managing data security.
+- **Enhanced Security and Compliance:** By self-hosting, you ensure that all data handling and processing complies with internal and external regulations, keeping sensitive information within your secure infrastructure. Note that Sitecrawl is a Mendable product and relies on SOC2 Type2 certification, which means that the platform adheres to high industry standards for managing data security.
 - **Customizable Services:** Self-hosting allows you to tailor the services, such as the Playwright service, to meet specific needs or handle particular use cases that may not be supported by the standard cloud offering.
-- **Learning and Community Contribution:** By setting up and maintaining your own instance, you gain a deeper understanding of how Firecrawl works, which can also lead to more meaningful contributions to the project.
+- **Learning and Community Contribution:** By setting up and maintaining your own instance, you gain a deeper understanding of how Sitecrawl works, which can also lead to more meaningful contributions to the project.
 
 ### Considerations
 
 However, there are some limitations and additional responsibilities to be aware of:
 
-1. **Limited Access to Fire-engine:** Currently, self-hosted instances of Firecrawl do not have access to Fire-engine, which includes advanced features for handling IP blocks, robot detection mechanisms, and more. This means that while you can manage basic scraping tasks, more complex scenarios might require additional configuration or might not be supported.
+1. **Limited Access to Fire-engine:** Currently, self-hosted instances of Sitecrawl do not have access to Fire-engine, which includes advanced features for handling IP blocks, robot detection mechanisms, and more. This means that while you can manage basic scraping tasks, more complex scenarios might require additional configuration or might not be supported.
 2. **Manual Configuration Required:** If you need to use scraping methods beyond the basic fetch and Playwright options, you will need to manually configure these in the `.env` file. This requires a deeper understanding of the technologies and might involve more setup time.
 
-Self-hosting Firecrawl is ideal for those who need full control over their scraping and data processing environments but comes with the trade-off of additional maintenance and configuration efforts.
+Self-hosting Sitecrawl is ideal for those who need full control over their scraping and data processing environments but comes with the trade-off of additional maintenance and configuration efforts.
 
 ## Steps
 
@@ -99,9 +99,9 @@ BULL_AUTH_KEY=CHANGEME
 ## === PostgreSQL Database Configuration ===
 # Configure PostgreSQL credentials. These should match the credentials used by the nuq-postgres container.
 # If you change these, ensure all three are set consistently.
-# POSTGRES_USER=firecrawl
-# POSTGRES_PASSWORD=firecrawl_password
-# POSTGRES_DB=firecrawl
+# POSTGRES_USER=sitecrawl
+# POSTGRES_PASSWORD=sitecrawl_password
+# POSTGRES_DB=sitecrawl
 
 # Set if you have a llamaparse key you'd like to use to parse pdfs
 # LLAMAPARSE_API_KEY=
@@ -137,7 +137,7 @@ BULL_AUTH_KEY=CHANGEME
 
     If you encounter an error, make sure you're using `docker compose` and not `docker-compose`.
     
-    This will run a local instance of Firecrawl which can be accessed at `http://localhost:3002`.
+    This will run a local instance of Sitecrawl which can be accessed at `http://localhost:3002`.
     
     You should be able to see the Bull Queue Manager UI on `http://localhost:3002/admin/CHANGEME/queues`.
 
@@ -149,17 +149,17 @@ If you’d like to test the crawl endpoint, you can run this:
   curl -X POST http://localhost:3002/v1/crawl \
       -H 'Content-Type: application/json' \
       -d '{
-        "url": "https://firecrawl.dev"
+        "url": "https://sitecrawl.dev"
       }'
   ```   
 
 ## Troubleshooting
 
-This section provides solutions to common issues you might encounter while setting up or running your self-hosted instance of Firecrawl.
+This section provides solutions to common issues you might encounter while setting up or running your self-hosted instance of Sitecrawl.
 
 ### API Keys for SDK Usage
 
-**Note:** When using Firecrawl SDKs with a self-hosted instance, API keys are optional. API keys are only required when connecting to the cloud service (api.firecrawl.dev).
+**Note:** When using Sitecrawl SDKs with a self-hosted instance, API keys are optional. API keys are only required when connecting to the cloud service (api.sitecrawl.dev).
 
 ### Supabase client is not configured
 
@@ -209,19 +209,19 @@ Errors related to connecting to Redis, such as timeouts or "Connection refused".
 ### API endpoint does not respond
 
 **Symptom:**
-API requests to the Firecrawl instance timeout or return no response.
+API requests to the Sitecrawl instance timeout or return no response.
 
 **Solution:**
-- Ensure that the Firecrawl service is running by checking the Docker container status.
+- Ensure that the Sitecrawl service is running by checking the Docker container status.
 - Verify that the PORT and HOST settings in your .env file are correct and that no other service is using the same port.
 - Check the network configuration to ensure that the host is accessible from the client making the API request.
 
-By addressing these common issues, you can ensure a smoother setup and operation of your self-hosted Firecrawl instance.
+By addressing these common issues, you can ensure a smoother setup and operation of your self-hosted Sitecrawl instance.
 
-## Install Firecrawl on a Kubernetes Cluster (Simple Version)
+## Install Sitecrawl on a Kubernetes Cluster (Simple Version)
 
-Read the [examples/kubernetes/cluster-install/README.md](https://github.com/firecrawl/firecrawl/blob/main/examples/kubernetes/cluster-install/README.md) for instructions on how to install Firecrawl on a Kubernetes Cluster.
+Read the [examples/kubernetes/cluster-install/README.md](https://github.com/sitecrawl/sitecrawl/blob/main/examples/kubernetes/cluster-install/README.md) for instructions on how to install Sitecrawl on a Kubernetes Cluster.
 
-## Install Firecrawl on a Kubernetes Cluster with Helm
+## Install Sitecrawl on a Kubernetes Cluster with Helm
 
-Read the [examples/kubernetes/firecrawl-helm/README.md](https://github.com/firecrawl/firecrawl/blob/main/examples/kubernetes/firecrawl-helm/README.md) for instructions on how to install Firecrawl on a Kubernetes Cluster with Helm.
+Read the [examples/kubernetes/sitecrawl-helm/README.md](https://github.com/sitecrawl/sitecrawl/blob/main/examples/kubernetes/sitecrawl-helm/README.md) for instructions on how to install Sitecrawl on a Kubernetes Cluster with Helm.

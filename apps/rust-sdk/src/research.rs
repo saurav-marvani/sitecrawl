@@ -1,11 +1,11 @@
-//! Research endpoints for Firecrawl API v2.
+//! Research endpoints for Sitecrawl API v2.
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
 
 use crate::client::Client;
-use crate::FirecrawlError;
+use crate::SitecrawlError;
 
 #[serde_with::skip_serializing_none]
 #[derive(Deserialize, Serialize, Debug, Default, Clone)]
@@ -156,7 +156,7 @@ impl Client {
         &self,
         query_text: impl AsRef<str>,
         options: impl Into<Option<SearchPapersOptions>>,
-    ) -> Result<SearchPapersResponse, FirecrawlError> {
+    ) -> Result<SearchPapersResponse, SitecrawlError> {
         let mut query = vec![
             ("query".to_string(), query_text.as_ref().to_string()),
             (
@@ -189,7 +189,7 @@ impl Client {
             .query(&query)
             .send()
             .await
-            .map_err(|e| FirecrawlError::HttpError("search papers".to_string(), e))?;
+            .map_err(|e| SitecrawlError::HttpError("search papers".to_string(), e))?;
 
         self.handle_response(response, "search papers").await
     }
@@ -197,7 +197,7 @@ impl Client {
     pub async fn inspect_paper(
         &self,
         paper_id: impl AsRef<str>,
-    ) -> Result<PaperMetadataResponse, FirecrawlError> {
+    ) -> Result<PaperMetadataResponse, SitecrawlError> {
         let response = self
             .client
             .get(self.url(&format!(
@@ -207,7 +207,7 @@ impl Client {
             .headers(self.prepare_headers(None))
             .send()
             .await
-            .map_err(|e| FirecrawlError::HttpError("inspect paper".to_string(), e))?;
+            .map_err(|e| SitecrawlError::HttpError("inspect paper".to_string(), e))?;
 
         self.handle_response(response, "inspect paper").await
     }
@@ -217,7 +217,7 @@ impl Client {
         paper_id: impl AsRef<str>,
         query_text: impl AsRef<str>,
         options: impl Into<Option<ReadPaperOptions>>,
-    ) -> Result<ReadPaperResponse, FirecrawlError> {
+    ) -> Result<ReadPaperResponse, SitecrawlError> {
         let mut query = vec![
             ("query".to_string(), query_text.as_ref().to_string()),
             (
@@ -241,7 +241,7 @@ impl Client {
             .query(&query)
             .send()
             .await
-            .map_err(|e| FirecrawlError::HttpError("read paper".to_string(), e))?;
+            .map_err(|e| SitecrawlError::HttpError("read paper".to_string(), e))?;
 
         self.handle_response(response, "read paper").await
     }
@@ -251,7 +251,7 @@ impl Client {
         paper_id: impl AsRef<str>,
         intent: impl AsRef<str>,
         options: impl Into<Option<RelatedPapersOptions>>,
-    ) -> Result<SimilarPapersResponse, FirecrawlError> {
+    ) -> Result<SimilarPapersResponse, SitecrawlError> {
         let mut query = vec![
             ("intent".to_string(), intent.as_ref().to_string()),
             (
@@ -284,7 +284,7 @@ impl Client {
             .query(&query)
             .send()
             .await
-            .map_err(|e| FirecrawlError::HttpError("related papers".to_string(), e))?;
+            .map_err(|e| SitecrawlError::HttpError("related papers".to_string(), e))?;
 
         self.handle_response(response, "related papers").await
     }
@@ -293,7 +293,7 @@ impl Client {
         &self,
         query_text: impl AsRef<str>,
         options: impl Into<Option<SearchGitHubOptions>>,
-    ) -> Result<GitHubSearchResponse, FirecrawlError> {
+    ) -> Result<GitHubSearchResponse, SitecrawlError> {
         let mut query = vec![
             ("query".to_string(), query_text.as_ref().to_string()),
             (
@@ -314,7 +314,7 @@ impl Client {
             .query(&query)
             .send()
             .await
-            .map_err(|e| FirecrawlError::HttpError("search github".to_string(), e))?;
+            .map_err(|e| SitecrawlError::HttpError("search github".to_string(), e))?;
 
         self.handle_response(response, "search github").await
     }

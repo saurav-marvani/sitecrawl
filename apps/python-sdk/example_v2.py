@@ -1,7 +1,7 @@
-from firecrawl.client import Firecrawl
+from sitecrawl.client import Sitecrawl
 
-# Initialize Firecrawl client
-firecrawl = Firecrawl(api_key="YOUR_API_KEY")
+# Initialize Sitecrawl client
+sitecrawl = Sitecrawl(api_key="YOUR_API_KEY")
 
 # =============================================================================
 # SCRAPE EXAMPLES
@@ -9,12 +9,12 @@ firecrawl = Firecrawl(api_key="YOUR_API_KEY")
 
 # Basic scraping - Get markdown content
 print("=== Basic Scrape (Markdown) ===")
-# doc = firecrawl.scrape("https://firecrawl.dev", formats=["markdown"])
+# doc = sitecrawl.scrape("https://sitecrawl.dev", formats=["markdown"])
 # print(doc.markdown)
 
 # Scraping with location settings
 print("\n=== Scrape with Location Settings ===")
-# doc = firecrawl.scrape('https://docs.firecrawl.dev',
+# doc = sitecrawl.scrape('https://docs.sitecrawl.dev',
 #     formats=['markdown'],
 #     location={
 #         'country': 'US',
@@ -33,8 +33,8 @@ print("\n=== Scrape with JSON Schema (Pydantic) ===")
 #     is_open_source: bool
 #     is_in_yc: bool
 # 
-# result = firecrawl.scrape(
-#     'https://firecrawl.dev',
+# result = sitecrawl.scrape(
+#     'https://sitecrawl.dev',
 #     formats=[{
 #       "type": "json",
 #       "schema": JsonSchema
@@ -46,8 +46,8 @@ print("\n=== Scrape with JSON Schema (Pydantic) ===")
 
 # Scraping with JSON extraction using prompt
 print("\n=== Scrape with JSON Prompt ===")
-# result = firecrawl.scrape(
-#     'https://firecrawl.dev',
+# result = sitecrawl.scrape(
+#     'https://sitecrawl.dev',
 #     formats=[{
 #       "type": "json",
 #       "prompt": "Extract the company mission from the page."
@@ -59,7 +59,7 @@ print("\n=== Scrape with JSON Prompt ===")
 
 # Advanced scraping with multiple formats and options
 print("\n=== Advanced Scrape (Multiple Formats + Options) ===")
-# response = firecrawl.scrape('https://docs.firecrawl.dev',
+# response = sitecrawl.scrape('https://docs.sitecrawl.dev',
 #     formats=[
 #         'markdown',
 #         { 'type': 'json', 'schema': { 'type': 'object', 'properties': { 'title': { 'type': 'string' } } } }
@@ -76,7 +76,7 @@ print("\n=== Advanced Scrape (Multiple Formats + Options) ===")
 
 # Basic crawling
 print("\n=== Basic Crawl ===")
-# docs = firecrawl.crawl(url="https://docs.firecrawl.dev", limit=10)  
+# docs = sitecrawl.crawl(url="https://docs.sitecrawl.dev", limit=10)  
 # print(docs)
 
 # =============================================================================
@@ -85,13 +85,13 @@ print("\n=== Basic Crawl ===")
 
 # Batch scraping multiple URLs
 print("\n=== Batch Scrape ===")
-# from firecrawl import Firecrawl
+# from sitecrawl import Sitecrawl
 # 
-# firecrawl = Firecrawl(api_key="fc-YOUR-API-KEY")
+# sitecrawl = Sitecrawl(api_key="fc-YOUR-API-KEY")
 # 
-# job = firecrawl.batch_scrape([
-#     "https://firecrawl.dev",
-#     "https://docs.firecrawl.dev",
+# job = sitecrawl.batch_scrape([
+#     "https://sitecrawl.dev",
+#     "https://docs.sitecrawl.dev",
 # ], formats=["markdown"], poll_interval=2, wait_timeout=120)
 # print(job)
 
@@ -101,7 +101,7 @@ print("\n=== Batch Scrape ===")
 
 # Search functionality
 print("\n=== Search ===")
-# search = firecrawl.search(query="firecrawl", sources=[{"type": "web"}], limit=5)
+# search = sitecrawl.search(query="sitecrawl", sources=[{"type": "web"}], limit=5)
 # print(search.web[0].title)
 
 # =============================================================================
@@ -110,7 +110,7 @@ print("\n=== Search ===")
 
 # Website mapping
 print("\n=== Map Website ===")
-# res = firecrawl.map(url="https://firecrawl.dev", limit=50, sitemap="include", search="price")
+# res = sitecrawl.map(url="https://sitecrawl.dev", limit=50, sitemap="include", search="price")
 # print(res.links[0].url)
 # print(res.links[1].url)
 # print(res.links[2].url)
@@ -128,8 +128,8 @@ print("\n=== Extract with Schema ===")
 #     "required": ["title"],
 # }
 # 
-# res = firecrawl.extract(
-#     urls=["https://docs.firecrawl.dev"],
+# res = sitecrawl.extract(
+#     urls=["https://docs.sitecrawl.dev"],
 #     prompt="Extract the page title",
 #     schema=schema,
 # )

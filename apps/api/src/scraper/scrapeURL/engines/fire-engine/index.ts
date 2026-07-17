@@ -30,7 +30,7 @@ import { gunzipSync } from "node:zlib";
 import { specialtyScrapeCheck } from "../utils/specialtyHandler";
 import { fireEngineDelete } from "./delete";
 import { MockState } from "../../lib/mock";
-import { getInnerJson } from "@mendable/firecrawl-rs";
+import { getInnerJson } from "@mendable/sitecrawl-rs";
 import { hasFormatOfType } from "../../../../lib/format-utils";
 import { InternalAction } from "../../../../controllers/v1/types";
 import { AbortManagerThrownError } from "../../lib/abortManager";
@@ -337,7 +337,7 @@ export async function scrapeURLWithFireEngineChromeCDP(
             {
               type: "executeJavascript" as const,
               script: getBrandingScript(),
-              metadata: { __firecrawl_internal: true },
+              metadata: { __sitecrawl_internal: true },
             },
           ]
         : []),
@@ -345,7 +345,7 @@ export async function scrapeURLWithFireEngineChromeCDP(
         ? ([
             {
               type: "getCookies",
-              metadata: { __firecrawl_internal: true },
+              metadata: { __sitecrawl_internal: true },
             },
           ] as unknown as InternalAction[])
         : []),

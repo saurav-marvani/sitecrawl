@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-use Firecrawl\Exceptions\FirecrawlException;
-use Firecrawl\Models\JsonFormat;
-use Firecrawl\Models\ParseFile;
-use Firecrawl\Models\ParseOptions;
+use Sitecrawl\Exceptions\SitecrawlException;
+use Sitecrawl\Models\JsonFormat;
+use Sitecrawl\Models\ParseFile;
+use Sitecrawl\Models\ParseOptions;
 
 it('builds a ParseFile from bytes', function (): void {
     $file = ParseFile::fromBytes('doc.pdf', 'hello');
@@ -16,11 +16,11 @@ it('builds a ParseFile from bytes', function (): void {
 
 it('rejects empty filename', function (): void {
     ParseFile::fromBytes('  ', 'hello');
-})->throws(FirecrawlException::class);
+})->throws(SitecrawlException::class);
 
 it('rejects empty content', function (): void {
     ParseFile::fromBytes('doc.pdf', '');
-})->throws(FirecrawlException::class);
+})->throws(SitecrawlException::class);
 
 it('serializes ParseOptions with JSON format', function (): void {
     $options = ParseOptions::with(
@@ -39,24 +39,24 @@ it('serializes ParseOptions with JSON format', function (): void {
 
 it('rejects unsupported parse formats', function (): void {
     ParseOptions::with(formats: ['screenshot']);
-})->throws(FirecrawlException::class);
+})->throws(SitecrawlException::class);
 
 it('rejects video parse format', function (): void {
     ParseOptions::with(formats: ['video']);
-})->throws(FirecrawlException::class);
+})->throws(SitecrawlException::class);
 
 it('rejects product parse format', function (): void {
     ParseOptions::with(formats: ['product']);
-})->throws(FirecrawlException::class);
+})->throws(SitecrawlException::class);
 
 it('rejects menu parse format', function (): void {
     ParseOptions::with(formats: ['menu']);
-})->throws(FirecrawlException::class);
+})->throws(SitecrawlException::class);
 
 it('rejects invalid proxy values', function (): void {
     ParseOptions::with(proxy: 'stealth');
-})->throws(FirecrawlException::class);
+})->throws(SitecrawlException::class);
 
 it('rejects non-positive timeout', function (): void {
     ParseOptions::with(timeout: 0);
-})->throws(FirecrawlException::class);
+})->throws(SitecrawlException::class);

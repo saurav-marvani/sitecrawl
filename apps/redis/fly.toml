@@ -1,8 +1,8 @@
-app = 'firecrawl-dragonfly'
+app = 'sitecrawl-dragonfly'
 primary_region = 'iad'
 
 [[mounts]]
-  source = 'firecrawl_redis'
+  source = 'sitecrawl_redis'
   destination = '/data'
 
 [[services]]

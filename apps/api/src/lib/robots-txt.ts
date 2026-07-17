@@ -140,7 +140,7 @@ export function createRobotsChecker(
 export function isUrlAllowedByRobots(
   url: string,
   robots: Robot | null,
-  userAgents: string[] = ["FireCrawlAgent", "FirecrawlAgent"],
+  userAgents: string[] = ["SiteCrawlAgent", "SitecrawlAgent"],
 ): boolean {
   if (!robots) return true;
 

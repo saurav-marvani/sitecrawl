@@ -61,5 +61,5 @@ jobs:
         working-directory: ./apps/python-sdk
       - name: Run E2E tests for Python SDK  
         run: |  
-          python -m pytest firecrawl/__tests__/e2e/v2
+          python -m pytest sitecrawl/__tests__/e2e/v2
         working-directory: ./apps/python-sdk

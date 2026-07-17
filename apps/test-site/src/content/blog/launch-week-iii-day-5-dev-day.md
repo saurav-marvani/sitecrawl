@@ -6,7 +6,7 @@ heroImage: "../../assets/blog/lw3-d5-3.webp"
 category: "updates"
 ---
 
-**Day 5 of Launch Week III is here — and it’s all about developers.** We’re rolling out a stack of improvements aimed at making Firecrawl smoother, faster, and better to build with.
+**Day 5 of Launch Week III is here — and it’s all about developers.** We’re rolling out a stack of improvements aimed at making Sitecrawl smoother, faster, and better to build with.
 
 ## New and Improved Python SDK
 
@@ -29,9 +29,9 @@ The Rust SDK got a serious set of improvements too:
 
 If you’re building in Rust, these changes open up a lot more flexibility.
 
-## New: Firecrawl Dark Theme for Code Editors
+## New: Sitecrawl Dark Theme for Code Editors
 
-We launched our Firecrawl Light Theme on Day 0. Today, we’re releasing the Dark Theme — for those who prefer building in low light.
+We launched our Sitecrawl Light Theme on Day 0. Today, we’re releasing the Dark Theme — for those who prefer building in low light.
 
 It’s available now for:
 
@@ -39,10 +39,10 @@ It’s available now for:
 - Windsurf
 - Cursor
 
-Download it directly from the [VSCode Marketplace](https://marketplace.visualstudio.com/items?itemName=Firecrawl.firecrawl-theme) and bring Firecrawl’s look and feel to your editor.
+Download it directly from the [VSCode Marketplace](https://marketplace.visualstudio.com/items?itemName=Sitecrawl.sitecrawl-theme) and bring Sitecrawl’s look and feel to your editor.
 
 ## Quality of Life Updates
 
-We’ve also shipped a number of smaller improvements behind the scenes to streamline developer experience across the board. Includinng now every Firecrawl plan now includes support for up to 20 seats — no more user limits. Bring your team and build together.
+We’ve also shipped a number of smaller improvements behind the scenes to streamline developer experience across the board. Includinng now every Sitecrawl plan now includes support for up to 20 seats — no more user limits. Bring your team and build together.
 
 That’s all for Day 5! Stay tuned for Day 6 🚀

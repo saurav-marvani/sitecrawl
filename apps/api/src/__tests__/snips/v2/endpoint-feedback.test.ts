@@ -95,7 +95,7 @@ describeIf(TEST_PRODUCTION)("Generic endpoint feedback tests", () => {
 
   it("applies search feedback validation on the generic endpoint", async () => {
     const raw = await searchRawFull(
-      { query: "firecrawl generic feedback", limit: 3 },
+      { query: "sitecrawl generic feedback", limit: 3 },
       identity,
     );
     expect(raw.statusCode).toBe(200);

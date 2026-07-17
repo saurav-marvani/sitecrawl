@@ -1,6 +1,6 @@
-# Firecrawl Helm Chart
+# Sitecrawl Helm Chart
 
-This chart deploys Firecrawl on Kubernetes with:
+This chart deploys Sitecrawl on Kubernetes with:
 
 - `api`
 - `worker` (queue-worker)
@@ -15,10 +15,10 @@ This chart deploys Firecrawl on Kubernetes with:
 
 ## Image Strategy
 
-- **x86-only cluster**: use official Firecrawl images from GHCR (`ghcr.io/firecrawl/...`).
+- **x86-only cluster**: use official Sitecrawl images from GHCR (`ghcr.io/sitecrawl/...`).
 - **ARM or mixed ARM+x86 cluster**: use your multi-arch `winkkgmbh` images.
 
-Official Firecrawl images are fine for x86. Use winkk images only when ARM support is needed.
+Official Sitecrawl images are fine for x86. Use winkk images only when ARM support is needed.
 
 ## Configure Values
 
@@ -38,42 +38,42 @@ Important fields:
 Render:
 
 ```bash
-HELM_NO_PLUGINS=1 helm template firecrawl . \
+HELM_NO_PLUGINS=1 helm template sitecrawl . \
   -f values.yaml \
   -f overlays/prod/values.yaml \
-  -n firecrawl
+  -n sitecrawl
 ```
 
 Install/upgrade:
 
 ```bash
-HELM_NO_PLUGINS=1 helm upgrade firecrawl . \
+HELM_NO_PLUGINS=1 helm upgrade sitecrawl . \
   -f values.yaml \
   -f overlays/prod/values.yaml \
-  -n firecrawl \
+  -n sitecrawl \
   --install \
   --create-namespace
 ```
 
-### Use Official Firecrawl Images (x86-only)
+### Use Official Sitecrawl Images (x86-only)
 
 If your cluster is x86-only and you want official images, override repositories:
 
 ```bash
-HELM_NO_PLUGINS=1 helm upgrade firecrawl . \
+HELM_NO_PLUGINS=1 helm upgrade sitecrawl . \
   -f values.yaml \
   -f overlays/prod/values.yaml \
-  --set image.repository=ghcr.io/firecrawl/firecrawl \
-  --set playwright.repository=ghcr.io/firecrawl/playwright-service \
-  --set nuqPostgres.image.repository=ghcr.io/firecrawl/nuq-postgres \
-  -n firecrawl \
+  --set image.repository=ghcr.io/sitecrawl/sitecrawl \
+  --set playwright.repository=ghcr.io/sitecrawl/playwright-service \
+  --set nuqPostgres.image.repository=ghcr.io/sitecrawl/nuq-postgres \
+  -n sitecrawl \
   --install \
   --create-namespace
 ```
 
 ## Build and Push Multi-Arch Containers (ARM+x86)
 
-Run from `examples/kubernetes/firecrawl-helm`:
+Run from `examples/kubernetes/sitecrawl-helm`:
 
 ```bash
 docker buildx create --name multiarch --use --bootstrap
@@ -81,11 +81,11 @@ docker buildx create --name multiarch --use --bootstrap
 
 ```bash
 docker buildx build --platform linux/amd64,linux/arm64 --push \
-  -t docker.io/winkkgmbh/firecrawl:latest \
+  -t docker.io/winkkgmbh/sitecrawl:latest \
   ../../../apps/api
 
 docker buildx build --platform linux/amd64,linux/arm64 --push \
-  -t docker.io/winkkgmbh/firecrawl-playwright:latest \
+  -t docker.io/winkkgmbh/sitecrawl-playwright:latest \
   ../../../apps/playwright-service-ts
 
 docker buildx build --platform linux/amd64,linux/arm64 --push \
@@ -97,15 +97,15 @@ docker buildx build --platform linux/amd64,linux/arm64 --push \
 
 ```bash
 HELM_NO_PLUGINS=1 helm package . --destination /tmp/helm-packages
-HELM_NO_PLUGINS=1 helm push /tmp/helm-packages/firecrawl-0.2.0.tgz oci://registry-1.docker.io/winkkgmbh
+HELM_NO_PLUGINS=1 helm push /tmp/helm-packages/sitecrawl-0.2.0.tgz oci://registry-1.docker.io/winkkgmbh
 ```
 
 Install from OCI:
 
 ```bash
-HELM_NO_PLUGINS=1 helm upgrade --install firecrawl oci://registry-1.docker.io/winkkgmbh/firecrawl \
+HELM_NO_PLUGINS=1 helm upgrade --install sitecrawl oci://registry-1.docker.io/winkkgmbh/sitecrawl \
   --version 0.2.0 \
-  -n firecrawl --create-namespace \
+  -n sitecrawl --create-namespace \
   -f values.yaml \
   -f overlays/prod/values.yaml
 ```
@@ -113,11 +113,11 @@ HELM_NO_PLUGINS=1 helm upgrade --install firecrawl oci://registry-1.docker.io/wi
 ## Test
 
 ```bash
-kubectl port-forward svc/firecrawl-firecrawl-api 3002:3002 -n firecrawl
+kubectl port-forward svc/sitecrawl-sitecrawl-api 3002:3002 -n sitecrawl
 ```
 
 ## Cleanup
 
 ```bash
-helm uninstall firecrawl -n firecrawl
+helm uninstall sitecrawl -n sitecrawl
 ```

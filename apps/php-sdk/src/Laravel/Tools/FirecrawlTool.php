@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace Firecrawl\Laravel\Tools;
+namespace Sitecrawl\Laravel\Tools;
 
-use Firecrawl\Client\FirecrawlClient;
-use Firecrawl\Exceptions\FirecrawlException;
-use Firecrawl\Models\Document;
+use Sitecrawl\Client\SitecrawlClient;
+use Sitecrawl\Exceptions\SitecrawlException;
+use Sitecrawl\Models\Document;
 use Illuminate\Container\Container;
 use Laravel\Ai\Contracts\Tool;
 
-abstract class FirecrawlTool implements Tool
+abstract class SitecrawlTool implements Tool
 {
     // The underscore prefix passes the API's integration validator on every
     // deployed version, including older self-hosted instances.
@@ -20,14 +20,14 @@ abstract class FirecrawlTool implements Tool
     protected int $outputCharacterBudget = 100000;
 
     public function __construct(
-        private ?FirecrawlClient $client = null,
+        private ?SitecrawlClient $client = null,
     ) {}
 
-    protected function client(): FirecrawlClient
+    protected function client(): SitecrawlClient
     {
         if ($this->client === null) {
-            /** @var FirecrawlClient $resolved */
-            $resolved = Container::getInstance()->make(FirecrawlClient::class);
+            /** @var SitecrawlClient $resolved */
+            $resolved = Container::getInstance()->make(SitecrawlClient::class);
             $this->client = $resolved;
         }
 
@@ -44,8 +44,8 @@ abstract class FirecrawlTool implements Tool
     {
         try {
             return $callback();
-        } catch (FirecrawlException $exception) {
-            return 'Firecrawl request failed: ' . $exception->getMessage();
+        } catch (SitecrawlException $exception) {
+            return 'Sitecrawl request failed: ' . $exception->getMessage();
         } catch (\Throwable $exception) {
             return 'Tool execution failed: ' . $exception->getMessage();
         }

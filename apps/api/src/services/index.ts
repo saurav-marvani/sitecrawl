@@ -37,7 +37,7 @@ export async function getIndexFromGCS(
   opts: { indexCreatedAt?: string | null } = {},
 ): Promise<any | null> {
   try {
-    return await withSpan("firecrawl-index-get-from-gcs", async span => {
+    return await withSpan("sitecrawl-index-get-from-gcs", async span => {
       setSpanAttributes(span, {
         "index.operation": "get_from_gcs",
         "index.url": url,
@@ -128,7 +128,7 @@ export async function saveIndexToGCS(
     proxyUsed?: "basic" | "stealth";
   },
 ): Promise<void> {
-  return await withSpan("firecrawl-index-save-to-gcs", async span => {
+  return await withSpan("sitecrawl-index-save-to-gcs", async span => {
     setSpanAttributes(span, {
       "index.operation": "save_to_gcs",
       "index.id": id,
@@ -441,7 +441,7 @@ export async function queryIndexAtSplitLevel(
   limit: number,
   maxAge = 2 * 24 * 60 * 60 * 1000,
 ): Promise<string[]> {
-  if (!useIndex || config.FIRECRAWL_INDEX_WRITE_ONLY) {
+  if (!useIndex || config.SITECRAWL_INDEX_WRITE_ONLY) {
     return [];
   }
 
@@ -474,7 +474,7 @@ export async function queryIndexAtDomainSplitLevel(
   limit: number,
   maxAge = 2 * 24 * 60 * 60 * 1000,
 ): Promise<string[]> {
-  if (!useIndex || config.FIRECRAWL_INDEX_WRITE_ONLY) {
+  if (!useIndex || config.SITECRAWL_INDEX_WRITE_ONLY) {
     return [];
   }
 
@@ -506,7 +506,7 @@ export async function queryOMCESignatures(
   hostname: string,
   maxAge = 2 * 24 * 60 * 60 * 1000,
 ): Promise<string[]> {
-  if (!useIndex || config.FIRECRAWL_INDEX_WRITE_ONLY) {
+  if (!useIndex || config.SITECRAWL_INDEX_WRITE_ONLY) {
     return [];
   }
 
@@ -532,7 +532,7 @@ export async function queryOMCESignatures(
 export async function queryEngpickerVerdict(
   hostname: string,
 ): Promise<"TlsClientOk" | "ChromeCdpRequired" | "Uncertain" | "Unknown"> {
-  if (!useIndex || config.FIRECRAWL_INDEX_WRITE_ONLY) {
+  if (!useIndex || config.SITECRAWL_INDEX_WRITE_ONLY) {
     return "Unknown";
   }
 
@@ -570,7 +570,7 @@ export async function queryIndexAtSplitLevelWithMeta(
   url: string,
   limit: number,
 ): Promise<MapDocument[]> {
-  if (!useIndex || config.FIRECRAWL_INDEX_WRITE_ONLY) {
+  if (!useIndex || config.SITECRAWL_INDEX_WRITE_ONLY) {
     return [];
   }
 
@@ -605,7 +605,7 @@ export async function queryIndexAtDomainSplitLevelWithMeta(
   hostname: string,
   limit: number,
 ): Promise<MapDocument[]> {
-  if (!useIndex || config.FIRECRAWL_INDEX_WRITE_ONLY) {
+  if (!useIndex || config.SITECRAWL_INDEX_WRITE_ONLY) {
     return [];
   }
 
@@ -648,7 +648,7 @@ export async function queryDomainsForPrecrawl(
   maxDomains = 50,
   logger: Logger = _logger,
 ): Promise<DomainPriority[]> {
-  if (!useIndex || config.FIRECRAWL_INDEX_WRITE_ONLY) {
+  if (!useIndex || config.SITECRAWL_INDEX_WRITE_ONLY) {
     return [];
   }
 

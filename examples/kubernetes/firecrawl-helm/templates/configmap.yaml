@@ -1,4 +1,4 @@
-{{- $fullname := include "firecrawl.fullname" . -}}
+{{- $fullname := include "sitecrawl.fullname" . -}}
 {{- $redisDefault := printf "redis://%s-redis:%v" $fullname .Values.service.redis.port -}}
 {{- $playwrightDefault := printf "http://%s-playwright:%v/scrape" $fullname .Values.service.playwright.port -}}
 {{- $pgUser := default "postgres" .Values.nuqPostgres.auth.username -}}
@@ -12,7 +12,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ include "firecrawl.fullname" . }}-config
+  name: {{ include "sitecrawl.fullname" . }}-config
 data:
   NUM_WORKERS_PER_QUEUE: {{ .Values.config.NUM_WORKERS_PER_QUEUE | quote }}
   PORT: {{ default (printf "%v" .Values.service.api.port) .Values.config.PORT | quote }}
@@ -33,9 +33,9 @@ data:
   IS_KUBERNETES: {{ .Values.config.IS_KUBERNETES | quote }}
   ENV: {{ .Values.config.ENV | quote }}
   LOGGING_LEVEL: {{ .Values.config.LOGGING_LEVEL | quote }}
-  FIRECRAWL_APP_SCHEME: {{ .Values.config.FIRECRAWL_APP_SCHEME | quote }}
-  FIRECRAWL_APP_HOST: {{ default $apiHostDefault .Values.config.FIRECRAWL_APP_HOST | quote }}
-  FIRECRAWL_APP_PORT: {{ default $apiPortDefault .Values.config.FIRECRAWL_APP_PORT | quote }}
+  SITECRAWL_APP_SCHEME: {{ .Values.config.SITECRAWL_APP_SCHEME | quote }}
+  SITECRAWL_APP_HOST: {{ default $apiHostDefault .Values.config.SITECRAWL_APP_HOST | quote }}
+  SITECRAWL_APP_PORT: {{ default $apiPortDefault .Values.config.SITECRAWL_APP_PORT | quote }}
   OPENAI_BASE_URL: {{ .Values.config.OPENAI_BASE_URL | quote }}
   MODEL_NAME: {{ .Values.config.MODEL_NAME | quote }}
   MODEL_EMBEDDING_NAME: {{ .Values.config.MODEL_EMBEDDING_NAME | quote }}

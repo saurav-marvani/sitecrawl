@@ -1,12 +1,12 @@
 ---
 title: "Introducing Change Tracking: Launch Week III - Day 1"
-description: "Firecrawl's enhanced Change Tracking feature now provides detailed insights into webpage updates, including diffs and structured data comparisons."
+description: "Sitecrawl's enhanced Change Tracking feature now provides detailed insights into webpage updates, including diffs and structured data comparisons."
 pubDate: "Apr 14, 2025"
 heroImage: "../../assets/blog/changeTracking.jpg"
 category: "updates"
 ---
 
-**Welcome to Launch Week III, Day 1! Today we’re excited to announce Change Tracking** — an enhanced Firecrawl feature that automatically detects and details changes on websites, now available in beta for all users.
+**Welcome to Launch Week III, Day 1! Today we’re excited to announce Change Tracking** — an enhanced Sitecrawl feature that automatically detects and details changes on websites, now available in beta for all users.
 
 ## What is Change Tracking?
 
@@ -24,12 +24,12 @@ Change Tracking allows you to monitor website changes by comparing the current s
 
 ## Simple Integration
 
-Firecrawl’s Change Tracking feature integrates effortlessly into your existing workflows with two simple request methods—scrape and crawl. You must specify the `markdown` format in addition to `changeTracking`:
+Sitecrawl’s Change Tracking feature integrates effortlessly into your existing workflows with two simple request methods—scrape and crawl. You must specify the `markdown` format in addition to `changeTracking`:
 
 ### Scrape Request Example:
 
 ```typescript
-const scrapeResponse = await app.scrapeUrl("https://firecrawl.dev", {
+const scrapeResponse = await app.scrapeUrl("https://sitecrawl.dev", {
   formats: ["markdown", "changeTracking"],
 });
 console.log(scrapeResponse);
@@ -39,7 +39,7 @@ console.log(scrapeResponse);
 
 ```json
 {
-  "url": "https://firecrawl.dev",
+  "url": "https://sitecrawl.dev",
   "markdown": "# AI Agents for great customer experiences\n\nChatbots that delight your users...",
   "changeTracking": {
     "previousScrapeAt": "2025-04-10T12:00:00Z",
@@ -52,7 +52,7 @@ console.log(scrapeResponse);
 ### Crawl Request Example:
 
 ```typescript
-const crawlResponse = await app.crawlUrl("https://firecrawl.dev", {
+const crawlResponse = await app.crawlUrl("https://sitecrawl.dev", {
   scrapeOptions: { formats: ["markdown", "changeTracking"] },
 });
 console.log(crawlResponse);
@@ -151,7 +151,7 @@ if (result.changeTracking.json) {
 
 ## How Change Tracking Works
 
-When enabled, Firecrawl compares current scrapes against previous versions based on URL, team ID, and markdown format:
+When enabled, Sitecrawl compares current scrapes against previous versions based on URL, team ID, and markdown format:
 
 - **Comparison is resilient to whitespace and content order changes.**
 - **Iframe source URLs are ignored** to avoid false positives caused by captchas or antibots.
@@ -173,7 +173,7 @@ When enabled, Firecrawl compares current scrapes against previous versions based
 Change Tracking is live in beta for all users:
 
 - **Try it now:** Add `changeTracking` to your scrape or crawl formats.
-- **Learn more:** [Read the docs for `/scrape`](https://docs.firecrawl.dev/features/change-tracking) and [the docs for `/crawl`](https://docs.firecrawl.dev/features/crawl#change-tracking).
-- **Get help:** Join our [Discord community](https://discord.gg/S7Enyh9Abh) or contact [help@firecrawl.com](mailto:help@firecrawl.com).
+- **Learn more:** [Read the docs for `/scrape`](https://docs.sitecrawl.dev/features/change-tracking) and [the docs for `/crawl`](https://docs.sitecrawl.dev/features/crawl#change-tracking).
+- **Get help:** Join our [Discord community](https://discord.gg/S7Enyh9Abh) or contact [help@sitecrawl.com](mailto:help@sitecrawl.com).
 
-**Ready to track detailed content changes?** [Sign up for Firecrawl](https://firecrawl.dev/signup) and start today.
+**Ready to track detailed content changes?** [Sign up for Sitecrawl](https://sitecrawl.dev/signup) and start today.

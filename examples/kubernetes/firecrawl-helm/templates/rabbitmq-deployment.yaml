@@ -2,18 +2,18 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "firecrawl.fullname" . }}-rabbitmq
+  name: {{ include "sitecrawl.fullname" . }}-rabbitmq
   labels:
-    app: {{ include "firecrawl.name" . }}-rabbitmq
+    app: {{ include "sitecrawl.name" . }}-rabbitmq
 spec:
   replicas: {{ .Values.rabbitmq.replicaCount | default 1 }}
   selector:
     matchLabels:
-      app: {{ include "firecrawl.name" . }}-rabbitmq
+      app: {{ include "sitecrawl.name" . }}-rabbitmq
   template:
     metadata:
       labels:
-        app: {{ include "firecrawl.name" . }}-rabbitmq
+        app: {{ include "sitecrawl.name" . }}-rabbitmq
     spec:
       containers:
         - name: rabbitmq
@@ -43,11 +43,11 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "firecrawl.fullname" . }}-rabbitmq
+  name: {{ include "sitecrawl.fullname" . }}-rabbitmq
 spec:
   type: {{ .Values.service.rabbitmq.type }}
   selector:
-    app: {{ include "firecrawl.name" . }}-rabbitmq
+    app: {{ include "sitecrawl.name" . }}-rabbitmq
   ports:
     - name: amqp
       protocol: TCP

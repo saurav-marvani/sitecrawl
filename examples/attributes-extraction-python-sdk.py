@@ -1,12 +1,12 @@
 """
-Example: Using Firecrawl Python SDK v2 to extract attributes from HTML elements
+Example: Using Sitecrawl Python SDK v2 to extract attributes from HTML elements
 """
 
 import os
-from firecrawl import FirecrawlApp
+from sitecrawl import SitecrawlApp
 
 def main():
-    app = FirecrawlApp(api_key=os.getenv('FIRECRAWL_API_KEY'))
+    app = SitecrawlApp(api_key=os.getenv('SITECRAWL_API_KEY'))
 
     print('🎯 Extracting attributes from Hacker News...')
 

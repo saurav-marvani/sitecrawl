@@ -1,9 +1,9 @@
-package com.firecrawl;
+package com.sitecrawl;
 
-import com.firecrawl.client.FirecrawlClient;
-import com.firecrawl.models.AgentOptions;
-import com.firecrawl.models.AgentResponse;
-import com.firecrawl.models.AgentStatusResponse;
+import com.sitecrawl.client.SitecrawlClient;
+import com.sitecrawl.models.AgentOptions;
+import com.sitecrawl.models.AgentResponse;
+import com.sitecrawl.models.AgentStatusResponse;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
@@ -17,30 +17,30 @@ import static org.junit.jupiter.api.Assertions.*;
  * Comprehensive Agent Tests
  * 
  * Tests the AI agent functionality with various configurations.
- * Based on Node.js SDK patterns and tested against live firecrawl.dev.
+ * Based on Node.js SDK patterns and tested against live sitecrawl.dev.
  * 
- * Run with: FIRECRAWL_API_KEY=fc-xxx gradle test --tests "com.firecrawl.AgentTest"
+ * Run with: SITECRAWL_API_KEY=fc-xxx gradle test --tests "com.sitecrawl.AgentTest"
  */
 class AgentTest {
 
-    private static FirecrawlClient client;
+    private static SitecrawlClient client;
 
     @BeforeAll
     static void setup() {
-        String apiKey = System.getenv("FIRECRAWL_API_KEY");
+        String apiKey = System.getenv("SITECRAWL_API_KEY");
         if (apiKey != null && !apiKey.isBlank()) {
-            client = FirecrawlClient.fromEnv();
+            client = SitecrawlClient.fromEnv();
         }
     }
 
     @Test
-    @EnabledIfEnvironmentVariable(named = "FIRECRAWL_API_KEY", matches = ".*\\S.*")
+    @EnabledIfEnvironmentVariable(named = "SITECRAWL_API_KEY", matches = ".*\\S.*")
     void testAgentWithPrompt() {
         System.out.println("\n=== Test: Agent with Prompt ===");
         
         AgentStatusResponse result = client.agent(
                 AgentOptions.builder()
-                        .prompt("Find information about Firecrawl's main features and pricing")
+                        .prompt("Find information about Sitecrawl's main features and pricing")
                         .build());
 
         assertNotNull(result, "Agent result should not be null");
@@ -56,14 +56,14 @@ class AgentTest {
     }
 
     @Test
-    @EnabledIfEnvironmentVariable(named = "FIRECRAWL_API_KEY", matches = ".*\\S.*")
+    @EnabledIfEnvironmentVariable(named = "SITECRAWL_API_KEY", matches = ".*\\S.*")
     void testAgentWithURLs() {
         System.out.println("\n=== Test: Agent with Specific URLs ===");
         
         AgentStatusResponse result = client.agent(
                 AgentOptions.builder()
-                        .urls(List.of("https://firecrawl.dev", "https://docs.firecrawl.dev"))
-                        .prompt("What are the main features of Firecrawl?")
+                        .urls(List.of("https://sitecrawl.dev", "https://docs.sitecrawl.dev"))
+                        .prompt("What are the main features of Sitecrawl?")
                         .build());
 
         assertNotNull(result, "Agent result should not be null");
@@ -76,7 +76,7 @@ class AgentTest {
     }
 
     @Test
-    @EnabledIfEnvironmentVariable(named = "FIRECRAWL_API_KEY", matches = ".*\\S.*")
+    @EnabledIfEnvironmentVariable(named = "SITECRAWL_API_KEY", matches = ".*\\S.*")
     void testAgentWithSchema() {
         System.out.println("\n=== Test: Agent with Schema ===");
         
@@ -99,7 +99,7 @@ class AgentTest {
 
         AgentStatusResponse result = client.agent(
                 AgentOptions.builder()
-                        .urls(List.of("https://firecrawl.dev"))
+                        .urls(List.of("https://sitecrawl.dev"))
                         .prompt("Extract features and pricing information")
                         .schema(schema)
                         .build());
@@ -114,13 +114,13 @@ class AgentTest {
     }
 
     @Test
-    @EnabledIfEnvironmentVariable(named = "FIRECRAWL_API_KEY", matches = ".*\\S.*")
+    @EnabledIfEnvironmentVariable(named = "SITECRAWL_API_KEY", matches = ".*\\S.*")
     void testStartAgent() {
         System.out.println("\n=== Test: Start Agent (Async) ===");
         
         AgentResponse response = client.startAgent(
                 AgentOptions.builder()
-                        .prompt("Research Firecrawl features")
+                        .prompt("Research Sitecrawl features")
                         .build());
 
         assertNotNull(response, "Agent response should not be null");
@@ -133,7 +133,7 @@ class AgentTest {
     }
 
     @Test
-    @EnabledIfEnvironmentVariable(named = "FIRECRAWL_API_KEY", matches = ".*\\S.*")
+    @EnabledIfEnvironmentVariable(named = "SITECRAWL_API_KEY", matches = ".*\\S.*")
     void testAgentStatusCheck() {
         System.out.println("\n=== Test: Check Agent Status ===");
         
@@ -157,7 +157,7 @@ class AgentTest {
     }
 
     @Test
-    @EnabledIfEnvironmentVariable(named = "FIRECRAWL_API_KEY", matches = ".*\\S.*")
+    @EnabledIfEnvironmentVariable(named = "SITECRAWL_API_KEY", matches = ".*\\S.*")
     void testCancelAgent() {
         System.out.println("\n=== Test: Cancel Agent ===");
         
@@ -175,13 +175,13 @@ class AgentTest {
     }
 
     @Test
-    @EnabledIfEnvironmentVariable(named = "FIRECRAWL_API_KEY", matches = ".*\\S.*")
+    @EnabledIfEnvironmentVariable(named = "SITECRAWL_API_KEY", matches = ".*\\S.*")
     void testAgentWithStrictURLConstraints() {
         System.out.println("\n=== Test: Agent with Strict URL Constraints ===");
         
         AgentStatusResponse result = client.agent(
                 AgentOptions.builder()
-                        .urls(List.of("https://docs.firecrawl.dev"))
+                        .urls(List.of("https://docs.sitecrawl.dev"))
                         .prompt("Extract API documentation structure")
                         .strictConstrainToURLs(true)
                         .build());
@@ -196,13 +196,13 @@ class AgentTest {
     }
 
     @Test
-    @EnabledIfEnvironmentVariable(named = "FIRECRAWL_API_KEY", matches = ".*\\S.*")
+    @EnabledIfEnvironmentVariable(named = "SITECRAWL_API_KEY", matches = ".*\\S.*")
     void testAgentWithMaxCredits() {
         System.out.println("\n=== Test: Agent with Max Credits Limit ===");
         
         AgentStatusResponse result = client.agent(
                 AgentOptions.builder()
-                        .prompt("Quick research on Firecrawl")
+                        .prompt("Quick research on Sitecrawl")
                         .maxCredits(10)
                         .build());
 
@@ -214,14 +214,14 @@ class AgentTest {
     }
 
     @Test
-    @EnabledIfEnvironmentVariable(named = "FIRECRAWL_API_KEY", matches = ".*\\S.*")
+    @EnabledIfEnvironmentVariable(named = "SITECRAWL_API_KEY", matches = ".*\\S.*")
     void testAgentResearchTask() {
-        System.out.println("\n=== Test: Agent Research - Firecrawl Features ===");
+        System.out.println("\n=== Test: Agent Research - Sitecrawl Features ===");
         
         AgentStatusResponse result = client.agent(
                 AgentOptions.builder()
-                        .urls(List.of("https://firecrawl.dev", "https://docs.firecrawl.dev"))
-                        .prompt("Research and summarize the key features of Firecrawl, including scraping, crawling, and extraction capabilities")
+                        .urls(List.of("https://sitecrawl.dev", "https://docs.sitecrawl.dev"))
+                        .prompt("Research and summarize the key features of Sitecrawl, including scraping, crawling, and extraction capabilities")
                         .build());
 
         assertNotNull(result, "Agent result should not be null");
@@ -240,7 +240,7 @@ class AgentTest {
     }
 
     @Test
-    @EnabledIfEnvironmentVariable(named = "FIRECRAWL_API_KEY", matches = ".*\\S.*")
+    @EnabledIfEnvironmentVariable(named = "SITECRAWL_API_KEY", matches = ".*\\S.*")
     void testAgentComprehensive() {
         System.out.println("\n=== Test: Agent with All Options ===");
         
@@ -259,7 +259,7 @@ class AgentTest {
 
         AgentStatusResponse result = client.agent(
                 AgentOptions.builder()
-                        .urls(List.of("https://firecrawl.dev"))
+                        .urls(List.of("https://sitecrawl.dev"))
                         .prompt("Extract comprehensive product information including name, features, and pricing")
                         .schema(schema)
                         .maxCredits(20)

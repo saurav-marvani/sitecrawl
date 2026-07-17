@@ -1,6 +1,6 @@
 # Llama 4 Maverick Web Crawler
 
-This project combines the power of Firecrawl for web crawling and Llama 4 Maverick (via Together AI) for intelligent content analysis. It helps you find specific information on websites by crawling pages and analyzing their content using advanced language models.
+This project combines the power of Sitecrawl for web crawling and Llama 4 Maverick (via Together AI) for intelligent content analysis. It helps you find specific information on websites by crawling pages and analyzing their content using advanced language models.
 
 ## Features
 
@@ -12,7 +12,7 @@ This project combines the power of Firecrawl for web crawling and Llama 4 Maveri
 ## Prerequisites
 
 - Python 3.8 or higher
-- Firecrawl API key
+- Sitecrawl API key
 - Together AI API key
 
 ## Installation
@@ -28,7 +28,7 @@ This project combines the power of Firecrawl for web crawling and Llama 4 Maveri
    ```
 4. Add your API keys to the `.env` file:
    ```
-   FIRECRAWL_API_KEY=your_firecrawl_api_key_here
+   SITECRAWL_API_KEY=your_sitecrawl_api_key_here
    TOGETHER_API_KEY=your_together_api_key_here
    ```
 
@@ -69,7 +69,7 @@ The script includes comprehensive error handling and will provide clear feedback
 
 ## Dependencies
 
-- firecrawl: For web crawling and content extraction
+- sitecrawl: For web crawling and content extraction
 - together: For accessing the Llama 4 Maverick model
 - python-dotenv: For environment variable management
 

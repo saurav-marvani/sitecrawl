@@ -2,18 +2,18 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "firecrawl.fullname" . }}-cclog-worker
+  name: {{ include "sitecrawl.fullname" . }}-cclog-worker
   labels:
-    app: {{ include "firecrawl.name" . }}-cclog-worker
+    app: {{ include "sitecrawl.name" . }}-cclog-worker
 spec:
   replicas: {{ .Values.cclogWorker.replicaCount | default 1 }}
   selector:
     matchLabels:
-      app: {{ include "firecrawl.name" . }}-cclog-worker
+      app: {{ include "sitecrawl.name" . }}-cclog-worker
   template:
     metadata:
       labels:
-        app: {{ include "firecrawl.name" . }}-cclog-worker
+        app: {{ include "sitecrawl.name" . }}-cclog-worker
     spec:
       {{- if .Values.image.dockerSecretEnabled }}
       imagePullSecrets:
@@ -39,9 +39,9 @@ spec:
                   fieldPath: metadata.name
           envFrom:
             - configMapRef:
-                name: {{ include "firecrawl.fullname" . }}-config
+                name: {{ include "sitecrawl.fullname" . }}-config
             - secretRef:
-                name: {{ include "firecrawl.fullname" . }}-secret
+                name: {{ include "sitecrawl.fullname" . }}-secret
           {{- if and .Values.resources.enabled .Values.cclogWorker.resources }}
           resources:
             {{- toYaml .Values.cclogWorker.resources | nindent 12 }}

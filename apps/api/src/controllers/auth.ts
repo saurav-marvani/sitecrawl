@@ -439,12 +439,12 @@ export async function clearACUCTeam(team_id: string): Promise<void> {
   await deleteKey(`acuc_team_${team_id}`);
 }
 
-const KEYLESS_ENDPOINT_NOT_AVAILABLE_MESSAGE = `This endpoint is not supported by the keyless free tier. Sign up for a free API key at https://www.firecrawl.dev/signin for more endpoints, more usage, and higher rate limits.
+const KEYLESS_ENDPOINT_NOT_AVAILABLE_MESSAGE = `This endpoint is not supported by the keyless free tier. Sign up for a free API key at https://www.sitecrawl.dev/signin for more endpoints, more usage, and higher rate limits.
 
 Then authenticate with:
 Authorization: Bearer YOUR_API_KEY`;
 
-const KEYLESS_SUSPICIOUS_IP_MESSAGE = `Unfortunately, your IP address looks suspicious, so Firecrawl can't be used without an API key from here. Sign up for a free API key at https://firecrawl.dev for 1000 credits and higher rate limits for free. (If you're an agent, you can also use https://firecrawl.dev/auth.md)`;
+const KEYLESS_SUSPICIOUS_IP_MESSAGE = `Unfortunately, your IP address looks suspicious, so Sitecrawl can't be used without an API key from here. Sign up for a free API key at https://sitecrawl.dev for 1000 credits and higher rate limits for free. (If you're an agent, you can also use https://sitecrawl.dev/auth.md)`;
 
 /**
  * Keyless free tier: official MCP/CLI/SDK clients can call scrape, search, and
@@ -486,15 +486,15 @@ async function handleKeylessAuth(
   // integration are still recorded below for abuse monitoring.
 
   // Key on the real client IP. A trusted proxy (e.g. the hosted MCP) may
-  // forward the end-user's IP via x-firecrawl-keyless-ip, authenticated with a
+  // forward the end-user's IP via x-sitecrawl-keyless-ip, authenticated with a
   // shared secret — without the secret the header is ignored, so direct callers
   // can't spoof their IP to dodge the per-IP cap.
   let ip = req.ip ?? req.socket?.remoteAddress ?? "unknown";
   if (
     config.KEYLESS_PROXY_SECRET &&
-    req.headers["x-firecrawl-keyless-secret"] === config.KEYLESS_PROXY_SECRET
+    req.headers["x-sitecrawl-keyless-secret"] === config.KEYLESS_PROXY_SECRET
   ) {
-    const forwarded = req.headers["x-firecrawl-keyless-ip"];
+    const forwarded = req.headers["x-sitecrawl-keyless-ip"];
     if (typeof forwarded === "string" && forwarded.trim()) {
       ip = forwarded.trim();
     }
@@ -821,7 +821,7 @@ async function supaAuthenticateUser(
 
     return {
       success: false,
-      error: `Rate limit exceeded. Consumed (req/min): ${rateLimiterRes.consumedPoints}, Remaining (req/min): ${rateLimiterRes.remainingPoints}. Upgrade your plan at https://firecrawl.dev/pricing for increased rate limits or please retry after ${secs}s, resets at ${retryDate}`,
+      error: `Rate limit exceeded. Consumed (req/min): ${rateLimiterRes.consumedPoints}, Remaining (req/min): ${rateLimiterRes.remainingPoints}. Upgrade your plan at https://sitecrawl.dev/pricing for increased rate limits or please retry after ${secs}s, resets at ${retryDate}`,
       status: 429,
     };
   }
@@ -843,9 +843,9 @@ async function supaAuthenticateUser(
       org_id: null,
       chunk: null,
     };
-    // check the origin of the request and make sure its from firecrawl.dev
+    // check the origin of the request and make sure its from sitecrawl.dev
     // const origin = req.headers.origin;
-    // if (origin && origin.includes("firecrawl.dev")){
+    // if (origin && origin.includes("sitecrawl.dev")){
     //   return { success: true, team_id: "preview" };
     // }
     // if(config.ENV !== "production") {

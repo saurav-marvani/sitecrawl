@@ -16,7 +16,7 @@ class Colors:
 # Load environment variables
 load_dotenv()
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-firecrawl_api_key = os.getenv("FIRECRAWL_API_KEY")
+sitecrawl_api_key = os.getenv("SITECRAWL_API_KEY")
 serp_api_key = os.getenv("SERP_API_KEY")
 
 def search_product(product_name):
@@ -54,7 +54,7 @@ def get_product_urls(amazon_results, walmart_results):
 
 def poll_extraction(extraction_id, api_key, max_attempts=20):
     """Poll for extraction results with detailed logging."""
-    url = f"https://api.firecrawl.dev/v1/extract/{extraction_id}"
+    url = f"https://api.sitecrawl.dev/v1/extract/{extraction_id}"
     headers = {'Authorization': f'Bearer {api_key}'}
     
     for attempt in range(max_attempts):
@@ -94,7 +94,7 @@ def extract_product_info_and_reviews(urls):
     """Extract product information and reviews and the best URL from amazon or walmart according to the deal."""
     headers = {
         'Content-Type': 'application/json',
-        'Authorization': f'Bearer {firecrawl_api_key}'
+        'Authorization': f'Bearer {sitecrawl_api_key}'
     }
     
     payload = {
@@ -124,7 +124,7 @@ def extract_product_info_and_reviews(urls):
     try:
         print(f"{Colors.YELLOW}Starting extraction...{Colors.RESET}")
         response = requests.post(
-            "https://api.firecrawl.dev/v1/extract",
+            "https://api.sitecrawl.dev/v1/extract",
             headers=headers,
             json=payload,
             timeout=45
@@ -143,7 +143,7 @@ def extract_product_info_and_reviews(urls):
             return None
             
         print(f"{Colors.YELLOW}Waiting for results...{Colors.RESET}")
-        return poll_extraction(extraction_id, firecrawl_api_key)
+        return poll_extraction(extraction_id, sitecrawl_api_key)
 
     except Exception as e:
         print(f"{Colors.RED}Extraction error: {str(e)}{Colors.RESET}")
@@ -157,7 +157,7 @@ def display_comparison(data):
         
     print(f"\n{Colors.CYAN}=== Product Comparison ==={Colors.RESET}")
     
-    # Handle the data structure returned by Firecrawl
+    # Handle the data structure returned by Sitecrawl
     if isinstance(data, dict):
         product_info = data
         

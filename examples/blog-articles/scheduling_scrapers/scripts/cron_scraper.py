@@ -3,7 +3,7 @@ import sys
 import logging
 from datetime import datetime
 from pathlib import Path
-from firecrawl_scraper import save_firecrawl_news_data
+from sitecrawl_scraper import save_sitecrawl_news_data
 
 # Set up logging
 log_dir = Path("logs")
@@ -20,7 +20,7 @@ logging.basicConfig(
 def main():
     try:
         logging.info("Starting scraping job")
-        filename = save_firecrawl_news_data()
+        filename = save_sitecrawl_news_data()
         logging.info(f"Successfully saved data to {filename}")
     except Exception as e:
         logging.error(f"Scraping failed: {str(e)}", exc_info=True)

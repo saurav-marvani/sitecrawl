@@ -561,7 +561,7 @@ export function shouldUseIndex(meta: Meta) {
 
   return (
     useIndex &&
-    config.FIRECRAWL_INDEX_WRITE_ONLY !== true &&
+    config.SITECRAWL_INDEX_WRITE_ONLY !== true &&
     !hasFormatOfType(meta.options.formats, "changeTracking") &&
     !hasFormatOfType(meta.options.formats, "branding") &&
     // Skip index if a non-default PDF maxPages is specified

@@ -1,18 +1,18 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "firecrawl.fullname" . }}-nuq-postgres
+  name: {{ include "sitecrawl.fullname" . }}-nuq-postgres
   labels:
-    app: {{ include "firecrawl.name" . }}-nuq-postgres
+    app: {{ include "sitecrawl.name" . }}-nuq-postgres
 spec:
   replicas: {{ .Values.nuqPostgres.replicaCount | default 1 }}
   selector:
     matchLabels:
-      app: {{ include "firecrawl.name" . }}-nuq-postgres
+      app: {{ include "sitecrawl.name" . }}-nuq-postgres
   template:
     metadata:
       labels:
-        app: {{ include "firecrawl.name" . }}-nuq-postgres
+        app: {{ include "sitecrawl.name" . }}-nuq-postgres
     spec:
       {{- if .Values.image.dockerSecretEnabled }}
       imagePullSecrets:
@@ -52,7 +52,7 @@ spec:
         - name: postgres-storage
           {{- if .Values.nuqPostgres.persistence.enabled }}
           persistentVolumeClaim:
-            claimName: {{ include "firecrawl.fullname" . }}-nuq-postgres-pvc
+            claimName: {{ include "sitecrawl.fullname" . }}-nuq-postgres-pvc
           {{- else }}
           emptyDir: {}
           {{- end }}
@@ -60,12 +60,12 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "firecrawl.fullname" . }}-nuq-postgres
+  name: {{ include "sitecrawl.fullname" . }}-nuq-postgres
   labels:
-    app: {{ include "firecrawl.name" . }}-nuq-postgres
+    app: {{ include "sitecrawl.name" . }}-nuq-postgres
 spec:
   selector:
-    app: {{ include "firecrawl.name" . }}-nuq-postgres
+    app: {{ include "sitecrawl.name" . }}-nuq-postgres
   ports:
     - protocol: TCP
       port: 5432

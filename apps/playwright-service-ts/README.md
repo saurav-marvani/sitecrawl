@@ -42,6 +42,6 @@ curl -X POST http://localhost:3000/scrape \
 }'
 ```
 
-## USING WITH FIRECRAWL
+## USING WITH SITECRAWL
 
 Add `PLAYWRIGHT_MICROSERVICE_URL=http://localhost:3003/scrape` to `/apps/api/.env` to configure the API to use this Playwright microservice for scraping operations.

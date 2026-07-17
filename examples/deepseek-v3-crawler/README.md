@@ -1,11 +1,11 @@
 # DeepSeek V3 Web Crawler
 
-This script uses the DeepSeek V3 large language model (via Hugging Face's Inference API) and FireCrawl to crawl websites based on specific objectives.
+This script uses the DeepSeek V3 large language model (via Hugging Face's Inference API) and SiteCrawl to crawl websites based on specific objectives.
 
 ## Prerequisites
 
 - Python 3.8+
-- A FireCrawl API key (get one at [FireCrawl's website](https://firecrawl.app))
+- A SiteCrawl API key (get one at [SiteCrawl's website](https://sitecrawl.app))
 - A Hugging Face API key with access to inference API
 
 ## Installation
@@ -26,7 +26,7 @@ pip install -r requirements.txt
 3. Create a `.env` file in the root directory with your API keys:
 
 ```
-FIRECRAWL_API_KEY=your_firecrawl_api_key
+SITECRAWL_API_KEY=your_sitecrawl_api_key
 HUGGINGFACE_API_KEY=your_huggingface_api_key
 ```
 

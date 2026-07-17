@@ -476,7 +476,7 @@ export async function parseController(
 
             const { file, ...parseOptions } = req.body;
             const syntheticFilename = getSyntheticFilename(file);
-            const syntheticUrl = `https://parse.firecrawl.dev/uploads/${encodeURIComponent(syntheticFilename)}`;
+            const syntheticUrl = `https://parse.sitecrawl.dev/uploads/${encodeURIComponent(syntheticFilename)}`;
             const forceEngine = getParseForceEngine(file.kind!);
 
             const doc = await withSpan(
@@ -588,7 +588,7 @@ export async function parseController(
               code: e.code,
               error: e.message,
               sponsor_status: "pending",
-              login_url: "https://firecrawl.dev/signin",
+              login_url: "https://sitecrawl.dev/signin",
             });
           }
 

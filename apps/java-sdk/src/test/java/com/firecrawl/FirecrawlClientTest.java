@@ -1,8 +1,8 @@
-package com.firecrawl;
+package com.sitecrawl;
 
-import com.firecrawl.client.FirecrawlClient;
-import com.firecrawl.errors.FirecrawlException;
-import com.firecrawl.models.*;
+import com.sitecrawl.client.SitecrawlClient;
+import com.sitecrawl.errors.SitecrawlException;
+import com.sitecrawl.models.*;
 import okhttp3.OkHttpClient;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
@@ -14,31 +14,31 @@ import java.util.concurrent.TimeUnit;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Integration tests for the Firecrawl Java SDK.
+ * Integration tests for the Sitecrawl Java SDK.
  *
- * <p>These tests require a valid FIRECRAWL_API_KEY environment variable.
- * Run with: FIRECRAWL_API_KEY=fc-xxx ./gradlew test
+ * <p>These tests require a valid SITECRAWL_API_KEY environment variable.
+ * Run with: SITECRAWL_API_KEY=fc-xxx ./gradlew test
  */
-class FirecrawlClientTest {
+class SitecrawlClientTest {
 
     @Test
     void testBuilderRequiresApiKey() {
-        assertThrows(FirecrawlException.class, () ->
-                FirecrawlClient.builder().apiKey("").build()
+        assertThrows(SitecrawlException.class, () ->
+                SitecrawlClient.builder().apiKey("").build()
         );
     }
 
     @Test
     void testBuilderRejectsExplicitNullApiKey() {
-        assertThrows(FirecrawlException.class, () ->
-                FirecrawlClient.builder().apiKey(null).build()
+        assertThrows(SitecrawlException.class, () ->
+                SitecrawlClient.builder().apiKey(null).build()
         );
     }
 
     @Test
     void testBuilderAcceptsApiKey() {
         // Should not throw — just validates construction
-        FirecrawlClient client = FirecrawlClient.builder()
+        SitecrawlClient client = SitecrawlClient.builder()
                 .apiKey("fc-test-key")
                 .build();
         assertNotNull(client);
@@ -51,7 +51,7 @@ class FirecrawlClientTest {
                 .readTimeout(10, TimeUnit.SECONDS)
                 .build();
 
-        FirecrawlClient client = FirecrawlClient.builder()
+        SitecrawlClient client = SitecrawlClient.builder()
                 .apiKey("fc-test-key")
                 .httpClient(custom)
                 .build();
@@ -61,7 +61,7 @@ class FirecrawlClientTest {
     @Test
     void testScrapeOptionsBuilder() {
         QueryFormat queryFormat = QueryFormat.builder()
-                .prompt("What is Firecrawl?")
+                .prompt("What is Sitecrawl?")
                 .mode(QueryFormat.Mode.DIRECT_QUOTE)
                 .build();
 
@@ -85,10 +85,10 @@ class FirecrawlClientTest {
     @Test
     void testQuestionAndHighlightsFormats() {
         QuestionFormat questionFormat = QuestionFormat.builder()
-                .question("What is Firecrawl?")
+                .question("What is Sitecrawl?")
                 .build();
         HighlightsFormat highlightsFormat = HighlightsFormat.builder()
-                .query("What is Firecrawl?")
+                .query("What is Sitecrawl?")
                 .build();
 
         ScrapeOptions options = ScrapeOptions.builder()
@@ -97,9 +97,9 @@ class FirecrawlClientTest {
 
         assertEquals(List.of(questionFormat, highlightsFormat), options.getFormats());
         assertEquals("question", questionFormat.getType());
-        assertEquals("What is Firecrawl?", questionFormat.getQuestion());
+        assertEquals("What is Sitecrawl?", questionFormat.getQuestion());
         assertEquals("highlights", highlightsFormat.getType());
-        assertEquals("What is Firecrawl?", highlightsFormat.getQuery());
+        assertEquals("What is Sitecrawl?", highlightsFormat.getQuery());
     }
 
     @Test
@@ -151,7 +151,7 @@ class FirecrawlClientTest {
 
     @Test
     void testBrowserExecuteRequiresSessionId() {
-        FirecrawlClient client = FirecrawlClient.builder()
+        SitecrawlClient client = SitecrawlClient.builder()
                 .apiKey("fc-test-key")
                 .build();
         assertThrows(NullPointerException.class, () ->
@@ -161,7 +161,7 @@ class FirecrawlClientTest {
 
     @Test
     void testInteractRequiresJobId() {
-        FirecrawlClient client = FirecrawlClient.builder()
+        SitecrawlClient client = SitecrawlClient.builder()
                 .apiKey("fc-test-key")
                 .build();
         assertThrows(NullPointerException.class, () ->
@@ -171,7 +171,7 @@ class FirecrawlClientTest {
 
     @Test
     void testInteractRequiresCode() {
-        FirecrawlClient client = FirecrawlClient.builder()
+        SitecrawlClient client = SitecrawlClient.builder()
                 .apiKey("fc-test-key")
                 .build();
         assertThrows(NullPointerException.class, () ->
@@ -181,7 +181,7 @@ class FirecrawlClientTest {
 
     @Test
     void testBrowserDeleteRequiresSessionId() {
-        FirecrawlClient client = FirecrawlClient.builder()
+        SitecrawlClient client = SitecrawlClient.builder()
                 .apiKey("fc-test-key")
                 .build();
         assertThrows(NullPointerException.class, () ->
@@ -191,7 +191,7 @@ class FirecrawlClientTest {
 
     @Test
     void testStopInteractiveBrowserRequiresJobId() {
-        FirecrawlClient client = FirecrawlClient.builder()
+        SitecrawlClient client = SitecrawlClient.builder()
                 .apiKey("fc-test-key")
                 .build();
         assertThrows(NullPointerException.class, () ->
@@ -217,7 +217,7 @@ class FirecrawlClientTest {
 
     @Test
     void testParseRequiresFile() {
-        FirecrawlClient client = FirecrawlClient.builder()
+        SitecrawlClient client = SitecrawlClient.builder()
                 .apiKey("fc-test-key")
                 .build();
         assertThrows(NullPointerException.class, () ->
@@ -321,13 +321,13 @@ class FirecrawlClientTest {
     }
 
     // ================================================================
-    // E2E TESTS (require FIRECRAWL_API_KEY)
+    // E2E TESTS (require SITECRAWL_API_KEY)
     // ================================================================
 
     @Test
-    @EnabledIfEnvironmentVariable(named = "FIRECRAWL_API_KEY", matches = ".*\\S.*")
+    @EnabledIfEnvironmentVariable(named = "SITECRAWL_API_KEY", matches = ".*\\S.*")
     void testScrapeE2E() {
-        FirecrawlClient client = FirecrawlClient.fromEnv();
+        SitecrawlClient client = SitecrawlClient.fromEnv();
         Document doc = client.scrape("https://example.com",
                 ScrapeOptions.builder()
                         .formats(List.of("markdown"))
@@ -339,9 +339,9 @@ class FirecrawlClientTest {
     }
 
     @Test
-    @EnabledIfEnvironmentVariable(named = "FIRECRAWL_API_KEY", matches = ".*\\S.*")
+    @EnabledIfEnvironmentVariable(named = "SITECRAWL_API_KEY", matches = ".*\\S.*")
     void testMapE2E() {
-        FirecrawlClient client = FirecrawlClient.fromEnv();
+        SitecrawlClient client = SitecrawlClient.fromEnv();
         MapData data = client.map("https://example.com",
                 MapOptions.builder()
                         .limit(10)
@@ -352,9 +352,9 @@ class FirecrawlClientTest {
     }
 
     @Test
-    @EnabledIfEnvironmentVariable(named = "FIRECRAWL_API_KEY", matches = ".*\\S.*")
+    @EnabledIfEnvironmentVariable(named = "SITECRAWL_API_KEY", matches = ".*\\S.*")
     void testCrawlE2E() {
-        FirecrawlClient client = FirecrawlClient.fromEnv();
+        SitecrawlClient client = SitecrawlClient.fromEnv();
         CrawlJob job = client.crawl("https://example.com",
                 CrawlOptions.builder()
                         .limit(3)
@@ -368,10 +368,10 @@ class FirecrawlClientTest {
     }
 
     @Test
-    @EnabledIfEnvironmentVariable(named = "FIRECRAWL_API_KEY", matches = ".*\\S.*")
+    @EnabledIfEnvironmentVariable(named = "SITECRAWL_API_KEY", matches = ".*\\S.*")
     void testSearchE2E() {
-        FirecrawlClient client = FirecrawlClient.fromEnv();
-        SearchData data = client.search("firecrawl web scraping",
+        SitecrawlClient client = SitecrawlClient.fromEnv();
+        SearchData data = client.search("sitecrawl web scraping",
                 SearchOptions.builder()
                         .limit(5)
                         .build());
@@ -380,9 +380,9 @@ class FirecrawlClientTest {
     }
 
     @Test
-    @EnabledIfEnvironmentVariable(named = "FIRECRAWL_API_KEY", matches = ".*\\S.*")
+    @EnabledIfEnvironmentVariable(named = "SITECRAWL_API_KEY", matches = ".*\\S.*")
     void testConcurrencyE2E() {
-        FirecrawlClient client = FirecrawlClient.fromEnv();
+        SitecrawlClient client = SitecrawlClient.fromEnv();
         ConcurrencyCheck check = client.getConcurrency();
 
         assertNotNull(check);
@@ -390,18 +390,18 @@ class FirecrawlClientTest {
     }
 
     @Test
-    @EnabledIfEnvironmentVariable(named = "FIRECRAWL_API_KEY", matches = ".*\\S.*")
+    @EnabledIfEnvironmentVariable(named = "SITECRAWL_API_KEY", matches = ".*\\S.*")
     void testCreditUsageE2E() {
-        FirecrawlClient client = FirecrawlClient.fromEnv();
+        SitecrawlClient client = SitecrawlClient.fromEnv();
         CreditUsage usage = client.getCreditUsage();
 
         assertNotNull(usage);
     }
 
     @Test
-    @EnabledIfEnvironmentVariable(named = "FIRECRAWL_API_KEY", matches = ".*\\S.*")
+    @EnabledIfEnvironmentVariable(named = "SITECRAWL_API_KEY", matches = ".*\\S.*")
     void testParseE2E() {
-        FirecrawlClient client = FirecrawlClient.fromEnv();
+        SitecrawlClient client = SitecrawlClient.fromEnv();
         ParseFile file = ParseFile.builder()
                 .filename("java-parse-e2e.html")
                 .content("<!DOCTYPE html><html><body><h1>Java SDK Parse E2E</h1></body></html>".getBytes(StandardCharsets.UTF_8))

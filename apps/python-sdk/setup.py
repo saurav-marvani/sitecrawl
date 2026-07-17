@@ -9,7 +9,7 @@ long_description_content = (this_directory / "README.md").read_text()
 
 def get_version():
     """Dynamically set version"""
-    version_file = (this_directory / "firecrawl" / "__init__.py").read_text()
+    version_file = (this_directory / "sitecrawl" / "__init__.py").read_text()
     version_match = re.search(r"^__version__ = ['\"]([^'\"]*)['\"]", version_file, re.M)
     if version_match:
         return version_match.group(1)
@@ -17,12 +17,12 @@ def get_version():
 
 
 setup(
-    name="firecrawl-py",
+    name="sitecrawl-py",
     version=get_version(),
-    url="https://github.com/firecrawl/firecrawl",
+    url="https://github.com/sitecrawl/sitecrawl",
     author="Mendable.ai",
     author_email="nick@mendable.ai",
-    description="Python SDK for Firecrawl API",
+    description="Python SDK for Sitecrawl API",
     long_description=long_description_content,
     long_description_content_type="text/markdown",
     packages=find_packages(),
@@ -58,11 +58,11 @@ setup(
         "Topic :: Text Processing",
         "Topic :: Text Processing :: Indexing",
     ],
-    keywords="SDK API firecrawl",
+    keywords="SDK API sitecrawl",
     project_urls={
-        "Documentation": "https://docs.firecrawl.dev",
-        "Source": "https://github.com/firecrawl/firecrawl",
-        "Tracker": "https://github.com/firecrawl/firecrawl/issues",
+        "Documentation": "https://docs.sitecrawl.dev",
+        "Source": "https://github.com/sitecrawl/sitecrawl",
+        "Tracker": "https://github.com/sitecrawl/sitecrawl/issues",
     },
     license="GNU General Public License v3 (GPLv3)",
 )

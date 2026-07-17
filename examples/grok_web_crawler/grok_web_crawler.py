@@ -1,5 +1,5 @@
 import os
-from firecrawl import FirecrawlApp
+from sitecrawl import SitecrawlApp
 import json
 from dotenv import load_dotenv
 import requests
@@ -18,11 +18,11 @@ class Colors:
 load_dotenv()
 
 # Retrieve API keys from environment variables
-firecrawl_api_key = os.getenv("FIRECRAWL_API_KEY")
+sitecrawl_api_key = os.getenv("SITECRAWL_API_KEY")
 grok_api_key = os.getenv("GROK_API_KEY")
 
-# Initialize the FirecrawlApp
-app = FirecrawlApp(api_key=firecrawl_api_key)
+# Initialize the SitecrawlApp
+app = SitecrawlApp(api_key=sitecrawl_api_key)
 
 # Function to make Grok API calls
 def grok_completion(prompt):

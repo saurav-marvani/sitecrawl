@@ -1,8 +1,8 @@
 # Contributors guide:
 
-Welcome to [Firecrawl](https://firecrawl.dev) 🔥! Here are some instructions on how to get the project locally, so you can run it on your own (and contribute)
+Welcome to [Sitecrawl](https://sitecrawl.dev) 🔥! Here are some instructions on how to get the project locally, so you can run it on your own (and contribute)
 
-If you're contributing, note that the process is similar to other open source repos i.e. (fork firecrawl, make changes, run tests, PR). If you have any questions, and would like help getting on board, reach out to help@firecrawl.com for more or submit an issue!
+If you're contributing, note that the process is similar to other open source repos i.e. (fork sitecrawl, make changes, run tests, PR). If you have any questions, and would like help getting on board, reach out to help@sitecrawl.com for more or submit an issue!
 
 ## Running the project locally
 
@@ -96,7 +96,7 @@ Now, navigate to the apps/api/ directory and run:
 
 ```bash
 pnpm start
-# if you are going to use the [llm-extract feature](https://github.com/firecrawl/firecrawl/pull/586/), you should also export OPENAI_API_KEY=sk-______
+# if you are going to use the [llm-extract feature](https://github.com/sitecrawl/sitecrawl/pull/586/), you should also export OPENAI_API_KEY=sk-______
 ```
 
 This will start the workers who are responsible for processing crawl jobs.

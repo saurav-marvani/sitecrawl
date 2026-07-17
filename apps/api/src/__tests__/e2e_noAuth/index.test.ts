@@ -62,7 +62,7 @@ describe("E2E Tests for API Routes with No Authentication", () => {
       const response = await request(TEST_URL)
         .post("/v0/scrape")
         .set("Content-Type", "application/json")
-        .send({ url: "https://firecrawl.dev" });
+        .send({ url: "https://sitecrawl.dev" });
       expect(response.statusCode).toBe(200);
     }, 10000); // 10 seconds timeout
   });
@@ -87,7 +87,7 @@ describe("E2E Tests for API Routes with No Authentication", () => {
       const response = await request(TEST_URL)
         .post("/v0/crawl")
         .set("Content-Type", "application/json")
-        .send({ url: "https://firecrawl.dev" });
+        .send({ url: "https://sitecrawl.dev" });
       expect(response.statusCode).toBe(200);
       expect(response.body).toHaveProperty("jobId");
       expect(response.body.jobId).toMatch(
@@ -116,7 +116,7 @@ describe("E2E Tests for API Routes with No Authentication", () => {
       const response = await request(TEST_URL)
         .post("/v0/crawlWebsitePreview")
         .set("Content-Type", "application/json")
-        .send({ url: "https://firecrawl.dev" });
+        .send({ url: "https://sitecrawl.dev" });
       expect(response.statusCode).toBe(200);
       expect(response.body).toHaveProperty("jobId");
       expect(response.body.jobId).toMatch(
@@ -169,7 +169,7 @@ describe("E2E Tests for API Routes with No Authentication", () => {
       const crawlResponse = await request(TEST_URL)
         .post("/v0/crawl")
         .set("Content-Type", "application/json")
-        .send({ url: "https://firecrawl.dev" });
+        .send({ url: "https://sitecrawl.dev" });
       expect(crawlResponse.statusCode).toBe(200);
 
       const response = await request(TEST_URL).get(

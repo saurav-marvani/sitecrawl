@@ -240,9 +240,9 @@ fn build_robot(
   if let Some(ua) = robots_user_agent {
     return Robot::new(ua, robots_txt.as_bytes()).ok();
   }
-  Robot::new("FireCrawlAgent", robots_txt.as_bytes())
+  Robot::new("SiteCrawlAgent", robots_txt.as_bytes())
     .ok()
-    .or_else(|| Robot::new("FirecrawlAgent", robots_txt.as_bytes()).ok())
+    .or_else(|| Robot::new("SitecrawlAgent", robots_txt.as_bytes()).ok())
 }
 
 fn _filter_links(data: FilterLinksCall) -> std::result::Result<FilterLinksResult, String> {
@@ -1063,7 +1063,7 @@ mod tests {
 
   #[test]
   fn test_filter_links_honors_custom_robots_user_agent() {
-    // robots.txt allows the default FireCrawlAgent but blocks CustomBot. Without
+    // robots.txt allows the default SiteCrawlAgent but blocks CustomBot. Without
     // a custom user-agent the link is allowed; with `robots_user_agent` wired
     // through it must be filtered.
     let robots_txt = "User-agent: *\nAllow: /\n\nUser-agent: CustomBot\nDisallow: /";

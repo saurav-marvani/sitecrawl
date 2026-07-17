@@ -2,27 +2,27 @@
 
 declare(strict_types=1);
 
-namespace Firecrawl\Laravel\Facades;
+namespace Sitecrawl\Laravel\Facades;
 
-use Firecrawl\Client\FirecrawlClient;
-use Firecrawl\Models\AgentOptions;
-use Firecrawl\Models\AgentStatusResponse;
-use Firecrawl\Models\BatchScrapeJob;
-use Firecrawl\Models\BatchScrapeOptions;
-use Firecrawl\Models\BrowserCreateResponse;
-use Firecrawl\Models\BrowserDeleteResponse;
-use Firecrawl\Models\BrowserExecuteResponse;
-use Firecrawl\Models\BrowserListResponse;
-use Firecrawl\Models\ConcurrencyCheck;
-use Firecrawl\Models\CrawlJob;
-use Firecrawl\Models\CrawlOptions;
-use Firecrawl\Models\CreditUsage;
-use Firecrawl\Models\Document;
-use Firecrawl\Models\MapData;
-use Firecrawl\Models\MapOptions;
-use Firecrawl\Models\ScrapeOptions;
-use Firecrawl\Models\SearchData;
-use Firecrawl\Models\SearchOptions;
+use Sitecrawl\Client\SitecrawlClient;
+use Sitecrawl\Models\AgentOptions;
+use Sitecrawl\Models\AgentStatusResponse;
+use Sitecrawl\Models\BatchScrapeJob;
+use Sitecrawl\Models\BatchScrapeOptions;
+use Sitecrawl\Models\BrowserCreateResponse;
+use Sitecrawl\Models\BrowserDeleteResponse;
+use Sitecrawl\Models\BrowserExecuteResponse;
+use Sitecrawl\Models\BrowserListResponse;
+use Sitecrawl\Models\ConcurrencyCheck;
+use Sitecrawl\Models\CrawlJob;
+use Sitecrawl\Models\CrawlOptions;
+use Sitecrawl\Models\CreditUsage;
+use Sitecrawl\Models\Document;
+use Sitecrawl\Models\MapData;
+use Sitecrawl\Models\MapOptions;
+use Sitecrawl\Models\ScrapeOptions;
+use Sitecrawl\Models\SearchData;
+use Sitecrawl\Models\SearchOptions;
 use Illuminate\Support\Facades\Facade;
 
 /**
@@ -45,12 +45,12 @@ use Illuminate\Support\Facades\Facade;
  * @method static ConcurrencyCheck getConcurrency()
  * @method static CreditUsage getCreditUsage()
  *
- * @see FirecrawlClient
+ * @see SitecrawlClient
  */
-class Firecrawl extends Facade
+class Sitecrawl extends Facade
 {
     protected static function getFacadeAccessor(): string
     {
-        return FirecrawlClient::class;
+        return SitecrawlClient::class;
     }
 }

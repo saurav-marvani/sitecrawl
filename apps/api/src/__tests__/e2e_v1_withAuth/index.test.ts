@@ -35,7 +35,7 @@ describe("E2E Tests for v1 API Routes", () => {
     it.concurrent("should require authorization", async () => {
       const response: any = await request(TEST_URL)
         .post("/v1/scrape")
-        .send({ url: "https://firecrawl.dev" });
+        .send({ url: "https://sitecrawl.dev" });
 
       expect(response.statusCode).toBe(401);
     });
@@ -62,7 +62,7 @@ describe("E2E Tests for v1 API Routes", () => {
           .post("/v1/scrape")
           .set("Authorization", `Bearer invalid-api-key`)
           .set("Content-Type", "application/json")
-          .send({ url: "https://firecrawl.dev" });
+          .send({ url: "https://sitecrawl.dev" });
         expect(response.statusCode).toBe(401);
       },
     );
@@ -71,7 +71,7 @@ describe("E2E Tests for v1 API Routes", () => {
       "should return a successful response with a valid API key",
       async () => {
         const scrapeRequest: ScrapeRequestInput = {
-          url: "https://firecrawl-test-site.vercel.app",
+          url: "https://sitecrawl-test-site.vercel.app",
         };
 
         const response: any = await request(TEST_URL)
@@ -89,29 +89,29 @@ describe("E2E Tests for v1 API Routes", () => {
         expect(response.body.data).toHaveProperty("markdown");
         expect(response.body.data).toHaveProperty("metadata");
         expect(response.body.data).not.toHaveProperty("html");
-        expect(response.body.data.markdown).toContain("Firecrawl Test Site");
+        expect(response.body.data.markdown).toContain("Sitecrawl Test Site");
         expect(response.body.data.metadata.error).toBeUndefined();
         expect(response.body.data.metadata.title).toBe(
-          "Firecrawl Test Website",
+          "Sitecrawl Test Website",
         );
         expect(response.body.data.metadata.description).toBe(
-          "Welcome to the Firecrawl Test Website!",
+          "Welcome to the Sitecrawl Test Website!",
         );
         expect(response.body.data.metadata.ogTitle).toBe(
-          "Firecrawl Test Website",
+          "Sitecrawl Test Website",
         );
         expect(response.body.data.metadata.ogDescription).toBe(
-          "Welcome to the Firecrawl Test Website!",
+          "Welcome to the Sitecrawl Test Website!",
         );
         expect(response.body.data.metadata.ogUrl).toContain(
-          "firecrawl-test-site",
+          "sitecrawl-test-site",
         );
         expect(response.body.data.metadata.ogImage).toContain(
-          "firecrawl-test-site",
+          "sitecrawl-test-site",
         );
         expect(response.body.data.metadata.ogLocaleAlternate).toStrictEqual([]);
         expect(response.body.data.metadata.sourceURL).toBe(
-          "https://firecrawl-test-site.vercel.app",
+          "https://sitecrawl-test-site.vercel.app",
         );
         expect(response.body.data.metadata.statusCode).toBe(200);
       },
@@ -178,7 +178,7 @@ describe("E2E Tests for v1 API Routes", () => {
       "should return a successful response with a valid API key and includeHtml set to true",
       async () => {
         const scrapeRequest: ScrapeRequestInput = {
-          url: "https://firecrawl-test-site.vercel.app",
+          url: "https://sitecrawl-test-site.vercel.app",
           formats: ["markdown", "html"],
         };
 
@@ -196,7 +196,7 @@ describe("E2E Tests for v1 API Routes", () => {
         expect(response.body.data).toHaveProperty("markdown");
         expect(response.body.data).toHaveProperty("html");
         expect(response.body.data).toHaveProperty("metadata");
-        expect(response.body.data.markdown).toContain("Firecrawl Test Site");
+        expect(response.body.data.markdown).toContain("Sitecrawl Test Site");
         expect(response.body.data.html).toContain("<h1");
         expect(response.body.data.metadata.statusCode).toBe(200);
         expect(response.body.data.metadata.error).toBeUndefined();
@@ -442,7 +442,7 @@ describe("E2E Tests for v1 API Routes", () => {
           .post("/v1/scrape")
           .set("Authorization", `Bearer ${config.TEST_API_KEY}`)
           .set("Content-Type", "application/json")
-          .send({ url: "https://firecrawl.dev", timeout: 1000 });
+          .send({ url: "https://sitecrawl.dev", timeout: 1000 });
 
         expect(response.statusCode).toBe(408);
       },
@@ -453,7 +453,7 @@ describe("E2E Tests for v1 API Routes", () => {
       "should return a successful response with a valid API key and includeHtml set to true",
       async () => {
         const scrapeRequest: ScrapeRequestInput = {
-          url: "https://firecrawl-test-site.vercel.app",
+          url: "https://sitecrawl-test-site.vercel.app",
           formats: ["html", "rawHtml"],
         };
 
@@ -516,7 +516,7 @@ describe("E2E Tests for v1 API Routes", () => {
       "should return a successful response with a valid links on page",
       async () => {
         const scrapeRequest: ScrapeRequestInput = {
-          url: "https://firecrawl-test-site.vercel.app",
+          url: "https://sitecrawl-test-site.vercel.app",
           formats: ["links"],
         };
 
@@ -535,7 +535,7 @@ describe("E2E Tests for v1 API Routes", () => {
         expect(response.body.data).not.toHaveProperty("rawHtml");
         expect(response.body.data).toHaveProperty("links");
         expect(response.body.data).toHaveProperty("metadata");
-        expect(response.body.data.links).toContain("https://firecrawl.dev");
+        expect(response.body.data.links).toContain("https://sitecrawl.dev");
         expect(response.body.data.metadata.statusCode).toBe(200);
         expect(response.body.data.metadata.error).toBeUndefined();
       },
@@ -547,7 +547,7 @@ describe("E2E Tests for v1 API Routes", () => {
     it.concurrent("should require authorization", async () => {
       const response: any = await request(TEST_URL)
         .post("/v1/map")
-        .send({ url: "https://firecrawl.dev" });
+        .send({ url: "https://sitecrawl.dev" });
       expect(response.statusCode).toBe(401);
     });
 
@@ -558,7 +558,7 @@ describe("E2E Tests for v1 API Routes", () => {
           .post("/v1/map")
           .set("Authorization", `Bearer invalid-api-key`)
           .set("Content-Type", "application/json")
-          .send({ url: "https://firecrawl.dev" });
+          .send({ url: "https://sitecrawl.dev" });
         expect(response.statusCode).toBe(401);
       },
     );
@@ -567,7 +567,7 @@ describe("E2E Tests for v1 API Routes", () => {
       "should return a successful response with a valid API key",
       async () => {
         const mapRequest = {
-          url: "https://firecrawl-test-site.vercel.app",
+          url: "https://sitecrawl-test-site.vercel.app",
         };
 
         const response: any = await request(TEST_URL)
@@ -619,7 +619,7 @@ describe("E2E Tests for v1 API Routes", () => {
       "should return a successful response with a valid API key and search and allowSubdomains",
       async () => {
         const mapRequest = {
-          url: "https://firecrawl.dev",
+          url: "https://sitecrawl.dev",
           search: "docs",
           includeSubdomains: true,
         };
@@ -640,10 +640,10 @@ describe("E2E Tests for v1 API Routes", () => {
         expect(Array.isArray(links)).toBe(true);
         expect(links.length).toBeGreaterThan(0);
 
-        const containsDocsFirecrawlDev = links.some((link: string) =>
-          link.includes("docs.firecrawl.dev"),
+        const containsDocsSitecrawlDev = links.some((link: string) =>
+          link.includes("docs.sitecrawl.dev"),
         );
-        expect(containsDocsFirecrawlDev).toBe(true);
+        expect(containsDocsSitecrawlDev).toBe(true);
       },
     );
 
@@ -651,7 +651,7 @@ describe("E2E Tests for v1 API Routes", () => {
       "should return a successful response with a valid API key and search and allowSubdomains and www",
       async () => {
         const mapRequest = {
-          url: "https://www.firecrawl.dev",
+          url: "https://www.sitecrawl.dev",
           search: "docs",
           includeSubdomains: true,
         };
@@ -672,10 +672,10 @@ describe("E2E Tests for v1 API Routes", () => {
         expect(Array.isArray(links)).toBe(true);
         expect(links.length).toBeGreaterThan(0);
 
-        const containsDocsFirecrawlDev = links.some((link: string) =>
-          link.includes("docs.firecrawl.dev"),
+        const containsDocsSitecrawlDev = links.some((link: string) =>
+          link.includes("docs.sitecrawl.dev"),
         );
-        expect(containsDocsFirecrawlDev).toBe(true);
+        expect(containsDocsSitecrawlDev).toBe(true);
       },
       10000,
     );
@@ -684,7 +684,7 @@ describe("E2E Tests for v1 API Routes", () => {
       "should return a successful response with a valid API key and search and not allowSubdomains and www",
       async () => {
         const mapRequest = {
-          url: "https://www.firecrawl.dev",
+          url: "https://www.sitecrawl.dev",
           search: "docs",
           includeSubdomains: false,
         };
@@ -704,7 +704,7 @@ describe("E2E Tests for v1 API Routes", () => {
         const links = response.body.links as unknown[];
         expect(Array.isArray(links)).toBe(true);
         expect(links.length).toBeGreaterThan(0);
-        expect(links[0]).not.toContain("docs.firecrawl.dev");
+        expect(links[0]).not.toContain("docs.sitecrawl.dev");
       },
     );
 
@@ -731,7 +731,7 @@ describe("E2E Tests for v1 API Routes", () => {
     it.concurrent("should require authorization", async () => {
       const response: any = await request(TEST_URL)
         .post("/v1/crawl")
-        .send({ url: "https://firecrawl.dev" });
+        .send({ url: "https://sitecrawl.dev" });
       expect(response.statusCode).toBe(401);
     });
 
@@ -757,7 +757,7 @@ describe("E2E Tests for v1 API Routes", () => {
           .post("/v1/crawl")
           .set("Authorization", `Bearer invalid-api-key`)
           .set("Content-Type", "application/json")
-          .send({ url: "https://firecrawl.dev" });
+          .send({ url: "https://sitecrawl.dev" });
         expect(response.statusCode).toBe(401);
       },
     );
@@ -767,7 +767,7 @@ describe("E2E Tests for v1 API Routes", () => {
         .post("/v1/crawl")
         .set("Authorization", `Bearer ${config.TEST_API_KEY}`)
         .set("Content-Type", "application/json")
-        .send({ url: "https://firecrawl.dev" });
+        .send({ url: "https://sitecrawl.dev" });
 
       expect(response.statusCode).toBe(200);
       expect(response.body).toHaveProperty("id");
@@ -787,7 +787,7 @@ describe("E2E Tests for v1 API Routes", () => {
           .set("Authorization", `Bearer ${config.TEST_API_KEY}`)
           .set("Content-Type", "application/json")
           .send({
-            url: "https://firecrawl.dev",
+            url: "https://sitecrawl.dev",
             limit: 40,
             includePaths: ["blog/*"],
           });
@@ -819,7 +819,7 @@ describe("E2E Tests for v1 API Routes", () => {
         );
         expect(urls.length).toBeGreaterThan(5);
         urls.forEach((url: string) => {
-          expect(url).toContain("firecrawl.dev/blog");
+          expect(url).toContain("sitecrawl.dev/blog");
         });
 
         expect(completedResponse.statusCode).toBe(200);
@@ -843,7 +843,7 @@ describe("E2E Tests for v1 API Routes", () => {
           .set("Authorization", `Bearer ${config.TEST_API_KEY}`)
           .set("Content-Type", "application/json")
           .send({
-            url: "https://firecrawl.dev",
+            url: "https://sitecrawl.dev",
             limit: 40,
             excludePaths: ["blog/*"],
           });
@@ -875,7 +875,7 @@ describe("E2E Tests for v1 API Routes", () => {
         );
         expect(urls.length).toBeGreaterThan(3);
         urls.forEach((url: string) => {
-          expect(url.startsWith("https://www.firecrawl.dev/blog/")).toBeFalsy();
+          expect(url.startsWith("https://www.sitecrawl.dev/blog/")).toBeFalsy();
         });
       },
       90000,
@@ -982,7 +982,7 @@ describe("E2E Tests for v1 API Routes", () => {
           .post("/v1/crawl")
           .set("Authorization", `Bearer ${config.TEST_API_KEY}`)
           .set("Content-Type", "application/json")
-          .send({ url: "https://docs.firecrawl.dev" });
+          .send({ url: "https://docs.sitecrawl.dev" });
         expect(crawlResponse.statusCode).toBe(200);
 
         let isCompleted = false;
@@ -1031,7 +1031,7 @@ describe("E2E Tests for v1 API Routes", () => {
           .post("/v1/crawl")
           .set("Authorization", `Bearer ${config.TEST_API_KEY}`)
           .set("Content-Type", "application/json")
-          .send({ url: "https://docs.firecrawl.dev", limit: 10 });
+          .send({ url: "https://docs.sitecrawl.dev", limit: 10 });
 
         expect(crawlResponse.statusCode).toBe(200);
 

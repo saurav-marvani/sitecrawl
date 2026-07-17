@@ -1,5 +1,5 @@
 import os
-from firecrawl import FirecrawlApp
+from sitecrawl import SitecrawlApp
 from groq import Groq
 from dotenv import load_dotenv
 
@@ -17,16 +17,16 @@ class Colors:
 load_dotenv()
 
 # Retrieve API keys from environment variables
-firecrawl_api_key = os.getenv("FIRECRAWL_API_KEY")
+sitecrawl_api_key = os.getenv("SITECRAWL_API_KEY")
 groq_api_key = os.getenv("GROQ_API_KEY")
 
-# Initialize the FirecrawlApp and Groq client
-app = FirecrawlApp(api_key=firecrawl_api_key)
+# Initialize the SitecrawlApp and Groq client
+app = SitecrawlApp(api_key=sitecrawl_api_key)
 groq_client = Groq(api_key=groq_api_key)
 
 def scrape_website(url):
     """
-    Scrape a website using Firecrawl.
+    Scrape a website using Sitecrawl.
 
     Args:
         url (str): The URL to scrape

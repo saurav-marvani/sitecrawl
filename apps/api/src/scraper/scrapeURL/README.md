@@ -1,5 +1,5 @@
 # `scrapeURL`
-New URL scraper for Firecrawl
+New URL scraper for Sitecrawl
 
 ## Signal flow
 ```mermaid

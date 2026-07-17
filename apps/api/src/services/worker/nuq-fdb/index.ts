@@ -44,9 +44,9 @@ export async function nuqFdbGetMetrics(): Promise<string> {
   ]);
 
   return `${queueMetrics}
-# HELP firecrawl_nuq_fdb_pending_jobs Number of FDB scrape jobs currently admitted to workers or waiting in ready shards
-# TYPE firecrawl_nuq_fdb_pending_jobs gauge
-firecrawl_nuq_fdb_pending_jobs ${workerLoad}
+# HELP sitecrawl_nuq_fdb_pending_jobs Number of FDB scrape jobs currently admitted to workers or waiting in ready shards
+# TYPE sitecrawl_nuq_fdb_pending_jobs gauge
+sitecrawl_nuq_fdb_pending_jobs ${workerLoad}
 `;
 }
 

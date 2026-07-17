@@ -18,8 +18,8 @@ class Colors:
 # Load environment variables
 load_dotenv()
 
-# Initialize the FirecrawlApp with your API key
-firecrawl_api_key = os.getenv("FIRECRAWL_API_KEY")
+# Initialize the SitecrawlApp with your API key
+sitecrawl_api_key = os.getenv("SITECRAWL_API_KEY")
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 # Set the jobs page URL
@@ -28,16 +28,16 @@ jobs_page_url = "https://openai.com/careers/search"
 # Resume
 resume_paste = """"
 Eric Ciarla
-Co-Founder @ Firecrawl
+Co-Founder @ Sitecrawl
 San Francisco, California, United States
 Summary
 Building…
 Experience
-Firecrawl
+Sitecrawl
 Co-Founder
 April 2024 - Present (6 months)
 San Francisco, California, United States
-Firecrawl by Mendable. Building data extraction infrastructure for AI. Used by
+Sitecrawl by Mendable. Building data extraction infrastructure for AI. Used by
 Amazon, Zapier, and Nvidia (YC S22)
 Mendable
 2 years 7 months
@@ -90,13 +90,13 @@ University of New Hampshire
 Economics and Philosophy
 """
 
-# First, scrape the jobs page using Firecrawl
+# First, scrape the jobs page using Sitecrawl
 try:
     response = requests.post(
-        "https://api.firecrawl.dev/v1/scrape",
+        "https://api.sitecrawl.dev/v1/scrape",
         headers={
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {firecrawl_api_key}"
+            "Authorization": f"Bearer {sitecrawl_api_key}"
         },
         json={
             "url": jobs_page_url,
@@ -184,10 +184,10 @@ for link in apply_links:
 for index, link in enumerate(apply_links):
     try:
         response = requests.post(
-            "https://api.firecrawl.dev/v1/scrape",
+            "https://api.sitecrawl.dev/v1/scrape",
             headers={
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {firecrawl_api_key}"
+                "Authorization": f"Bearer {sitecrawl_api_key}"
             },
             json={
                 "url": link,

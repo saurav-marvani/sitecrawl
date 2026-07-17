@@ -2,4 +2,4 @@
 
 require "minitest/autorun"
 require "webmock/minitest"
-require "firecrawl"
+require "sitecrawl"

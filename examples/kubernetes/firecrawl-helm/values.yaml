@@ -106,13 +106,13 @@ rabbitmq:
       cpu: "500m"
 
 image:
-  repository: docker.io/winkkgmbh/firecrawl
+  repository: docker.io/winkkgmbh/sitecrawl
   tag: "latest"
   pullPolicy: Always
   dockerSecretEnabled: false
 
 playwright:
-  repository: docker.io/winkkgmbh/firecrawl-playwright
+  repository: docker.io/winkkgmbh/sitecrawl-playwright
   tag: "latest"
   pullPolicy: Always
   replicaCount: 1
@@ -150,9 +150,9 @@ config:
   IS_KUBERNETES: "true"
   ENV: "production"
   LOGGING_LEVEL: "INFO"
-  FIRECRAWL_APP_SCHEME: "http"
-  FIRECRAWL_APP_HOST: ""
-  FIRECRAWL_APP_PORT: ""
+  SITECRAWL_APP_SCHEME: "http"
+  SITECRAWL_APP_HOST: ""
+  SITECRAWL_APP_PORT: ""
   REDIS_URL: ""
   REDIS_RATE_LIMIT_URL: ""
   PLAYWRIGHT_MICROSERVICE_URL: ""

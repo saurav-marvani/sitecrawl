@@ -1,4 +1,4 @@
-//impired by firecrawl repo @rafaelsideguide
+//impired by sitecrawl repo @rafaelsideguide
 export const getError = (statusCode: number | null): string | null => {
     if (statusCode === null) {
       return 'No response received';

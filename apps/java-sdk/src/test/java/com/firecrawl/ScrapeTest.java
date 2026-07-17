@@ -1,9 +1,9 @@
-package com.firecrawl;
+package com.sitecrawl;
 
-import com.firecrawl.client.FirecrawlClient;
-import com.firecrawl.errors.FirecrawlException;
-import com.firecrawl.models.Document;
-import com.firecrawl.models.ScrapeOptions;
+import com.sitecrawl.client.SitecrawlClient;
+import com.sitecrawl.errors.SitecrawlException;
+import com.sitecrawl.models.Document;
+import com.sitecrawl.models.ScrapeOptions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
@@ -15,26 +15,26 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * Scrape Endpoint Tests
  * 
- * Tests the scrape functionality of the Firecrawl Java SDK.
- * These tests require FIRECRAWL_API_KEY environment variable to be set.
+ * Tests the scrape functionality of the Sitecrawl Java SDK.
+ * These tests require SITECRAWL_API_KEY environment variable to be set.
  * 
- * Run with: FIRECRAWL_API_KEY=fc-xxx gradle test --tests "com.firecrawl.ScrapeTest"
+ * Run with: SITECRAWL_API_KEY=fc-xxx gradle test --tests "com.sitecrawl.ScrapeTest"
  */
 class ScrapeTest {
 
-    private static FirecrawlClient client;
+    private static SitecrawlClient client;
 
     @BeforeAll
     static void setup() {
         // Initialize client from environment variable
-        String apiKey = System.getenv("FIRECRAWL_API_KEY");
+        String apiKey = System.getenv("SITECRAWL_API_KEY");
         if (apiKey != null && !apiKey.isBlank()) {
-            client = FirecrawlClient.fromEnv();
+            client = SitecrawlClient.fromEnv();
         }
     }
 
     @Test
-    @EnabledIfEnvironmentVariable(named = "FIRECRAWL_API_KEY", matches = ".*\\S.*")
+    @EnabledIfEnvironmentVariable(named = "SITECRAWL_API_KEY", matches = ".*\\S.*")
     void testScrapeBasic() {
         // Test basic scraping with markdown format
         System.out.println("Testing basic scrape with markdown format...");
@@ -54,7 +54,7 @@ class ScrapeTest {
     }
 
     @Test
-    @EnabledIfEnvironmentVariable(named = "FIRECRAWL_API_KEY", matches = ".*\\S.*")
+    @EnabledIfEnvironmentVariable(named = "SITECRAWL_API_KEY", matches = ".*\\S.*")
     void testScrapeWithMultipleFormats() {
         // Test scraping with multiple formats
         System.out.println("Testing scrape with multiple formats (markdown + html)...");
@@ -77,7 +77,7 @@ class ScrapeTest {
     }
 
     @Test
-    @EnabledIfEnvironmentVariable(named = "FIRECRAWL_API_KEY", matches = ".*\\S.*")
+    @EnabledIfEnvironmentVariable(named = "SITECRAWL_API_KEY", matches = ".*\\S.*")
     void testScrapeWithMetadata() {
         // Test that metadata is properly extracted
         System.out.println("Testing scrape with metadata extraction...");
@@ -101,7 +101,7 @@ class ScrapeTest {
     }
 
     @Test
-    @EnabledIfEnvironmentVariable(named = "FIRECRAWL_API_KEY", matches = ".*\\S.*")
+    @EnabledIfEnvironmentVariable(named = "SITECRAWL_API_KEY", matches = ".*\\S.*")
     void testScrapeWithOnlyMainContent() {
         // Test scraping with onlyMainContent option
         System.out.println("Testing scrape with onlyMainContent option...");
@@ -122,7 +122,7 @@ class ScrapeTest {
     }
 
     @Test
-    @EnabledIfEnvironmentVariable(named = "FIRECRAWL_API_KEY", matches = ".*\\S.*")
+    @EnabledIfEnvironmentVariable(named = "SITECRAWL_API_KEY", matches = ".*\\S.*")
     void testScrapeWithTimeout() {
         // Test scraping with custom timeout
         System.out.println("Testing scrape with custom timeout...");
@@ -141,23 +141,23 @@ class ScrapeTest {
     }
 
     @Test
-    @EnabledIfEnvironmentVariable(named = "FIRECRAWL_API_KEY", matches = ".*\\S.*")
+    @EnabledIfEnvironmentVariable(named = "SITECRAWL_API_KEY", matches = ".*\\S.*")
     void testScrapeInvalidUrl() {
         // Test that invalid URLs are handled properly
         System.out.println("Testing scrape with invalid URL...");
         
-        assertThrows(FirecrawlException.class, () -> {
+        assertThrows(SitecrawlException.class, () -> {
             client.scrape("not-a-valid-url",
                     ScrapeOptions.builder()
                             .formats(List.of("markdown"))
                             .build());
-        }, "Should throw FirecrawlException for invalid URL");
+        }, "Should throw SitecrawlException for invalid URL");
         
         System.out.println("✓ Invalid URL handling test passed");
     }
 
     @Test
-    @EnabledIfEnvironmentVariable(named = "FIRECRAWL_API_KEY", matches = ".*\\S.*")
+    @EnabledIfEnvironmentVariable(named = "SITECRAWL_API_KEY", matches = ".*\\S.*")
     void testScrapeWithWaitFor() {
         // Test scraping with waitFor option (useful for dynamic content)
         System.out.println("Testing scrape with waitFor option...");

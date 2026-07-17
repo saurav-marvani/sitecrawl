@@ -1,6 +1,6 @@
 ---
 title: "Introducing /extract v2: Launch Week III - Day 3"
-description: "Turn any website into a clean, LLM-ready text file in seconds with llmstxt.new — powered by Firecrawl."
+description: "Turn any website into a clean, LLM-ready text file in seconds with llmstxt.new — powered by Sitecrawl."
 pubDate: "Apr 16, 2025"
 heroImage: "../../assets/blog/lw3-d3-2.webp"
 category: "updates"
@@ -37,7 +37,7 @@ You can now use the same FIRE-1 agent introduced in Day 2 to perform advanced ex
 ### Example Usage (cURL):
 
 ```bash
-curl -X POST https://api.firecrawl.dev/v1/extract \
+curl -X POST https://api.sitecrawl.dev/v1/extract \
     -H 'Content-Type: application/json' \
     -H 'Authorization: Bearer YOUR_API_KEY' \
     -d '{
@@ -72,6 +72,6 @@ This allows you to extract complex, multi-step, and paginated data — all with 
 
 Ready to experience smarter, more interactive data extraction?
 
-- **Try /extract v2:** Unlock next-level data gathering with Firecrawl and FIRE-1.
-- **Check the docs:** Learn everything you need in our [official documentation](https://docs.firecrawl.dev/features/extract#using-fire-1).
-- **Join the community:** Need help or want to share feedback? Head to our [Discord](https://discord.gg/S7Enyh9Abh) or email [help@firecrawl.com](mailto:help@firecrawl.com).
+- **Try /extract v2:** Unlock next-level data gathering with Sitecrawl and FIRE-1.
+- **Check the docs:** Learn everything you need in our [official documentation](https://docs.sitecrawl.dev/features/extract#using-fire-1).
+- **Join the community:** Need help or want to share feedback? Head to our [Discord](https://discord.gg/S7Enyh9Abh) or email [help@sitecrawl.com](mailto:help@sitecrawl.com).

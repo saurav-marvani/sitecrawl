@@ -1,11 +1,11 @@
-//! Batch scrape endpoint for Firecrawl API v2.
+//! Batch scrape endpoint for Sitecrawl API v2.
 
 use serde::{Deserialize, Serialize};
 
 use crate::client::Client;
 use crate::scrape::ScrapeOptions;
 use crate::types::{CrawlErrorsResponse, Document, JobStatus, WebhookConfig};
-use crate::FirecrawlError;
+use crate::SitecrawlError;
 
 /// Options for batch scraping.
 #[serde_with::skip_serializing_none]
@@ -106,7 +106,7 @@ impl Client {
     /// # Example
     ///
     /// ```no_run
-    /// use firecrawl::{Client, BatchScrapeOptions};
+    /// use sitecrawl::{Client, BatchScrapeOptions};
     ///
     /// #[tokio::main]
     /// async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -131,7 +131,7 @@ impl Client {
         &self,
         urls: Vec<String>,
         options: impl Into<Option<BatchScrapeOptions>>,
-    ) -> Result<BatchScrapeResponse, FirecrawlError> {
+    ) -> Result<BatchScrapeResponse, SitecrawlError> {
         let options = options.into().unwrap_or_default();
         let body = BatchScrapeRequest {
             urls,
@@ -147,7 +147,7 @@ impl Client {
             .json(&body)
             .send()
             .await
-            .map_err(|e| FirecrawlError::HttpError("Starting batch scrape".to_string(), e))?;
+            .map_err(|e| SitecrawlError::HttpError("Starting batch scrape".to_string(), e))?;
 
         self.handle_response(response, "start batch scrape").await
     }
@@ -167,7 +167,7 @@ impl Client {
     /// # Example
     ///
     /// ```no_run
-    /// use firecrawl::Client;
+    /// use sitecrawl::Client;
     ///
     /// #[tokio::main]
     /// async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -184,7 +184,7 @@ impl Client {
     pub async fn get_batch_scrape_status(
         &self,
         id: impl AsRef<str>,
-    ) -> Result<BatchScrapeJob, FirecrawlError> {
+    ) -> Result<BatchScrapeJob, SitecrawlError> {
         let response = self
             .client
             .get(self.url(&format!("/batch/scrape/{}", id.as_ref())))
@@ -192,7 +192,7 @@ impl Client {
             .send()
             .await
             .map_err(|e| {
-                FirecrawlError::HttpError(
+                SitecrawlError::HttpError(
                     format!("Checking batch scrape status {}", id.as_ref()),
                     e,
                 )
@@ -218,7 +218,7 @@ impl Client {
     async fn get_batch_scrape_status_next(
         &self,
         next: &str,
-    ) -> Result<BatchScrapeJob, FirecrawlError> {
+    ) -> Result<BatchScrapeJob, SitecrawlError> {
         let response = self
             .client
             .get(next)
@@ -226,7 +226,7 @@ impl Client {
             .send()
             .await
             .map_err(|e| {
-                FirecrawlError::HttpError(format!("Paginating batch scrape at {}", next), e)
+                SitecrawlError::HttpError(format!("Paginating batch scrape at {}", next), e)
             })?;
 
         self.handle_response(response, "batch scrape pagination")
@@ -249,7 +249,7 @@ impl Client {
     /// # Example
     ///
     /// ```no_run
-    /// use firecrawl::{Client, BatchScrapeOptions, ScrapeOptions, Format};
+    /// use sitecrawl::{Client, BatchScrapeOptions, ScrapeOptions, Format};
     ///
     /// #[tokio::main]
     /// async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -285,7 +285,7 @@ impl Client {
         &self,
         urls: Vec<String>,
         options: impl Into<Option<BatchScrapeOptions>>,
-    ) -> Result<BatchScrapeJob, FirecrawlError> {
+    ) -> Result<BatchScrapeJob, SitecrawlError> {
         let options = options.into().unwrap_or_default();
         let poll_interval = options.poll_interval.unwrap_or(2000);
 
@@ -299,7 +299,7 @@ impl Client {
         &self,
         id: &str,
         poll_interval: u64,
-    ) -> Result<BatchScrapeJob, FirecrawlError> {
+    ) -> Result<BatchScrapeJob, SitecrawlError> {
         loop {
             let status = self.get_batch_scrape_status(id).await?;
 
@@ -309,13 +309,13 @@ impl Client {
                     tokio::time::sleep(tokio::time::Duration::from_millis(poll_interval)).await;
                 }
                 JobStatus::Failed => {
-                    return Err(FirecrawlError::JobFailed(
+                    return Err(SitecrawlError::JobFailed(
                         "Batch scrape job failed".to_string(),
                         JobStatus::Failed,
                     ));
                 }
                 JobStatus::Cancelled => {
-                    return Err(FirecrawlError::JobFailed(
+                    return Err(SitecrawlError::JobFailed(
                         "Batch scrape job was cancelled".to_string(),
                         JobStatus::Cancelled,
                     ));
@@ -337,7 +337,7 @@ impl Client {
     /// # Example
     ///
     /// ```no_run
-    /// use firecrawl::Client;
+    /// use sitecrawl::Client;
     ///
     /// #[tokio::main]
     /// async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -354,7 +354,7 @@ impl Client {
     pub async fn get_batch_scrape_errors(
         &self,
         id: impl AsRef<str>,
-    ) -> Result<CrawlErrorsResponse, FirecrawlError> {
+    ) -> Result<CrawlErrorsResponse, SitecrawlError> {
         let response = self
             .client
             .get(self.url(&format!("/batch/scrape/{}/errors", id.as_ref())))
@@ -362,7 +362,7 @@ impl Client {
             .send()
             .await
             .map_err(|e| {
-                FirecrawlError::HttpError(format!("Getting batch scrape errors {}", id.as_ref()), e)
+                SitecrawlError::HttpError(format!("Getting batch scrape errors {}", id.as_ref()), e)
             })?;
 
         self.handle_response(response, "batch scrape errors").await
@@ -386,7 +386,7 @@ mod tests {
                 json!({
                     "success": true,
                     "id": "batch-123",
-                    "url": "https://api.firecrawl.dev/v2/batch/scrape/batch-123"
+                    "url": "https://api.sitecrawl.dev/v2/batch/scrape/batch-123"
                 })
                 .to_string(),
             )
@@ -456,7 +456,7 @@ mod tests {
                 json!({
                     "success": true,
                     "id": "batch-456",
-                    "url": "https://api.firecrawl.dev/v2/batch/scrape/batch-456",
+                    "url": "https://api.sitecrawl.dev/v2/batch/scrape/batch-456",
                     "invalidURLs": ["not-a-url"]
                 })
                 .to_string(),
@@ -491,7 +491,7 @@ mod tests {
                 json!({
                     "success": true,
                     "id": "batch-789",
-                    "url": "https://api.firecrawl.dev/v2/batch/scrape/batch-789"
+                    "url": "https://api.sitecrawl.dev/v2/batch/scrape/batch-789"
                 })
                 .to_string(),
             )

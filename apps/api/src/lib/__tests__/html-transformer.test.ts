@@ -3,7 +3,7 @@ import {
   extractMetadata,
   transformHtml,
   TransformHtmlOptions,
-} from "@mendable/firecrawl-rs";
+} from "@mendable/sitecrawl-rs";
 
 describe("HTML Transformer", () => {
   describe("extractLinks", () => {

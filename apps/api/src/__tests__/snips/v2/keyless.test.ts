@@ -106,7 +106,7 @@ describeIf(KEYLESS_ENABLED)("Keyless free tier", () => {
     expect(response.body.error).toContain(
       "not supported by the keyless free tier",
     );
-    expect(response.body.error).toContain("https://www.firecrawl.dev/signin");
+    expect(response.body.error).toContain("https://www.sitecrawl.dev/signin");
     expect(response.body.error).toContain("Authorization: Bearer YOUR_API_KEY");
   });
 
@@ -157,7 +157,7 @@ describeIf(KEYLESS_ENABLED)("Keyless free tier", () => {
 
     expect(blocked.statusCode).toBe(429);
     expect(blocked.body.error).toContain("keyless free tier rate limit");
-    expect(blocked.body.error).toContain("https://www.firecrawl.dev/signin");
+    expect(blocked.body.error).toContain("https://www.sitecrawl.dev/signin");
     expect(blocked.body.error).toContain("Authorization: Bearer YOUR_API_KEY");
     // Out of quota → emit the OAuth-discovery header so agents find the key flow.
     expect(blocked.headers["www-authenticate"]).toContain("resource_metadata");
@@ -182,7 +182,7 @@ describeIf(KEYLESS_ENABLED)("Keyless free tier", () => {
 
     expect(blocked.statusCode).toBe(429);
     expect(blocked.body.error).toContain("keyless free tier rate limit");
-    expect(blocked.body.error).toContain("https://www.firecrawl.dev/signin");
+    expect(blocked.body.error).toContain("https://www.sitecrawl.dev/signin");
     expect(blocked.body.error).toContain("Authorization: Bearer YOUR_API_KEY");
   });
 
@@ -211,7 +211,7 @@ describeIf(KEYLESS_ENABLED)("Keyless free tier", () => {
 
     expect(blocked.statusCode).toBe(429);
     expect(blocked.body.error).toContain("keyless free tier rate limit");
-    expect(blocked.body.error).toContain("https://www.firecrawl.dev/signin");
+    expect(blocked.body.error).toContain("https://www.sitecrawl.dev/signin");
     expect(blocked.body.error).toContain("Authorization: Bearer YOUR_API_KEY");
   });
 
@@ -253,7 +253,7 @@ describeIf(KEYLESS_ENABLED)("Keyless free tier", () => {
 
       expect(blocked.statusCode).toBe(429);
       expect(blocked.body.error).toContain("keyless free tier rate limit");
-      expect(blocked.body.error).toContain("https://www.firecrawl.dev/signin");
+      expect(blocked.body.error).toContain("https://www.sitecrawl.dev/signin");
       expect(blocked.body.error).toContain(
         "Authorization: Bearer YOUR_API_KEY",
       );
@@ -297,7 +297,7 @@ describeIf(KEYLESS_ENABLED)("Keyless free tier", () => {
 
       expect(blocked.statusCode).toBe(429);
       expect(blocked.body.error).toContain("keyless free tier rate limit");
-      expect(blocked.body.error).toContain("https://www.firecrawl.dev/signin");
+      expect(blocked.body.error).toContain("https://www.sitecrawl.dev/signin");
       expect(blocked.body.error).toContain(
         "Authorization: Bearer YOUR_API_KEY",
       );
@@ -339,7 +339,7 @@ describeIf(KEYLESS_ENABLED)("Keyless free tier", () => {
 
       expect(blocked.statusCode).toBe(429);
       expect(blocked.body.error).toContain("keyless free tier rate limit");
-      expect(blocked.body.error).toContain("https://www.firecrawl.dev/signin");
+      expect(blocked.body.error).toContain("https://www.sitecrawl.dev/signin");
       expect(blocked.body.error).toContain(
         "Authorization: Bearer YOUR_API_KEY",
       );
@@ -458,7 +458,7 @@ describeIf(KEYLESS_ENABLED)("Keyless free tier", () => {
         .post("/v2/search")
         .set("Content-Type", "application/json")
         .send({
-          query: "firecrawl",
+          query: "sitecrawl",
           limit: 1,
           origin: "mcp",
           scrapeOptions: {
@@ -469,7 +469,7 @@ describeIf(KEYLESS_ENABLED)("Keyless free tier", () => {
 
       expect(blocked.statusCode).toBe(429);
       expect(blocked.body.error).toContain("keyless free tier rate limit");
-      expect(blocked.body.error).toContain("https://www.firecrawl.dev/signin");
+      expect(blocked.body.error).toContain("https://www.sitecrawl.dev/signin");
       expect(blocked.body.error).toContain(
         "Authorization: Bearer YOUR_API_KEY",
       );
@@ -497,7 +497,7 @@ describeIf(KEYLESS_ENABLED)("Keyless free tier", () => {
         .post("/v1/search")
         .set("Content-Type", "application/json")
         .send({
-          query: "firecrawl",
+          query: "sitecrawl",
           limit: 1,
           origin: "mcp",
           scrapeOptions: {
@@ -508,7 +508,7 @@ describeIf(KEYLESS_ENABLED)("Keyless free tier", () => {
 
       expect(blocked.statusCode).toBe(429);
       expect(blocked.body.error).toContain("keyless free tier rate limit");
-      expect(blocked.body.error).toContain("https://www.firecrawl.dev/signin");
+      expect(blocked.body.error).toContain("https://www.sitecrawl.dev/signin");
       expect(blocked.body.error).toContain(
         "Authorization: Bearer YOUR_API_KEY",
       );
@@ -525,7 +525,7 @@ describeIf(KEYLESS_ENABLED)("Keyless free tier", () => {
       const response = await request(TEST_API_URL)
         .post("/v2/search")
         .set("Content-Type", "application/json")
-        .send({ query: "firecrawl", limit: 1, origin: "mcp" });
+        .send({ query: "sitecrawl", limit: 1, origin: "mcp" });
 
       expect(response.statusCode).toBe(200);
       expect(response.body.success).toBe(true);
@@ -554,12 +554,12 @@ describeIf(KEYLESS_ENABLED)("Keyless free tier", () => {
       const blocked = await request(TEST_API_URL)
         .post("/v2/scrape")
         .set("Content-Type", "application/json")
-        .set("x-firecrawl-keyless-secret", process.env.KEYLESS_PROXY_SECRET!)
-        .set("x-firecrawl-keyless-ip", fakeIp)
+        .set("x-sitecrawl-keyless-secret", process.env.KEYLESS_PROXY_SECRET!)
+        .set("x-sitecrawl-keyless-ip", fakeIp)
         .send({ origin: "mcp" });
       expect(blocked.statusCode).toBe(429);
       expect(blocked.body.error).toContain("keyless free tier rate limit");
-      expect(blocked.body.error).toContain("https://www.firecrawl.dev/signin");
+      expect(blocked.body.error).toContain("https://www.sitecrawl.dev/signin");
       expect(blocked.body.error).toContain(
         "Authorization: Bearer YOUR_API_KEY",
       );
@@ -568,7 +568,7 @@ describeIf(KEYLESS_ENABLED)("Keyless free tier", () => {
       const allowed = await request(TEST_API_URL)
         .post("/v2/scrape")
         .set("Content-Type", "application/json")
-        .set("x-firecrawl-keyless-ip", fakeIp)
+        .set("x-sitecrawl-keyless-ip", fakeIp)
         .send({ origin: "mcp" });
       expect(allowed.statusCode).not.toBe(429);
     },
@@ -580,8 +580,8 @@ describeIf(KEYLESS_ENABLED)("Keyless free tier", () => {
       const response = await request(TEST_API_URL)
         .post("/v2/scrape")
         .set("Content-Type", "application/json")
-        .set("x-firecrawl-keyless-secret", process.env.KEYLESS_PROXY_SECRET!)
-        .set("x-firecrawl-keyless-ip", "2001:db8::1")
+        .set("x-sitecrawl-keyless-secret", process.env.KEYLESS_PROXY_SECRET!)
+        .set("x-sitecrawl-keyless-ip", "2001:db8::1")
         .send({ url: TEST_SUITE_WEBSITE, origin: "mcp" });
 
       // IPv6 is not eligible → falls through to the normal unauthorized path.
@@ -596,8 +596,8 @@ describeIf(KEYLESS_ENABLED)("Keyless free tier", () => {
       const response = await request(TEST_API_URL)
         .post("/v2/scrape")
         .set("Content-Type", "application/json")
-        .set("x-firecrawl-keyless-secret", process.env.KEYLESS_PROXY_SECRET!)
-        .set("x-firecrawl-keyless-ip", "not-an-ip")
+        .set("x-sitecrawl-keyless-secret", process.env.KEYLESS_PROXY_SECRET!)
+        .set("x-sitecrawl-keyless-ip", "not-an-ip")
         .send({ url: TEST_SUITE_WEBSITE, origin: "mcp" });
 
       expect(response.statusCode).toBe(401);
@@ -612,8 +612,8 @@ describeIf(KEYLESS_ENABLED)("Keyless free tier", () => {
       // Fresh IP under cap → eligible.
       const ok = await request(TEST_API_URL)
         .get("/v2/keyless/eligibility")
-        .set("x-firecrawl-keyless-secret", process.env.KEYLESS_PROXY_SECRET!)
-        .set("x-firecrawl-keyless-ip", ip);
+        .set("x-sitecrawl-keyless-secret", process.env.KEYLESS_PROXY_SECRET!)
+        .set("x-sitecrawl-keyless-ip", ip);
       expect(ok.statusCode).toBe(200);
       expect(ok.body.eligible).toBe(true);
 
@@ -625,14 +625,14 @@ describeIf(KEYLESS_ENABLED)("Keyless free tier", () => {
       );
       const capped = await request(TEST_API_URL)
         .get("/v2/keyless/eligibility")
-        .set("x-firecrawl-keyless-secret", process.env.KEYLESS_PROXY_SECRET!)
-        .set("x-firecrawl-keyless-ip", ip);
+        .set("x-sitecrawl-keyless-secret", process.env.KEYLESS_PROXY_SECRET!)
+        .set("x-sitecrawl-keyless-ip", ip);
       expect(capped.body.eligible).toBe(false);
 
       // Without the secret → rejected (no leaking eligibility to untrusted callers).
       const noSecret = await request(TEST_API_URL)
         .get("/v2/keyless/eligibility")
-        .set("x-firecrawl-keyless-ip", ip);
+        .set("x-sitecrawl-keyless-ip", ip);
       expect(noSecret.statusCode).toBe(401);
     },
   );
@@ -682,7 +682,7 @@ describeIf(KEYLESS_ENABLED)("Keyless free tier", () => {
 
       expect(blocked.statusCode).toBe(429);
       expect(blocked.body.error).toContain("keyless free tier rate limit");
-      expect(blocked.body.error).toContain("https://www.firecrawl.dev/signin");
+      expect(blocked.body.error).toContain("https://www.sitecrawl.dev/signin");
       expect(blocked.body.error).toContain(
         "Authorization: Bearer YOUR_API_KEY",
       );
@@ -744,7 +744,7 @@ describeIf(KEYLESS_ENABLED)("Keyless free tier", () => {
       const response = await request(TEST_API_URL)
         .post("/v2/search")
         .set("Content-Type", "application/json")
-        .send({ query: "firecrawl", limit: 1, origin: "mcp" });
+        .send({ query: "sitecrawl", limit: 1, origin: "mcp" });
 
       expect(response.statusCode).toBe(200);
       expect(response.body.success).toBe(true);
@@ -792,8 +792,8 @@ describeIf(SPUR_ENABLED)("Keyless free tier — Spur IP reputation", () => {
       const response = await request(TEST_API_URL)
         .post("/v2/scrape")
         .set("Content-Type", "application/json")
-        .set("x-firecrawl-keyless-secret", process.env.KEYLESS_PROXY_SECRET!)
-        .set("x-firecrawl-keyless-ip", ip)
+        .set("x-sitecrawl-keyless-secret", process.env.KEYLESS_PROXY_SECRET!)
+        .set("x-sitecrawl-keyless-ip", ip)
         .send({
           url: TEST_SUITE_WEBSITE,
           origin: "mcp",
@@ -824,8 +824,8 @@ describeIf(SPUR_ENABLED)("Keyless free tier — Spur IP reputation", () => {
       const response = await request(TEST_API_URL)
         .post("/v2/scrape")
         .set("Content-Type", "application/json")
-        .set("x-firecrawl-keyless-secret", process.env.KEYLESS_PROXY_SECRET!)
-        .set("x-firecrawl-keyless-ip", ip)
+        .set("x-sitecrawl-keyless-secret", process.env.KEYLESS_PROXY_SECRET!)
+        .set("x-sitecrawl-keyless-ip", ip)
         .send({
           url: TEST_SUITE_WEBSITE,
           origin: "mcp",

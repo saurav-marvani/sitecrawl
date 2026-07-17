@@ -1,23 +1,23 @@
 import request from "supertest";
 import { config } from "../../config";
 import {
-  FirecrawlCrawlResponse,
-  FirecrawlCrawlStatusResponse,
-  FirecrawlScrapeResponse,
+  SitecrawlCrawlResponse,
+  SitecrawlCrawlStatusResponse,
+  SitecrawlScrapeResponse,
 } from "../../types";
 
 const TEST_URL = "http://127.0.0.1:3002";
 
 describe("E2E Tests for Extract API Routes", () => {
   it.concurrent(
-    "should return authors of blog posts on firecrawl.dev",
+    "should return authors of blog posts on sitecrawl.dev",
     async () => {
       const response = await request(TEST_URL)
         .post("/v1/extract")
         .set("Authorization", `Bearer ${config.TEST_API_KEY}`)
         .set("Content-Type", "application/json")
         .send({
-          urls: ["https://firecrawl.dev/*"],
+          urls: ["https://sitecrawl.dev/*"],
           prompt: "Who are the authors of the blog posts?",
           schema: {
             type: "object",
@@ -48,14 +48,14 @@ describe("E2E Tests for Extract API Routes", () => {
   );
 
   it.concurrent(
-    "should return founders of firecrawl.dev (allowExternalLinks = true)",
+    "should return founders of sitecrawl.dev (allowExternalLinks = true)",
     async () => {
       const response = await request(TEST_URL)
         .post("/v1/extract")
         .set("Authorization", `Bearer ${config.TEST_API_KEY}`)
         .set("Content-Type", "application/json")
         .send({
-          urls: ["firecrawl.dev/*"],
+          urls: ["sitecrawl.dev/*"],
           prompt: "Who are the founders of the company?",
           allowExternalLinks: true,
           schema: {
@@ -86,14 +86,14 @@ describe("E2E Tests for Extract API Routes", () => {
   );
 
   it.concurrent(
-    "should return hiring opportunities on firecrawl.dev (allowExternalLinks = true)",
+    "should return hiring opportunities on sitecrawl.dev (allowExternalLinks = true)",
     async () => {
       const response = await request(TEST_URL)
         .post("/v1/extract")
         .set("Authorization", `Bearer ${config.TEST_API_KEY}`)
         .set("Content-Type", "application/json")
         .send({
-          urls: ["https://firecrawl.dev/*"],
+          urls: ["https://sitecrawl.dev/*"],
           prompt: "What are they hiring for?",
           allowExternalLinks: true,
           schema: {
@@ -110,7 +110,7 @@ describe("E2E Tests for Extract API Routes", () => {
 
       let gotItRight = 0;
       for (const hiring of response.body.data?.items) {
-        if (hiring.includes("Firecrawl Example Creator")) gotItRight++;
+        if (hiring.includes("Sitecrawl Example Creator")) gotItRight++;
         if (hiring.includes("Senior Frontend Engineer")) gotItRight++;
         if (hiring.includes("Technical Chief of Staff")) gotItRight++;
         if (hiring.includes("Founding Web Automation Engineer")) gotItRight++;
@@ -293,7 +293,7 @@ describe("E2E Tests for Extract API Routes", () => {
         .set("Authorization", `Bearer ${config.TEST_API_KEY}`)
         .set("Content-Type", "application/json")
         .send({
-          urls: ["https://docs.firecrawl.dev"],
+          urls: ["https://docs.sitecrawl.dev"],
           prompt: "What is the title and description of the page?",
         });
 
@@ -315,7 +315,7 @@ describe("E2E Tests for Extract API Routes", () => {
         .set("Content-Type", "application/json")
         .send({
           urls: [
-            "https://firecrawl-e2e-test-git-main-rafaelsideguides-projects.vercel.app/",
+            "https://sitecrawl-e2e-test-git-main-rafaelsideguides-projects.vercel.app/",
           ],
           prompt: "What is the content right after the #content-1 id?",
           schema: {

@@ -71,7 +71,7 @@ describeIf(TEST_PRODUCTION)("Billing tests", () => {
         scrape(
           {
             url: TEST_SUITE_WEBSITE,
-            formats: [{ type: "query", prompt: "What is Firecrawl?" }],
+            formats: [{ type: "query", prompt: "What is Sitecrawl?" }],
           },
           identity,
         ),
@@ -284,7 +284,7 @@ describeIf(TEST_PRODUCTION)("Billing tests", () => {
 
       const results = await search(
         {
-          query: "firecrawl",
+          query: "sitecrawl",
         },
         identity,
       );

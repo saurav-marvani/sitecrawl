@@ -16,8 +16,8 @@ describe("Express 5 compatibility", () => {
 
     expect(response.statusCode).toBe(200);
     expect(response.body).toEqual({
-      message: "Firecrawl API",
-      documentation_url: "https://docs.firecrawl.dev",
+      message: "Sitecrawl API",
+      documentation_url: "https://docs.sitecrawl.dev",
     });
   });
 

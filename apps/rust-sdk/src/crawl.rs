@@ -1,11 +1,11 @@
-//! Crawl endpoint for Firecrawl API v2.
+//! Crawl endpoint for Sitecrawl API v2.
 
 use serde::{Deserialize, Serialize};
 
 use crate::client::Client;
 use crate::scrape::ScrapeOptions;
 use crate::types::{CrawlErrorsResponse, Document, JobStatus, SitemapMode, WebhookConfig};
-use crate::FirecrawlError;
+use crate::SitecrawlError;
 
 /// Options for crawling a website.
 #[serde_with::skip_serializing_none]
@@ -136,7 +136,7 @@ impl Client {
     /// # Example
     ///
     /// ```no_run
-    /// use firecrawl::{Client, CrawlOptions};
+    /// use sitecrawl::{Client, CrawlOptions};
     ///
     /// #[tokio::main]
     /// async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -156,7 +156,7 @@ impl Client {
         &self,
         url: impl AsRef<str>,
         options: impl Into<Option<CrawlOptions>>,
-    ) -> Result<CrawlResponse, FirecrawlError> {
+    ) -> Result<CrawlResponse, SitecrawlError> {
         let options = options.into().unwrap_or_default();
         let body = CrawlRequest {
             url: url.as_ref().to_string(),
@@ -173,7 +173,7 @@ impl Client {
             .send()
             .await
             .map_err(|e| {
-                FirecrawlError::HttpError(format!("Starting crawl of {:?}", url.as_ref()), e)
+                SitecrawlError::HttpError(format!("Starting crawl of {:?}", url.as_ref()), e)
             })?;
 
         self.handle_response(response, "start crawl").await
@@ -194,7 +194,7 @@ impl Client {
     /// # Example
     ///
     /// ```no_run
-    /// use firecrawl::Client;
+    /// use sitecrawl::Client;
     ///
     /// #[tokio::main]
     /// async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -208,7 +208,7 @@ impl Client {
     ///     Ok(())
     /// }
     /// ```
-    pub async fn get_crawl_status(&self, id: impl AsRef<str>) -> Result<CrawlJob, FirecrawlError> {
+    pub async fn get_crawl_status(&self, id: impl AsRef<str>) -> Result<CrawlJob, SitecrawlError> {
         let response = self
             .client
             .get(self.url(&format!("/crawl/{}", id.as_ref())))
@@ -216,7 +216,7 @@ impl Client {
             .send()
             .await
             .map_err(|e| {
-                FirecrawlError::HttpError(format!("Checking crawl status {}", id.as_ref()), e)
+                SitecrawlError::HttpError(format!("Checking crawl status {}", id.as_ref()), e)
             })?;
 
         let mut status: CrawlJob = self
@@ -236,14 +236,14 @@ impl Client {
     }
 
     /// Fetches the next page of crawl results.
-    async fn get_crawl_status_next(&self, next: &str) -> Result<CrawlJob, FirecrawlError> {
+    async fn get_crawl_status_next(&self, next: &str) -> Result<CrawlJob, SitecrawlError> {
         let response = self
             .client
             .get(next)
             .headers(self.prepare_headers(None))
             .send()
             .await
-            .map_err(|e| FirecrawlError::HttpError(format!("Paginating crawl at {}", next), e))?;
+            .map_err(|e| SitecrawlError::HttpError(format!("Paginating crawl at {}", next), e))?;
 
         self.handle_response(response, "crawl pagination").await
     }
@@ -264,7 +264,7 @@ impl Client {
     /// # Example
     ///
     /// ```no_run
-    /// use firecrawl::{Client, CrawlOptions, SitemapMode};
+    /// use sitecrawl::{Client, CrawlOptions, SitemapMode};
     ///
     /// #[tokio::main]
     /// async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -291,7 +291,7 @@ impl Client {
         &self,
         url: impl AsRef<str>,
         options: impl Into<Option<CrawlOptions>>,
-    ) -> Result<CrawlJob, FirecrawlError> {
+    ) -> Result<CrawlJob, SitecrawlError> {
         let options = options.into().unwrap_or_default();
         let poll_interval = options.poll_interval.unwrap_or(2000);
 
@@ -304,7 +304,7 @@ impl Client {
         &self,
         id: &str,
         poll_interval: u64,
-    ) -> Result<CrawlJob, FirecrawlError> {
+    ) -> Result<CrawlJob, SitecrawlError> {
         loop {
             let status = self.get_crawl_status(id).await?;
 
@@ -314,13 +314,13 @@ impl Client {
                     tokio::time::sleep(tokio::time::Duration::from_millis(poll_interval)).await;
                 }
                 JobStatus::Failed => {
-                    return Err(FirecrawlError::JobFailed(
+                    return Err(SitecrawlError::JobFailed(
                         "Crawl job failed".to_string(),
                         JobStatus::Failed,
                     ));
                 }
                 JobStatus::Cancelled => {
-                    return Err(FirecrawlError::JobFailed(
+                    return Err(SitecrawlError::JobFailed(
                         "Crawl job was cancelled".to_string(),
                         JobStatus::Cancelled,
                     ));
@@ -342,7 +342,7 @@ impl Client {
     /// # Example
     ///
     /// ```no_run
-    /// use firecrawl::Client;
+    /// use sitecrawl::Client;
     ///
     /// #[tokio::main]
     /// async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -357,7 +357,7 @@ impl Client {
     pub async fn cancel_crawl(
         &self,
         id: impl AsRef<str>,
-    ) -> Result<CancelCrawlResponse, FirecrawlError> {
+    ) -> Result<CancelCrawlResponse, SitecrawlError> {
         let response = self
             .client
             .delete(self.url(&format!("/crawl/{}", id.as_ref())))
@@ -365,7 +365,7 @@ impl Client {
             .send()
             .await
             .map_err(|e| {
-                FirecrawlError::HttpError(format!("Cancelling crawl {}", id.as_ref()), e)
+                SitecrawlError::HttpError(format!("Cancelling crawl {}", id.as_ref()), e)
             })?;
 
         self.handle_response(response, "cancel crawl").await
@@ -384,7 +384,7 @@ impl Client {
     /// # Example
     ///
     /// ```no_run
-    /// use firecrawl::Client;
+    /// use sitecrawl::Client;
     ///
     /// #[tokio::main]
     /// async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -401,7 +401,7 @@ impl Client {
     pub async fn get_crawl_errors(
         &self,
         id: impl AsRef<str>,
-    ) -> Result<CrawlErrorsResponse, FirecrawlError> {
+    ) -> Result<CrawlErrorsResponse, SitecrawlError> {
         let response = self
             .client
             .get(self.url(&format!("/crawl/{}/errors", id.as_ref())))
@@ -409,7 +409,7 @@ impl Client {
             .send()
             .await
             .map_err(|e| {
-                FirecrawlError::HttpError(format!("Getting crawl errors {}", id.as_ref()), e)
+                SitecrawlError::HttpError(format!("Getting crawl errors {}", id.as_ref()), e)
             })?;
 
         self.handle_response(response, "crawl errors").await
@@ -433,7 +433,7 @@ mod tests {
                 json!({
                     "success": true,
                     "id": "crawl-123",
-                    "url": "https://api.firecrawl.dev/v2/crawl/crawl-123"
+                    "url": "https://api.sitecrawl.dev/v2/crawl/crawl-123"
                 })
                 .to_string(),
             )
@@ -567,7 +567,7 @@ mod tests {
                 json!({
                     "success": true,
                     "id": "crawl-456",
-                    "url": "https://api.firecrawl.dev/v2/crawl/crawl-456"
+                    "url": "https://api.sitecrawl.dev/v2/crawl/crawl-456"
                 })
                 .to_string(),
             )

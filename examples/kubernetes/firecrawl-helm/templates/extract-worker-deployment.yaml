@@ -2,18 +2,18 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "firecrawl.fullname" . }}-extract-worker
+  name: {{ include "sitecrawl.fullname" . }}-extract-worker
   labels:
-    app: {{ include "firecrawl.name" . }}-extract-worker
+    app: {{ include "sitecrawl.name" . }}-extract-worker
 spec:
   replicas: {{ .Values.extractWorker.replicaCount | default 1 }}
   selector:
     matchLabels:
-      app: {{ include "firecrawl.name" . }}-extract-worker
+      app: {{ include "sitecrawl.name" . }}-extract-worker
   template:
     metadata:
       labels:
-        app: {{ include "firecrawl.name" . }}-extract-worker
+        app: {{ include "sitecrawl.name" . }}-extract-worker
     spec:
       {{- if .Values.image.dockerSecretEnabled }}
       imagePullSecrets:
@@ -39,9 +39,9 @@ spec:
                   fieldPath: metadata.name
           envFrom:
             - configMapRef:
-                name: {{ include "firecrawl.fullname" . }}-config
+                name: {{ include "sitecrawl.fullname" . }}-config
             - secretRef:
-                name: {{ include "firecrawl.fullname" . }}-secret
+                name: {{ include "sitecrawl.fullname" . }}-secret
           {{- if and .Values.resources.enabled .Values.extractWorker.resources }}
           resources:
             {{- toYaml .Values.extractWorker.resources | nindent 12 }}

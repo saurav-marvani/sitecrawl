@@ -100,10 +100,10 @@ describe("monitoring email URLs", () => {
           monitorId: "019e07fb-fb25-74cb-9a6c-f36c685c6e5b",
           checkId: "019e0903-bf7c-779f-a8a5-736ba82d3974",
         },
-        "https://firecrawl-o2cg7p09w-side-guide.vercel.app/",
+        "https://sitecrawl-o2cg7p09w-side-guide.vercel.app/",
       ),
     ).toBe(
-      "https://firecrawl-o2cg7p09w-side-guide.vercel.app/app/monitoring/019e07fb-fb25-74cb-9a6c-f36c685c6e5b?checkId=019e0903-bf7c-779f-a8a5-736ba82d3974",
+      "https://sitecrawl-o2cg7p09w-side-guide.vercel.app/app/monitoring/019e07fb-fb25-74cb-9a6c-f36c685c6e5b?checkId=019e0903-bf7c-779f-a8a5-736ba82d3974",
     );
   });
 
@@ -125,7 +125,7 @@ describe("monitoring email URLs", () => {
         monitorId: "monitor-1",
         checkId: "check-1",
       },
-      "https://www.firecrawl.dev",
+      "https://www.sitecrawl.dev",
     );
     const payload: MonitoringEmailPayload = {
       monitorId: "monitor-1",
@@ -147,7 +147,7 @@ describe("monitoring email URLs", () => {
       ],
       creditsUsed: 1,
       unsubscribeUrl:
-        "https://www.firecrawl.dev/monitoring/email/unsubscribe?token=tok123",
+        "https://www.sitecrawl.dev/monitoring/email/unsubscribe?token=tok123",
     };
 
     const html = buildHtml(payload);
@@ -155,7 +155,7 @@ describe("monitoring email URLs", () => {
       `<a href="${dashboardUrl}">View this check in the dashboard</a>`,
     );
     expect(html).toContain(
-      "https://www.firecrawl.dev/monitoring/email/unsubscribe?token=tok123",
+      "https://www.sitecrawl.dev/monitoring/email/unsubscribe?token=tok123",
     );
     expect(html).toContain("Unsubscribe from this monitor");
   });
@@ -165,7 +165,7 @@ describe("monitoring email URLs", () => {
       monitorId: "m1",
       monitorName: "M",
       checkId: "c1",
-      dashboardUrl: "https://www.firecrawl.dev/app/monitoring/m1?checkId=c1",
+      dashboardUrl: "https://www.sitecrawl.dev/app/monitoring/m1?checkId=c1",
       summary: { changed: 0, new: 1, removed: 0, error: 0, totalPages: 1 },
       pages: [{ url: "https://example.com", status: "new" }],
       creditsUsed: 1,
@@ -180,9 +180,9 @@ describe("buildConfirmationHtml", () => {
       monitorName: "Marketing site",
       recipientEmail: "alerts@example.com",
       confirmUrl:
-        "https://www.firecrawl.dev/monitoring/email/confirm?token=tok1",
+        "https://www.sitecrawl.dev/monitoring/email/confirm?token=tok1",
       unsubscribeUrl:
-        "https://www.firecrawl.dev/monitoring/email/unsubscribe?token=tok1",
+        "https://www.sitecrawl.dev/monitoring/email/unsubscribe?token=tok1",
     });
     expect(html).toContain("Confirm subscription");
     expect(html).toContain("Marketing site");

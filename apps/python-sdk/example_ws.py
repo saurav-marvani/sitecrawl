@@ -3,8 +3,8 @@
 Minimal websocket watcher examples (sync and async).
 
 Env:
-  FIRECRAWL_API_KEY
-  FIRECRAWL_API_URL
+  SITECRAWL_API_KEY
+  SITECRAWL_API_URL
 """
 
 import os
@@ -12,19 +12,19 @@ import time
 import asyncio
 from dotenv import load_dotenv
 
-from firecrawl import Firecrawl, Watcher, AsyncWatcher
+from sitecrawl import Sitecrawl, Watcher, AsyncWatcher
 
 
 def example_watcher() -> None:
-    api_key = os.getenv("FIRECRAWL_API_KEY")
-    api_url = os.getenv("FIRECRAWL_API_URL")
+    api_key = os.getenv("SITECRAWL_API_KEY")
+    api_url = os.getenv("SITECRAWL_API_URL")
     if not api_key or not api_url:
-        raise ValueError("FIRECRAWL_API_KEY and FIRECRAWL_API_URL must be set")
+        raise ValueError("SITECRAWL_API_KEY and SITECRAWL_API_URL must be set")
 
-    client = Firecrawl(api_key=api_key, api_url=api_url)
+    client = Sitecrawl(api_key=api_key, api_url=api_url)
 
     # Start a small crawl job
-    job = client.start_crawl("https://docs.firecrawl.dev", limit=2)
+    job = client.start_crawl("https://docs.sitecrawl.dev", limit=2)
 
     events = {"document": 0, "done": 0}
     statuses = []
@@ -50,15 +50,15 @@ async def example_async_watcher() -> None:
     """
     Example of using the async watcher.
     """
-    api_key = os.getenv("FIRECRAWL_API_KEY")
-    api_url = os.getenv("FIRECRAWL_API_URL")
+    api_key = os.getenv("SITECRAWL_API_KEY")
+    api_url = os.getenv("SITECRAWL_API_URL")
     if not api_key or not api_url:
-        raise ValueError("FIRECRAWL_API_KEY and FIRECRAWL_API_URL must be set")
+        raise ValueError("SITECRAWL_API_KEY and SITECRAWL_API_URL must be set")
 
-    client = Firecrawl(api_key=api_key, api_url=api_url)
+    client = Sitecrawl(api_key=api_key, api_url=api_url)
 
     # Start a small crawl job
-    job = client.start_crawl("https://docs.firecrawl.dev", limit=2)
+    job = client.start_crawl("https://docs.sitecrawl.dev", limit=2)
 
     async for snapshot in AsyncWatcher(client, job.id, kind="crawl"):
         print("async watcher:", snapshot.status, f"docs={len(snapshot.data)}")

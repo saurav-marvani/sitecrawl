@@ -120,9 +120,9 @@ describe("slack signature verification", () => {
 describe("slack link escaping", () => {
   it("percent-encodes the pipe so a URL can't spoof the display label", () => {
     // Without encoding, Slack would render this as a link to external.example labeled
-    // "firecrawl.dev".
-    expect(slackLink("https://external.example?x=y|firecrawl.dev")).toBe(
-      "<https://external.example?x=y%7Cfirecrawl.dev>",
+    // "sitecrawl.dev".
+    expect(slackLink("https://external.example?x=y|sitecrawl.dev")).toBe(
+      "<https://external.example?x=y%7Csitecrawl.dev>",
     );
   });
 
@@ -145,7 +145,7 @@ describe("slack message builder", () => {
   it("builds an alert with a header, summary, page rows and a dashboard button", () => {
     const { text, blocks } = buildMonitorAlertMessage({
       monitorName: "Pricing <watch>",
-      dashboardUrl: "https://www.firecrawl.dev/app/monitoring/m1?checkId=c1",
+      dashboardUrl: "https://www.sitecrawl.dev/app/monitoring/m1?checkId=c1",
       checkId: "c1",
       summary: { changed: 2, new: 1, removed: 0, error: 0, totalPages: 5 },
       pages: [
@@ -172,7 +172,7 @@ describe("slack message builder", () => {
     const longUrl = "https://example.com/" + "a".repeat(6000);
     const { blocks } = buildMonitorAlertMessage({
       monitorName: "m",
-      dashboardUrl: "https://www.firecrawl.dev/app/monitoring/m1?checkId=c1",
+      dashboardUrl: "https://www.sitecrawl.dev/app/monitoring/m1?checkId=c1",
       checkId: "c1",
       summary: { changed: 1, new: 0, removed: 0, error: 0, totalPages: 1 },
       pages: [

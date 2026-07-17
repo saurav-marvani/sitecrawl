@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use Firecrawl\Laravel\Tools\FirecrawlMap;
+use Sitecrawl\Laravel\Tools\SitecrawlMap;
 use GuzzleHttp\Psr7\Response;
 use Illuminate\JsonSchema\JsonSchemaTypeFactory;
 use Laravel\Ai\ObjectSchema;
@@ -10,7 +10,7 @@ use Laravel\Ai\Tools\Request;
 
 it('maps a site and returns discovered URLs as JSON', function (): void {
     $history = new ArrayObject();
-    $client = fakeFirecrawlClient([
+    $client = fakeSitecrawlClient([
         new Response(200, [], json_encode([
             'success' => true,
             'data' => [
@@ -22,7 +22,7 @@ it('maps a site and returns discovered URLs as JSON', function (): void {
         ])),
     ], $history);
 
-    $result = (new FirecrawlMap($client))->handle(new Request(['url' => 'https://example.com']));
+    $result = (new SitecrawlMap($client))->handle(new Request(['url' => 'https://example.com']));
 
     expect(json_decode($result, true))->toBe([
         ['url' => 'https://example.com/', 'title' => 'Home'],
@@ -38,11 +38,11 @@ it('maps a site and returns discovered URLs as JSON', function (): void {
 
 it('passes the search filter through when provided', function (): void {
     $history = new ArrayObject();
-    $client = fakeFirecrawlClient([
+    $client = fakeSitecrawlClient([
         new Response(200, [], json_encode(['success' => true, 'data' => ['links' => []]])),
     ], $history);
 
-    (new FirecrawlMap($client))->handle(new Request(['url' => 'https://example.com', 'search' => 'docs']));
+    (new SitecrawlMap($client))->handle(new Request(['url' => 'https://example.com', 'search' => 'docs']));
 
     $body = json_decode((string) $history[0]['request']->getBody(), true);
     expect($body['search'])->toBe('docs');
@@ -50,43 +50,43 @@ it('passes the search filter through when provided', function (): void {
 
 it('clamps an explicit limit of 5000 down to 500', function (): void {
     $history = new ArrayObject();
-    $client = fakeFirecrawlClient([
+    $client = fakeSitecrawlClient([
         new Response(200, [], json_encode(['success' => true, 'data' => ['links' => []]])),
     ], $history);
 
-    (new FirecrawlMap($client))->handle(new Request(['url' => 'https://example.com', 'limit' => 5000]));
+    (new SitecrawlMap($client))->handle(new Request(['url' => 'https://example.com', 'limit' => 5000]));
 
     $body = json_decode((string) $history[0]['request']->getBody(), true);
     expect($body['limit'])->toBe(500);
 });
 
 it('reports when no URLs were discovered', function (): void {
-    $client = fakeFirecrawlClient([
+    $client = fakeSitecrawlClient([
         new Response(200, [], json_encode(['success' => true, 'data' => ['links' => []]])),
     ]);
 
-    $result = (new FirecrawlMap($client))->handle(new Request(['url' => 'https://example.com']));
+    $result = (new SitecrawlMap($client))->handle(new Request(['url' => 'https://example.com']));
 
     expect($result)->toBe('No URLs discovered.');
 });
 
 it('surfaces a success:false envelope as an error instead of empty results', function (): void {
-    $client = fakeFirecrawlClient([
+    $client = fakeSitecrawlClient([
         new Response(200, [], json_encode([
             'success' => false,
             'error' => 'DNS resolution failed for host: nosuchdomain.example',
         ])),
     ]);
 
-    $result = (new FirecrawlMap($client))->handle(new Request(['url' => 'https://nosuchdomain.example']));
+    $result = (new SitecrawlMap($client))->handle(new Request(['url' => 'https://nosuchdomain.example']));
 
-    expect($result)->toStartWith('Firecrawl request failed: DNS resolution failed');
+    expect($result)->toStartWith('Sitecrawl request failed: DNS resolution failed');
 });
 
 it('exposes name and a schema with required url', function (): void {
-    $tool = new FirecrawlMap(fakeFirecrawlClient([]));
+    $tool = new SitecrawlMap(fakeSitecrawlClient([]));
 
-    expect($tool->name())->toBe('firecrawl_map');
+    expect($tool->name())->toBe('sitecrawl_map');
 
     $types = $tool->schema(new JsonSchemaTypeFactory());
     expect($types)->toHaveKeys(['url', 'search', 'limit']);
@@ -101,11 +101,11 @@ it('drops tail links and reports the cut when output exceeds the budget', functi
         $links[] = ['url' => "https://example.com/page-{$i}"];
     }
 
-    $client = fakeFirecrawlClient([
+    $client = fakeSitecrawlClient([
         new Response(200, [], json_encode(['success' => true, 'data' => ['links' => $links]])),
     ]);
 
-    $tool = new class ($client) extends FirecrawlMap {
+    $tool = new class ($client) extends SitecrawlMap {
         protected int $outputCharacterBudget = 100;
     };
 
@@ -118,13 +118,13 @@ it('drops tail links and reports the cut when output exceeds the budget', functi
 });
 
 it('reduces a single oversized item to an omitted marker', function (): void {
-    $client = fakeFirecrawlClient([
+    $client = fakeSitecrawlClient([
         new Response(200, [], json_encode(['success' => true, 'data' => ['links' => [
             ['url' => 'https://example.com/' . str_repeat('x', 400)],
         ]]])),
     ]);
 
-    $tool = new class ($client) extends FirecrawlMap {
+    $tool = new class ($client) extends SitecrawlMap {
         protected int $outputCharacterBudget = 100;
     };
 

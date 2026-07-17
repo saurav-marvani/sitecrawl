@@ -2,7 +2,7 @@ import type { Request, Response } from "express";
 import { logger } from "./logger";
 
 /**
- * Same contract as firecrawl-integrations `ResponseErrorPayload` (`src/errors/response-error.ts`).
+ * Same contract as sitecrawl-integrations `ResponseErrorPayload` (`src/errors/response-error.ts`).
  * Allowed `error.code` values are the `ExternalErrorCode` union in `src/errors/service-error.ts`;
  * those files are the source of truth (no separate public error-code doc today).
  */
@@ -23,7 +23,7 @@ async function proxyPartnerIntegrationPost(
     | "/partner/v1/api-keys/rotate",
   route: "create-user" | "validate-api-key" | "rotate-api-key",
 ): Promise<void> {
-  const url = `https://integrations.firecrawl.dev${upstreamPath}`;
+  const url = `https://integrations.sitecrawl.dev${upstreamPath}`;
   const log = logger.child({
     module: "admin-integration-integrations-proxy",
     route,
@@ -59,7 +59,7 @@ async function proxyPartnerIntegrationPost(
       signal: AbortSignal.timeout(60_000),
     });
   } catch (error) {
-    log.error("firecrawl-integrations proxy fetch failed", { error, url });
+    log.error("sitecrawl-integrations proxy fetch failed", { error, url });
     const unavailable: IntegrationsResponseErrorPayload = {
       error: {
         code: "unknown_error",

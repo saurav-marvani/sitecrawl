@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Firecrawl\Models;
+namespace Sitecrawl\Models;
 
-use Firecrawl\Exceptions\FirecrawlException;
+use Sitecrawl\Exceptions\SitecrawlException;
 
 /**
  * Binary upload payload for the `/v2/parse` endpoint.
@@ -42,10 +42,10 @@ final class ParseFile
     ): self {
         $trimmed = trim($filename);
         if ($trimmed === '') {
-            throw new FirecrawlException('filename is required');
+            throw new SitecrawlException('filename is required');
         }
         if ($content === '') {
-            throw new FirecrawlException('content is required');
+            throw new SitecrawlException('content is required');
         }
 
         return new self($trimmed, $content, $contentType);
@@ -60,15 +60,15 @@ final class ParseFile
         ?string $contentType = null,
     ): self {
         if ($path === '') {
-            throw new FirecrawlException('path is required');
+            throw new SitecrawlException('path is required');
         }
         if (!is_file($path) || !is_readable($path)) {
-            throw new FirecrawlException('file path does not exist or is not readable: ' . $path);
+            throw new SitecrawlException('file path does not exist or is not readable: ' . $path);
         }
 
         $content = @file_get_contents($path);
         if ($content === false) {
-            throw new FirecrawlException('failed to read parse file: ' . $path);
+            throw new SitecrawlException('failed to read parse file: ' . $path);
         }
 
         $resolvedFilename = $filename ?: basename($path);

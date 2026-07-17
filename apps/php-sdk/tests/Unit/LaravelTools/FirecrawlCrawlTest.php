@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use Firecrawl\Laravel\Tools\FirecrawlCrawl;
+use Sitecrawl\Laravel\Tools\SitecrawlCrawl;
 use GuzzleHttp\Psr7\Response;
 use Illuminate\JsonSchema\JsonSchemaTypeFactory;
 use Laravel\Ai\ObjectSchema;
@@ -10,7 +10,7 @@ use Laravel\Ai\Tools\Request;
 
 it('crawls a site and returns status and pages as JSON', function (): void {
     $history = new ArrayObject();
-    $client = fakeFirecrawlClient([
+    $client = fakeSitecrawlClient([
         new Response(200, [], json_encode(['success' => true, 'id' => 'job-1'])),
         new Response(200, [], json_encode([
             'success' => true,
@@ -23,7 +23,7 @@ it('crawls a site and returns status and pages as JSON', function (): void {
         ])),
     ], $history);
 
-    $result = (new FirecrawlCrawl($client))->handle(new Request(['url' => 'https://example.com']));
+    $result = (new SitecrawlCrawl($client))->handle(new Request(['url' => 'https://example.com']));
 
     expect(json_decode($result, true))->toBe([
         'status' => 'completed',
@@ -45,14 +45,14 @@ it('crawls a site and returns status and pages as JSON', function (): void {
 
 it('clamps the page limit between 1 and 25', function (): void {
     $history = new ArrayObject();
-    $client = fakeFirecrawlClient([
+    $client = fakeSitecrawlClient([
         new Response(200, [], json_encode(['success' => true, 'id' => 'job-1'])),
         new Response(200, [], json_encode([
             'success' => true, 'status' => 'completed', 'total' => 0, 'completed' => 0, 'data' => [],
         ])),
     ], $history);
 
-    (new FirecrawlCrawl($client))->handle(new Request(['url' => 'https://example.com', 'limit' => 500]));
+    (new SitecrawlCrawl($client))->handle(new Request(['url' => 'https://example.com', 'limit' => 500]));
 
     $body = json_decode((string) $history[0]['request']->getBody(), true);
     expect($body['limit'])->toBe(25);
@@ -60,7 +60,7 @@ it('clamps the page limit between 1 and 25', function (): void {
 
 it('reuses the same idempotency key across HTTP retries of the start request', function (): void {
     $history = new ArrayObject();
-    $client = fakeFirecrawlClient([
+    $client = fakeSitecrawlClient([
         new Response(502, [], json_encode(['error' => 'bad gateway'])),
         new Response(200, [], json_encode(['success' => true, 'id' => 'job-1'])),
         new Response(200, [], json_encode([
@@ -68,7 +68,7 @@ it('reuses the same idempotency key across HTTP retries of the start request', f
         ])),
     ], $history);
 
-    (new FirecrawlCrawl($client))->handle(new Request(['url' => 'https://example.com']));
+    (new SitecrawlCrawl($client))->handle(new Request(['url' => 'https://example.com']));
 
     $firstKey = $history[0]['request']->getHeaderLine('x-idempotency-key');
     $retryKey = $history[1]['request']->getHeaderLine('x-idempotency-key');
@@ -80,21 +80,21 @@ it('reuses the same idempotency key across HTTP retries of the start request', f
 
 it('surfaces failed crawls with partial pages and does not follow pagination', function (): void {
     $history = new ArrayObject();
-    $client = fakeFirecrawlClient([
+    $client = fakeSitecrawlClient([
         new Response(200, [], json_encode(['success' => true, 'id' => 'job-1'])),
         new Response(200, [], json_encode([
             'success' => true,
             'status' => 'failed',
             'total' => 5,
             'completed' => 2,
-            'next' => 'https://api.firecrawl.dev/v2/crawl/job-1?skip=1',
+            'next' => 'https://api.sitecrawl.dev/v2/crawl/job-1?skip=1',
             'data' => [
                 ['markdown' => '# Partial page', 'metadata' => ['sourceURL' => 'https://example.com/p1']],
             ],
         ])),
     ], $history);
 
-    $result = (new FirecrawlCrawl($client))->handle(new Request(['url' => 'https://example.com']));
+    $result = (new SitecrawlCrawl($client))->handle(new Request(['url' => 'https://example.com']));
     $decoded = json_decode($result, true);
 
     expect($decoded['status'])->toBe('failed');
@@ -104,7 +104,7 @@ it('surfaces failed crawls with partial pages and does not follow pagination', f
 });
 
 it('applies the whole-result budget across pages', function (): void {
-    $client = fakeFirecrawlClient([
+    $client = fakeSitecrawlClient([
         new Response(200, [], json_encode(['success' => true, 'id' => 'job-1'])),
         new Response(200, [], json_encode([
             'success' => true,
@@ -119,7 +119,7 @@ it('applies the whole-result budget across pages', function (): void {
         ])),
     ]);
 
-    $tool = new class ($client) extends FirecrawlCrawl {
+    $tool = new class ($client) extends SitecrawlCrawl {
         protected int $outputCharacterBudget = 60;
     };
 
@@ -130,7 +130,7 @@ it('applies the whole-result budget across pages', function (): void {
 });
 
 it('returns a timeout message when the crawl runs long', function (): void {
-    $client = fakeFirecrawlClient([
+    $client = fakeSitecrawlClient([
         new Response(200, [], json_encode(['success' => true, 'id' => 'job-1'])),
         new Response(200, [], json_encode([
             'success' => true, 'status' => 'scraping', 'total' => 0, 'completed' => 0, 'data' => [],
@@ -140,7 +140,7 @@ it('returns a timeout message when the crawl runs long', function (): void {
         ])),
     ]);
 
-    $tool = new class ($client) extends FirecrawlCrawl {
+    $tool = new class ($client) extends SitecrawlCrawl {
         protected int $timeoutSeconds = 1;
         protected int $pollIntervalSeconds = 1;
     };
@@ -152,19 +152,19 @@ it('returns a timeout message when the crawl runs long', function (): void {
 });
 
 it('returns API failures as readable strings instead of throwing', function (): void {
-    $client = fakeFirecrawlClient([
+    $client = fakeSitecrawlClient([
         new Response(400, [], json_encode(['error' => 'Invalid URL'])),
     ]);
 
-    $result = (new FirecrawlCrawl($client))->handle(new Request(['url' => 'not-a-url']));
+    $result = (new SitecrawlCrawl($client))->handle(new Request(['url' => 'not-a-url']));
 
-    expect($result)->toStartWith('Firecrawl request failed:');
+    expect($result)->toStartWith('Sitecrawl request failed:');
 });
 
 it('exposes name and a schema with required url and optional limit', function (): void {
-    $tool = new FirecrawlCrawl(fakeFirecrawlClient([]));
+    $tool = new SitecrawlCrawl(fakeSitecrawlClient([]));
 
-    expect($tool->name())->toBe('firecrawl_crawl');
+    expect($tool->name())->toBe('sitecrawl_crawl');
 
     $types = $tool->schema(new JsonSchemaTypeFactory());
     expect($types)->toHaveKeys(['url', 'limit']);
@@ -176,14 +176,14 @@ it('exposes name and a schema with required url and optional limit', function ()
 
 it('bounds each HTTP request by the remaining deadline', function (): void {
     $history = new ArrayObject();
-    $client = fakeFirecrawlClient([
+    $client = fakeSitecrawlClient([
         new Response(200, [], json_encode(['success' => true, 'id' => 'job-1'])),
         new Response(200, [], json_encode([
             'success' => true, 'status' => 'completed', 'total' => 0, 'completed' => 0, 'data' => [],
         ])),
     ], $history);
 
-    (new FirecrawlCrawl($client))->handle(new Request(['url' => 'https://example.com']));
+    (new SitecrawlCrawl($client))->handle(new Request(['url' => 'https://example.com']));
 
     foreach ([0, 1] as $i) {
         $timeout = $history[$i]['options'][GuzzleHttp\RequestOptions::TIMEOUT] ?? null;

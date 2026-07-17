@@ -13,7 +13,7 @@ import {
   parseSitemapXml,
   processSitemap,
   SitemapProcessingResult,
-} from "@mendable/firecrawl-rs";
+} from "@mendable/sitecrawl-rs";
 import { gunzip } from "node:zlib";
 import { promisify } from "node:util";
 import { fetchFileToBuffer } from "../scrapeURL/engines/utils/downloadFile";

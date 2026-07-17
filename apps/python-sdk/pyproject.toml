@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 dynamic = ["version"]
-name = "firecrawl-py"
-description = "Python SDK for Firecrawl API"
+name = "sitecrawl-py"
+description = "Python SDK for Sitecrawl API"
 readme = {file="README.md", content-type = "text/markdown"}
 requires-python = ">=3.8"
 dependencies = [
@@ -43,12 +43,12 @@ classifiers = [
     "Topic :: Text Processing :: Indexing",
 ]
 
-keywords = ["SDK", "API", "firecrawl"]
+keywords = ["SDK", "API", "sitecrawl"]
 
 [project.urls]
-"Documentation" = "https://docs.firecrawl.dev"
-"Source" = "https://github.com/firecrawl/firecrawl"
-"Tracker" = "https://github.com/firecrawl/firecrawl/issues"
+"Documentation" = "https://docs.sitecrawl.dev"
+"Source" = "https://github.com/sitecrawl/sitecrawl"
+"Tracker" = "https://github.com/sitecrawl/sitecrawl/issues"
 
 [tool.setuptools.packages.find]
 where = ["."]

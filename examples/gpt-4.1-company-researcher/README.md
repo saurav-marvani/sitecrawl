@@ -1,12 +1,12 @@
 # GPT-4.1 Company Researcher
 
-A Python tool that uses GPT-4.1, Firecrawl, and SerpAPI to research companies and extract structured information.
+A Python tool that uses GPT-4.1, Sitecrawl, and SerpAPI to research companies and extract structured information.
 
 ## Features
 
 - Search for company information using Google (via SerpAPI)
 - Analyze search results with GPT-4.1 to identify relevant URLs
-- Extract structured data from websites using Firecrawl
+- Extract structured data from websites using Sitecrawl
 - Deduplicate and consolidate information for higher quality results
 - Interactive command-line interface
 
@@ -14,7 +14,7 @@ A Python tool that uses GPT-4.1, Firecrawl, and SerpAPI to research companies an
 
 - Python 3.8+
 - OpenAI API key (with GPT-4.1 access)
-- Firecrawl API key
+- Sitecrawl API key
 - SerpAPI key
 
 ## Installation
@@ -47,7 +47,7 @@ The tool will then:
 
 - Search for relevant information
 - Select the most appropriate URLs using GPT-4.1
-- Extract structured data using Firecrawl
+- Extract structured data using Sitecrawl
 - Deduplicate and consolidate the information
 - Display the results in JSON format
 

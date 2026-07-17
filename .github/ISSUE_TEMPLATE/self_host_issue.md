@@ -1,6 +1,6 @@
 ---
 name: Self-host issue
-about: Report an issue with self-hosting Firecrawl
+about: Report an issue with self-hosting Sitecrawl
 title: "[Self-Host] "
 labels: self-host
 assignees: ''
@@ -25,7 +25,7 @@ If applicable, add screenshots or copies of the command line output to help expl
 
 **Environment (please complete the following information):**
 - OS: [e.g. macOS, Linux, Windows]
-- Firecrawl Version: [e.g. 1.2.3]
+- Sitecrawl Version: [e.g. 1.2.3]
 - Node.js Version: [e.g. 14.x]
 - Docker Version (if applicable): [e.g. 20.10.14]
 - Database Type and Version: [e.g. PostgreSQL 13.4]
@@ -37,4 +37,4 @@ If applicable, include detailed logs to help understand the self-hosting problem
 Provide relevant parts of your configuration files (with sensitive information redacted).
 
 **Additional Context**
-Add any other context about the self-hosting issue here, such as specific infrastructure details, network setup, or any modifications made to the original Firecrawl setup.
+Add any other context about the self-hosting issue here, such as specific infrastructure details, network setup, or any modifications made to the original Sitecrawl setup.

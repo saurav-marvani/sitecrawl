@@ -29,7 +29,7 @@ describe("Batch scrape tests", () => {
       );
 
       expect(response.data[0]).toHaveProperty("markdown");
-      expect(response.data[0].markdown).toContain("Firecrawl");
+      expect(response.data[0].markdown).toContain("Sitecrawl");
     },
     scrapeTimeout,
   );
