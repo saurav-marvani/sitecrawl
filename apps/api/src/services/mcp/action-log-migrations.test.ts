@@ -52,6 +52,7 @@ describe("MCP action log migration", () => {
 
   it("adds mcp-search as a Train 2 forward-only resource constraint upgrade", () => {
     expect(train2SearchResourceMigration).not.toContain("CREATE TABLE");
+    expect(train2SearchResourceMigration).toMatch(/(?:^|\n)BEGIN;\n[\s\S]*\nCOMMIT;\s*$/);
     expect(train2SearchResourceMigration).toContain(
       "DROP CONSTRAINT IF EXISTS mcp_action_logs_resource_check",
     );
