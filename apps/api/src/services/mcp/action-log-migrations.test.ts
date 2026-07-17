@@ -29,5 +29,6 @@ describe("MCP action log migration", () => {
       /user_agent|raw_ip|arguments|request_body|response_body/,
     );
     expect(migration).toContain("mcp.firecrawl.dev/v2/mcp-oauth");
+    expect(migration).toContain("mcp.firecrawl.dev/v2/mcp-search");
   });
 });
