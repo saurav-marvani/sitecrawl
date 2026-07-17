@@ -15,8 +15,7 @@ CREATE TABLE public.mcp_action_logs (
   error_class text,
   resource text NOT NULL CHECK (resource IN (
     'https://mcp.firecrawl.dev/v2/mcp',
-    'https://mcp.firecrawl.dev/v2/mcp-oauth',
-    'https://mcp.firecrawl.dev/v2/mcp-search'
+    'https://mcp.firecrawl.dev/v2/mcp-oauth'
   )),
   created_at timestamptz NOT NULL DEFAULT now(),
   expires_at timestamptz NOT NULL DEFAULT (now() + interval '30 days'),
