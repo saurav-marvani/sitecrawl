@@ -1,18 +1,18 @@
 [package]
-name = "firecrawl"
+name = "sitecrawl"
 version = "2.11.1"
 edition = "2021"
 license = "MIT"
-homepage = "https://www.firecrawl.dev/"
-repository = "https://github.com/firecrawl/firecrawl"
-description = "Official Rust SDK for Firecrawl API v2."
-authors = ["Gergő Móricz <mogery@firecrawl.dev>", "sanix-darker <sanixdk@gmail.com>", "kkharji <kkharji@protonmail.com>"]
-keywords = ["firecrawl", "web-scraping", "crawling", "api"]
+homepage = "https://www.sitecrawl.dev/"
+repository = "https://github.com/sitecrawl/sitecrawl"
+description = "Official Rust SDK for Sitecrawl API v2."
+authors = ["Gergő Móricz <mogery@sitecrawl.dev>", "sanix-darker <sanixdk@gmail.com>", "kkharji <kkharji@protonmail.com>"]
+keywords = ["sitecrawl", "web-scraping", "crawling", "api"]
 categories = ["api-bindings", "web-programming"]
 
 [lib]
 path = "src/lib.rs"
-name = "firecrawl"
+name = "sitecrawl"
 
 [dependencies]
 reqwest = { version = "0.12", features = ["json", "multipart"] }

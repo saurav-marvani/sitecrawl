@@ -1,30 +1,30 @@
 ---
 title: "Build a 'Chat with website' using Groq Llama 3"
-description: "Learn how to use Firecrawl, Groq Llama 3, and Langchain to build a 'Chat with your website' bot."
+description: "Learn how to use Sitecrawl, Groq Llama 3, and Langchain to build a 'Chat with your website' bot."
 ---
 
 ## Setup
 
-Install our python dependencies, including langchain, groq, faiss, ollama, and firecrawl-py. 
+Install our python dependencies, including langchain, groq, faiss, ollama, and sitecrawl-py. 
 
 ```bash
-pip install --upgrade --quiet langchain langchain-community groq faiss-cpu ollama firecrawl-py
+pip install --upgrade --quiet langchain langchain-community groq faiss-cpu ollama sitecrawl-py
 ```
 
 We will be using Ollama for the embeddings, you can download Ollama [here](https://ollama.com/). But feel free to use any other embeddings you prefer.
 
-## Load website with Firecrawl
+## Load website with Sitecrawl
 
-To be able to get all the data from a website and make sure it is in the cleanest format, we will use FireCrawl. Firecrawl integrates very easily with Langchain as a document loader.
+To be able to get all the data from a website and make sure it is in the cleanest format, we will use Sitecrawl. Sitecrawl integrates very easily with Langchain as a document loader.
 
-Here is how you can load a website with FireCrawl:
+Here is how you can load a website with Sitecrawl:
 
 ```python
-from langchain_community.document_loaders import FireCrawlLoader  # Importing the FireCrawlLoader
+from langchain_community.document_loaders import SitecrawlLoader  # Importing the SitecrawlLoader
 
-url = "https://firecrawl.dev"
-loader = FireCrawlLoader(
-    api_key="fc-YOUR_API_KEY", # Note: Replace 'YOUR_API_KEY' with your actual FireCrawl API key
+url = "https://sitecrawl.dev"
+loader = SitecrawlLoader(
+    api_key="fc-YOUR_API_KEY", # Note: Replace 'YOUR_API_KEY' with your actual Sitecrawl API key
     url=url,  # Target URL to crawl
     mode="crawl"  # Mode set to 'crawl' to crawl all accessible subpages
 )
@@ -52,7 +52,7 @@ Now that our documents  are loaded and the vectorstore is setup, we can, based o
 
 
 ```python
-question = "What is firecrawl?"
+question = "What is sitecrawl?"
 docs = vectorstore.similarity_search(query=question)
 ```
 
@@ -86,6 +86,6 @@ print(completion.choices[0].message)
 
 ## And Voila!
 
-You have now built a 'Chat with your website' bot using Llama 3, Groq Llama 3, Langchain, and Firecrawl. You can now use this bot to answer questions based on the documentation of your website.
+You have now built a 'Chat with your website' bot using Llama 3, Groq Llama 3, Langchain, and Sitecrawl. You can now use this bot to answer questions based on the documentation of your website.
 
-If you have any questions or need help, feel free to reach out to us at [Firecrawl](https://firecrawl.dev).
+If you have any questions or need help, feel free to reach out to us at [Sitecrawl](https://sitecrawl.dev).

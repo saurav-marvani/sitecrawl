@@ -127,7 +127,7 @@ describeIf(TEST_PRODUCTION)(
         await scrape({ url: createTestIdUrl() }, identity);
 
         // ...anything else is rejected at auth.
-        const response = await map({ url: "https://firecrawl.dev" }, identity);
+        const response = await map({ url: "https://sitecrawl.dev" }, identity);
         expect(response.statusCode).toBe(403);
         expect(response.body.success).toBe(false);
         expect(response.body.error).toContain(

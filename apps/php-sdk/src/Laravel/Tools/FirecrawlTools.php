@@ -2,26 +2,26 @@
 
 declare(strict_types=1);
 
-namespace Firecrawl\Laravel\Tools;
+namespace Sitecrawl\Laravel\Tools;
 
-use Firecrawl\Client\FirecrawlClient;
+use Sitecrawl\Client\SitecrawlClient;
 
-final class FirecrawlTools
+final class SitecrawlTools
 {
     private function __construct() {}
 
     /**
-     * All core Firecrawl tools, ready to spread into an agent's tools() array.
+     * All core Sitecrawl tools, ready to spread into an agent's tools() array.
      *
-     * @return list<FirecrawlTool>
+     * @return list<SitecrawlTool>
      */
-    public static function all(?FirecrawlClient $client = null): array
+    public static function all(?SitecrawlClient $client = null): array
     {
         return [
-            new FirecrawlScrape($client),
-            new FirecrawlSearch($client),
-            new FirecrawlMap($client),
-            new FirecrawlCrawl($client),
+            new SitecrawlScrape($client),
+            new SitecrawlSearch($client),
+            new SitecrawlMap($client),
+            new SitecrawlCrawl($client),
         ];
     }
 }

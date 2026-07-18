@@ -1,6 +1,6 @@
-[submodule "apps/go-sdk/firecrawl-go"]
-	path = apps/go-sdk/firecrawl-go
-	url = https://github.com/firecrawl/firecrawl-go
-[submodule "apps/go-sdk/firecrawl-go-examples"]
-	path = apps/go-sdk/firecrawl-go-examples
-	url = https://github.com/firecrawl/firecrawl-go-examples
+[submodule "apps/go-sdk/sitecrawl-go"]
+	path = apps/go-sdk/sitecrawl-go
+	url = https://github.com/sitecrawl/sitecrawl-go
+[submodule "apps/go-sdk/sitecrawl-go-examples"]
+	path = apps/go-sdk/sitecrawl-go-examples
+	url = https://github.com/sitecrawl/sitecrawl-go-examples

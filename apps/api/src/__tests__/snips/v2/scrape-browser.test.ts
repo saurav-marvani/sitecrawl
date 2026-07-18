@@ -79,7 +79,7 @@ describe("Scrape browser interact replay", () => {
             actions: [
               {
                 type: "executeJavascript",
-                script: `window.__firecrawlReplayMarker = "${marker}";`,
+                script: `window.__sitecrawlReplayMarker = "${marker}";`,
               },
             ],
           },
@@ -97,7 +97,7 @@ describe("Scrape browser interact replay", () => {
             language: "node",
             timeout: 60,
             code: `
-              const replayMarker = await page.evaluate(() => window.__firecrawlReplayMarker ?? null);
+              const replayMarker = await page.evaluate(() => window.__sitecrawlReplayMarker ?? null);
               console.log(replayMarker ?? "missing-marker");
             `,
           },

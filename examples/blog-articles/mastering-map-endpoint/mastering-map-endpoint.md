@@ -1,17 +1,17 @@
 ---
-title: "How to Generate a Sitemap Using Firecrawl's /map Endpoint: A Complete Guide"
-meta_description: "Learn how to generate XML and visual sitemaps using Firecrawl's /map endpoint. Step-by-step guide with Python code examples, performance comparisons, and interactive visualization techniques for effective website mapping."
-slug: how-to-generate-sitemap-using-firecrawl-map-endpoint
+title: "How to Generate a Sitemap Using Sitecrawl's /map Endpoint: A Complete Guide"
+meta_description: "Learn how to generate XML and visual sitemaps using Sitecrawl's /map endpoint. Step-by-step guide with Python code examples, performance comparisons, and interactive visualization techniques for effective website mapping."
+slug: how-to-generate-sitemap-using-sitecrawl-map-endpoint
 date: 23 Nov, 2024
 author: Bex Tuychiev
 image: to_fill_in_later
 categories: [tutorials]
-keywords: [sitemap generator, website mapping, firecrawl, url discovery, site structure analysis, seo optimization, web crawling, website indexing, automated sitemap, site mapping tools, website architecture, sitemap creation, web development tools, website maintenance, seo tools, map endpoint, firecrawl map endpoint, python sitemap generator, visual sitemap creator, website structure visualization, interactive site mapping, xml sitemap generation, website crawling api, sitemap automation tools, website structure analysis tools]
+keywords: [sitemap generator, website mapping, sitecrawl, url discovery, site structure analysis, seo optimization, web crawling, website indexing, automated sitemap, site mapping tools, website architecture, sitemap creation, web development tools, website maintenance, seo tools, map endpoint, sitecrawl map endpoint, python sitemap generator, visual sitemap creator, website structure visualization, interactive site mapping, xml sitemap generation, website crawling api, sitemap automation tools, website structure analysis tools]
 ---
 
 ## Introduction
 
-In this guide, we'll explore Firecrawl's `/map` endpoint - a powerful tool for automated website mapping and URL discovery. We'll cover what it does, why it matters, and how to use it effectively in your web development workflow.
+In this guide, we'll explore Sitecrawl's `/map` endpoint - a powerful tool for automated website mapping and URL discovery. We'll cover what it does, why it matters, and how to use it effectively in your web development workflow.
 
 Website mapping has become increasingly critical in modern web development. As sites grow more complex with dynamic content and single-page applications, having a clear understanding of your site's structure and URL hierarchy is essential for SEO, maintenance, and user experience.
 
@@ -20,10 +20,10 @@ The /map endpoint helps solve common challenges like keeping track of site struc
 ## Table of Contents
 
 - [Introduction](#introduction)
-- [Understanding Firecrawl's `/map` Endpoint: Features and Benefits](#understanding-firecrawls-map-endpoint-features-and-benefits)
+- [Understanding Sitecrawl's `/map` Endpoint: Features and Benefits](#understanding-sitecrawls-map-endpoint-features-and-benefits)
   - [What is Site Mapping and Why is it Essential for Modern Websites?](#what-is-site-mapping-and-why-is-it-essential-for-modern-websites)
   - [Guide to Sitemap Types: Visual vs XML Sitemaps](#guide-to-sitemap-types-visual-vs-xml-sitemaps)
-  - [How Firecrawl's `/map` Endpoint Solves These Challenges](#how-firecrawls-map-endpoint-solves-these-challenges)
+  - [How Sitecrawl's `/map` Endpoint Solves These Challenges](#how-sitecrawls-map-endpoint-solves-these-challenges)
   - [Limitations of `/map` in the alpha stage](#limitations-of-map-in-the-alpha-stage)
 - [Step-by-Step Guide to Using the /map Endpoint](#step-by-step-guide-to-using-the-map-endpoint)
 - [Further Configuration Options for Website Mapping](#further-configuration-options-for-website-mapping)
@@ -34,7 +34,7 @@ The /map endpoint helps solve common challenges like keeping track of site struc
 - [Advanced Visualization: Building Interactive Visual Sitemaps with `/map`](#advanced-visualization-building-interactive-visual-sitemaps-with-map)
 - [Conclusion](#conclusion)
 
-## Understanding Firecrawl's `/map` Endpoint: Features and Benefits
+## Understanding Sitecrawl's `/map` Endpoint: Features and Benefits
 
 To understand what the `/map` endpoint does, let's briefly cover what's __site mapping__ and why it is important.
 
@@ -66,7 +66,7 @@ XML sitemaps are shown to the public much less frequently because they contain s
 
 Source: [DataCamp](https://www.datacamp.com/sitemap/es/tutorial/category.xml)
 
-### How Firecrawl's `/map` Endpoint Solves These Challenges
+### How Sitecrawl's `/map` Endpoint Solves These Challenges
 
 When you are building a website from scratch, you usually need a visual sitemap and can develop the XML one over the time as you add more pages. However, if you neglected these steps early on and suddenly find yourself with a massive website, possibly with thousands of URLs, creating either type of sitemap manually becomes an overwhelming task. This is where automated solutions like the `/map` endpoint can become invaluable.
 
@@ -87,19 +87,19 @@ While the /map endpoint is still in alpha stage, it has some limitations. The en
 
 ## Step-by-Step Guide to Using the /map Endpoint
 
-Firecrawl is a scraping engine exposed as a REST API, which means you can use it from the command-line using cURL or by using one of its SDKs in Python, Node, Go or Rust. In this tutorial, we will use its Python SDK, so please install it in your environment:
+Sitecrawl is a scraping engine exposed as a REST API, which means you can use it from the command-line using cURL or by using one of its SDKs in Python, Node, Go or Rust. In this tutorial, we will use its Python SDK, so please install it in your environment:
 
 ```bash
-pip install firecrawl-py
+pip install sitecrawl-py
 ```
 
-The next step is obtaining a Firecrawl API key by signing up at [firecrawl.dev](firecrawl.dev) and choosing a plan (the free plan is fine for this tutorial).
+The next step is obtaining a Sitecrawl API key by signing up at [sitecrawl.dev](sitecrawl.dev) and choosing a plan (the free plan is fine for this tutorial).
 
 Once you have your API key, you should save it in a .env file, which provides a secure way to store sensitive credentials without exposing them in your code:
 
 ```bash
 touch .env
-echo "FIRECRAWL_API_KEY='YOUR-API-KEY'" >> .env
+echo "SITECRAWL_API_KEY='YOUR-API-KEY'" >> .env
 ```
 
 Then, you should install python-dotenv to automatically load the variables in `.env` files in Python scripts and notebooks:
@@ -111,24 +111,24 @@ pip install python-dotenv
 Then, using the /map endpoint is as easy as the following code:
 
 ```python
-from firecrawl import FirecrawlApp
+from sitecrawl import SitecrawlApp
 from dotenv import load_dotenv; load_dotenv()
 
-app = FirecrawlApp()
+app = SitecrawlApp()
 
-response = app.map_url(url="https://firecrawl.dev")
+response = app.map_url(url="https://sitecrawl.dev")
 ```
 
-In this code snippet, we're using the Firecrawl Python SDK to map a URL. Let's break down what's happening:
+In this code snippet, we're using the Sitecrawl Python SDK to map a URL. Let's break down what's happening:
 
 First, we import two key components:
 
-- FirecrawlApp from the firecrawl package, which provides the main interface to interact with Firecrawl's API
+- SitecrawlApp from the sitecrawl package, which provides the main interface to interact with Sitecrawl's API
 - `load_dotenv` from `dotenv` to load our environment variables containing the API key
 
-After importing, we initialize a FirecrawlApp instance, which automatically picks up our API key from the environment variables.
+After importing, we initialize a SitecrawlApp instance, which automatically picks up our API key from the environment variables.
 
-Finally, we make a request to map the URL `https://firecrawl.dev` using the`map_url()` method. This crawls the website and returns information about its structure and pages, taking about two seconds on my machine (the speed may vary based on internet speeds).
+Finally, we make a request to map the URL `https://sitecrawl.dev` using the`map_url()` method. This crawls the website and returns information about its structure and pages, taking about two seconds on my machine (the speed may vary based on internet speeds).
 
 Let's look at the `response` dictionary:
 
@@ -241,7 +241,7 @@ This time, the link count increased.
 
 ## Comparing `/crawl` and `/map`: When to Use Each Endpoint
 
-If you read our [separate guide on the `/crawl` endpoint](https://www.firecrawl.dev/blog/mastering-the-crawl-endpoint-in-firecrawl) of Firecrawl, you may notice one similarity between it and the `/map` endpoint:
+If you read our [separate guide on the `/crawl` endpoint](https://www.sitecrawl.dev/blog/mastering-the-crawl-endpoint-in-sitecrawl) of Sitecrawl, you may notice one similarity between it and the `/map` endpoint:
 
 If you set the response format of crawl to "links", you will also get a list of URLs found on the website. While the purpose is the same, there are huge differences performance-wise.
 
@@ -273,7 +273,7 @@ CPU times: user 4.91 ms, sys: 3.58 ms, total: 8.49 ms
 Wall time: 2.04 s
 ```
 
-![Comparison chart showing significant performance difference between map and crawl endpoints of Firecrawl with map being much faster](notebook_files/notebook_42_0.png)
+![Comparison chart showing significant performance difference between map and crawl endpoints of Sitecrawl with map being much faster](notebook_files/notebook_42_0.png)
 
 This is because `/crawl` needs to fully load and parse each page's HTML content, even when we only want the links. In contrast, `/map` is optimized specifically for URL discovery, making it much faster for generating sitemaps and link analysis.
 
@@ -439,7 +439,7 @@ with open("sitemap.xml", "w", encoding="utf-8") as f:
 
 Here is what the file looks like after saving:
 
-![XML sitemap example showing structured website data with URLs, last modified dates, change frequencies and priorities, generated using Firecrawl](notebook_files/image.png)
+![XML sitemap example showing structured website data with URLs, last modified dates, change frequencies and priorities, generated using Sitecrawl](notebook_files/image.png)
 
 Such `sitemap.xml` file provides a standardized way for search engines to discover and crawl all pages on your website.
 
@@ -449,7 +449,7 @@ If you want a visual sitemap of a website, you don't have to sign up for expensi
 
 The resulting graph would like the following:
 
-![Interactive Sankey diagram visualization showing hierarchical structure of Stripe documentation with color-coded sections and flow widths representing page counts, generated using Firecrawl's /map endpoint](images/stripe_docs.png)
+![Interactive Sankey diagram visualization showing hierarchical structure of Stripe documentation with color-coded sections and flow widths representing page counts, generated using Sitecrawl's /map endpoint](images/stripe_docs.png)
 
 The Sankey diagram above visualizes the hierarchical structure of [the Stripe documentation](docs.stripe.org) (which is quite large) by showing how pages are organized and connected across different sections. The width of each flow represents the number of pages in that section, making it easy to identify which parts of the website contain the most content. The colors help distinguish between different sections and their subsections.
 
@@ -457,7 +457,7 @@ The diagram starts from a central root node and branches out into main sections 
 
 For example, you can quickly spot which sections are the largest (the API section), how content is distributed across different areas, and whether there's a logical grouping of related pages. This visualization is particularly useful for content strategists, SEO specialists, and web architects who need to analyze and optimize website structure.
 
-[The script that generated this plot](https://github.com/FirstClassML/firecrawl_articles/blob/main/3_generating_sitemap/sitemap_generator.py) contains more than 400 lines of code and I made it fully customizable. The code in `sitemap_generator.py` follows a modular, object-oriented approach with several key components:
+[The script that generated this plot](https://github.com/FirstClassML/sitecrawl_articles/blob/main/3_generating_sitemap/sitemap_generator.py) contains more than 400 lines of code and I made it fully customizable. The code in `sitemap_generator.py` follows a modular, object-oriented approach with several key components:
 
 1. A `HierarchyBuilder` class that analyzes URLs returned my `/map` or `/crawl` and builds a tree-like data structure up to 4 levels deep.
 2. A `SankeyDataPreparator` class that transforms this hierarchy into a format suitable for visualization, using thresholds to control complexity
@@ -467,7 +467,7 @@ The script automatically handles things like grouping smaller sections together,
 
 Here is another plot generated for the [PyData.org](https://pydata.org) website:
 
-![Interactive Sankey diagram showing hierarchical website structure of PyData.org with color-coded sections, flow visualization and navigation paths for improved site architecture understanding, generated using Firecrawl's map endpoint and Plotly](images/pydata.png)
+![Interactive Sankey diagram showing hierarchical website structure of PyData.org with color-coded sections, flow visualization and navigation paths for improved site architecture understanding, generated using Sitecrawl's map endpoint and Plotly](images/pydata.png)
 
 ## Conclusion
 
@@ -479,15 +479,15 @@ The `/map` endpoint represents a powerful tool in the modern web developer's too
 
 While it may not capture every single URL compared to full crawling solutions, its speed and ease of use make it an excellent choice for rapid site mapping and initial structure analysis. As the endpoint continues to evolve, its combination of performance and accuracy will make it an increasingly valuable tool for website maintenance, SEO optimization, and content strategy.
 
-To discover what more Firecrawl has to offer, be sure to read the following related resources:
+To discover what more Sitecrawl has to offer, be sure to read the following related resources:
 
-- [Firecrawl Documentation](docs.firecrawl.dev)
-- [Firecrawl Blog](https://www.firecrawl.dev/blog/category/tutorials)
-- [Firecrawl API Reference](https://docs.firecrawl.dev/api-reference/introduction)
+- [Sitecrawl Documentation](docs.sitecrawl.dev)
+- [Sitecrawl Blog](https://www.sitecrawl.dev/blog/category/tutorials)
+- [Sitecrawl API Reference](https://docs.sitecrawl.dev/api-reference/introduction)
 
 ## Frequently Asked Questions
 
-### How fast is Firecrawl's `/map` endpoint?
+### How fast is Sitecrawl's `/map` endpoint?
 
 The /map endpoint typically processes websites in 2-3 seconds, compared to several minutes with traditional crawling methods.
 

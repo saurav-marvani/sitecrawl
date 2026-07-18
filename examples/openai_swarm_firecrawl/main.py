@@ -1,5 +1,5 @@
 import os
-from firecrawl import FirecrawlApp
+from sitecrawl import SitecrawlApp
 from swarm import Agent
 from swarm.repl import run_demo_loop
 import dotenv
@@ -7,12 +7,12 @@ from openai import OpenAI
 
 dotenv.load_dotenv()
 
-# Initialize FirecrawlApp and OpenAI
-app = FirecrawlApp(api_key=os.getenv("FIRECRAWL_API_KEY"))
+# Initialize SitecrawlApp and OpenAI
+app = SitecrawlApp(api_key=os.getenv("SITECRAWL_API_KEY"))
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 def scrape_website(url):
-    """Scrape a website using Firecrawl."""
+    """Scrape a website using Sitecrawl."""
     scrape_status = app.scrape_url(
         url,
         params={'formats': ['markdown']}

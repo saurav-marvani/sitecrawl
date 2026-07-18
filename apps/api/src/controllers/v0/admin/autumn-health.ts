@@ -51,7 +51,7 @@ export async function autumnHealthController(req: Request, res: Response) {
     details.customerCreate = await runStep("customerCreate", () =>
       autumnClient!.customers.getOrCreate({
         customerId,
-        name: "Firecrawl Health Check",
+        name: "Sitecrawl Health Check",
       }),
     );
     if (details.customerCreate.status !== "healthy") {

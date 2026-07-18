@@ -7,7 +7,7 @@ from unittest.mock import patch, MagicMock
 from pydantic import BaseModel, Field
 from typing import List, Optional
 
-from firecrawl import FirecrawlApp
+from sitecrawl import SitecrawlApp
 
 
 class Founder(BaseModel):
@@ -23,8 +23,8 @@ class FoundersSchema(BaseModel):
 class TestAgent(unittest.TestCase):
     """Integration tests for agent method."""
 
-    @patch('firecrawl.v2.utils.http_client.requests.post')
-    @patch('firecrawl.v2.utils.http_client.requests.get')
+    @patch('sitecrawl.v2.utils.http_client.requests.post')
+    @patch('sitecrawl.v2.utils.http_client.requests.get')
     def test_agent_basic(self, mock_get, mock_post):
         """Test basic agent call."""
         # Mock start agent response
@@ -57,9 +57,9 @@ class TestAgent(unittest.TestCase):
         }
         mock_get.return_value = mock_status_response
         
-        app = FirecrawlApp(api_key="test-api-key")
+        app = SitecrawlApp(api_key="test-api-key")
         result = app.agent(
-            prompt="Find the founders of Firecrawl",
+            prompt="Find the founders of Sitecrawl",
             schema=FoundersSchema
         )
         
@@ -71,7 +71,7 @@ class TestAgent(unittest.TestCase):
         
         # Check request body
         request_body = post_call_args[1]["json"]
-        assert request_body["prompt"] == "Find the founders of Firecrawl"
+        assert request_body["prompt"] == "Find the founders of Sitecrawl"
         assert "schema" in request_body
         assert request_body["schema"]["type"] == "object"
         assert "founders" in request_body["schema"]["properties"]
@@ -83,7 +83,7 @@ class TestAgent(unittest.TestCase):
         assert result.status == "completed"
         assert result.data is not None
 
-    @patch('firecrawl.v2.utils.http_client.requests.post')
+    @patch('sitecrawl.v2.utils.http_client.requests.post')
     def test_agent_with_urls(self, mock_post):
         """Test agent call with URLs."""
         mock_response = MagicMock()
@@ -96,7 +96,7 @@ class TestAgent(unittest.TestCase):
         }
         mock_post.return_value = mock_response
         
-        app = FirecrawlApp(api_key="test-api-key")
+        app = SitecrawlApp(api_key="test-api-key")
         result = app.agent(
             urls=["https://example.com", "https://test.com"],
             prompt="Extract information",
@@ -109,7 +109,7 @@ class TestAgent(unittest.TestCase):
         assert request_body["urls"] == ["https://example.com", "https://test.com"]
         assert request_body["prompt"] == "Extract information"
 
-    @patch('firecrawl.v2.utils.http_client.requests.post')
+    @patch('sitecrawl.v2.utils.http_client.requests.post')
     def test_agent_with_dict_schema(self, mock_post):
         """Test agent call with dict schema."""
         mock_response = MagicMock()
@@ -130,7 +130,7 @@ class TestAgent(unittest.TestCase):
             }
         }
         
-        app = FirecrawlApp(api_key="test-api-key")
+        app = SitecrawlApp(api_key="test-api-key")
         result = app.agent(
             prompt="Extract person data",
             schema=schema
@@ -141,7 +141,7 @@ class TestAgent(unittest.TestCase):
         request_body = post_call_args[1]["json"]
         assert request_body["schema"] == schema
 
-    @patch('firecrawl.v2.utils.http_client.requests.post')
+    @patch('sitecrawl.v2.utils.http_client.requests.post')
     def test_agent_with_all_params(self, mock_post):
         """Test agent call with all parameters."""
         mock_response = MagicMock()
@@ -157,7 +157,7 @@ class TestAgent(unittest.TestCase):
         schema = {"type": "object"}
         urls = ["https://example.com"]
         
-        app = FirecrawlApp(api_key="test-api-key")
+        app = SitecrawlApp(api_key="test-api-key")
         result = app.agent(
             urls=urls,
             prompt="Complete test",
@@ -179,7 +179,7 @@ class TestAgent(unittest.TestCase):
         assert request_body["maxCredits"] == 50
         assert request_body["strictConstrainToURLs"] is True
 
-    @patch('firecrawl.v2.utils.http_client.requests.post')
+    @patch('sitecrawl.v2.utils.http_client.requests.post')
     def test_agent_pydantic_schema_normalization(self, mock_post):
         """Test that Pydantic schemas are properly normalized."""
         mock_response = MagicMock()
@@ -192,7 +192,7 @@ class TestAgent(unittest.TestCase):
         }
         mock_post.return_value = mock_response
         
-        app = FirecrawlApp(api_key="test-api-key")
+        app = SitecrawlApp(api_key="test-api-key")
         result = app.agent(
             prompt="Find founders",
             schema=FoundersSchema
@@ -208,8 +208,8 @@ class TestAgent(unittest.TestCase):
         assert "founders" in schema["properties"]
         assert schema["properties"]["founders"]["type"] == "array"
 
-    @patch('firecrawl.v2.utils.http_client.requests.post')
-    @patch('firecrawl.v2.utils.http_client.requests.get')
+    @patch('sitecrawl.v2.utils.http_client.requests.post')
+    @patch('sitecrawl.v2.utils.http_client.requests.get')
     def test_agent_url_construction(self, mock_get, mock_post):
         """Test that agent requests are sent to correct URL."""
         # Mock start agent response
@@ -235,7 +235,7 @@ class TestAgent(unittest.TestCase):
         }
         mock_get.return_value = mock_status_response
         
-        app = FirecrawlApp(api_key="test-api-key", api_url="https://api.firecrawl.dev")
+        app = SitecrawlApp(api_key="test-api-key", api_url="https://api.sitecrawl.dev")
         result = app.agent(prompt="Test prompt")
         
         # Check POST URL - requests.post is called with url as keyword arg
@@ -248,7 +248,7 @@ class TestAgent(unittest.TestCase):
         get_url = get_call_args[1].get("url") if "url" in get_call_args[1] else get_call_args[0][0]
         assert "/v2/agent/test-agent-123" in str(get_url)
 
-    @patch('firecrawl.v2.utils.http_client.requests.post')
+    @patch('sitecrawl.v2.utils.http_client.requests.post')
     def test_agent_headers(self, mock_post):
         """Test that agent requests include correct headers."""
         mock_response = MagicMock()
@@ -261,7 +261,7 @@ class TestAgent(unittest.TestCase):
         }
         mock_post.return_value = mock_response
         
-        app = FirecrawlApp(api_key="test-api-key")
+        app = SitecrawlApp(api_key="test-api-key")
         result = app.agent(prompt="Test prompt")
         
         # Check headers

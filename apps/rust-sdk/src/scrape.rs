@@ -1,4 +1,4 @@
-//! Scrape endpoint for Firecrawl API v2.
+//! Scrape endpoint for Sitecrawl API v2.
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -9,7 +9,7 @@ use crate::types::{
     Action, AttributeSelector, ChangeTrackingOptions, Document, Format, JsonOptions,
     LocationConfig, ProfileConfig, ProxyType, ScreenshotOptions,
 };
-use crate::FirecrawlError;
+use crate::SitecrawlError;
 
 /// Options for scraping a URL.
 #[serde_with::skip_serializing_none]
@@ -223,7 +223,7 @@ impl Client {
     /// # Example
     ///
     /// ```no_run
-    /// use firecrawl::{Client, ScrapeOptions, Format};
+    /// use sitecrawl::{Client, ScrapeOptions, Format};
     ///
     /// #[tokio::main]
     /// async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -249,7 +249,7 @@ impl Client {
         &self,
         url: impl AsRef<str>,
         options: impl Into<Option<ScrapeOptions>>,
-    ) -> Result<Document, FirecrawlError> {
+    ) -> Result<Document, SitecrawlError> {
         let mut options = options.into().unwrap_or_default();
         if options.origin.is_none() {
             options.origin = Some(format!("rust-sdk@{}", env!("CARGO_PKG_VERSION")));
@@ -268,7 +268,7 @@ impl Client {
             .json(&body)
             .send()
             .await
-            .map_err(|e| FirecrawlError::HttpError(format!("Scraping {:?}", url.as_ref()), e))?;
+            .map_err(|e| SitecrawlError::HttpError(format!("Scraping {:?}", url.as_ref()), e))?;
 
         let response: ScrapeResponse = self.handle_response(response, "scrape").await?;
 
@@ -292,7 +292,7 @@ impl Client {
     /// # Example
     ///
     /// ```no_run
-    /// use firecrawl::Client;
+    /// use sitecrawl::Client;
     /// use serde_json::json;
     ///
     /// #[tokio::main]
@@ -323,7 +323,7 @@ impl Client {
         url: impl AsRef<str>,
         schema: Value,
         prompt: Option<impl AsRef<str>>,
-    ) -> Result<Value, FirecrawlError> {
+    ) -> Result<Value, SitecrawlError> {
         let options = ScrapeOptions {
             formats: Some(vec![Format::Json]),
             json_options: Some(JsonOptions {
@@ -352,14 +352,14 @@ impl Client {
         &self,
         job_id: impl AsRef<str>,
         options: ScrapeExecuteOptions,
-    ) -> Result<ScrapeExecuteResponse, FirecrawlError> {
+    ) -> Result<ScrapeExecuteResponse, SitecrawlError> {
         let has_code = options.code.as_ref().is_some_and(|c| !c.trim().is_empty());
         let has_prompt = options
             .prompt
             .as_ref()
             .is_some_and(|p| !p.trim().is_empty());
         if !has_code && !has_prompt {
-            return Err(FirecrawlError::Misuse(
+            return Err(SitecrawlError::Misuse(
                 "Either 'code' or 'prompt' must be provided".into(),
             ));
         }
@@ -380,7 +380,7 @@ impl Client {
             .send()
             .await
             .map_err(|e| {
-                FirecrawlError::HttpError(
+                SitecrawlError::HttpError(
                     format!("Interacting with scrape browser for {}", job_id.as_ref()),
                     e,
                 )
@@ -401,7 +401,7 @@ impl Client {
     pub async fn stop_interaction(
         &self,
         job_id: impl AsRef<str>,
-    ) -> Result<ScrapeBrowserDeleteResponse, FirecrawlError> {
+    ) -> Result<ScrapeBrowserDeleteResponse, SitecrawlError> {
         let response = self
             .client
             .delete(self.url(&format!("/scrape/{}/interact", job_id.as_ref())))
@@ -409,7 +409,7 @@ impl Client {
             .send()
             .await
             .map_err(|e| {
-                FirecrawlError::HttpError(
+                SitecrawlError::HttpError(
                     format!("Stopping interaction for {}", job_id.as_ref()),
                     e,
                 )
@@ -424,7 +424,7 @@ impl Client {
         &self,
         job_id: impl AsRef<str>,
         options: ScrapeExecuteOptions,
-    ) -> Result<ScrapeExecuteResponse, FirecrawlError> {
+    ) -> Result<ScrapeExecuteResponse, SitecrawlError> {
         self.interact(job_id, options).await
     }
 
@@ -433,7 +433,7 @@ impl Client {
     pub async fn stop_interactive_browser(
         &self,
         job_id: impl AsRef<str>,
-    ) -> Result<ScrapeBrowserDeleteResponse, FirecrawlError> {
+    ) -> Result<ScrapeBrowserDeleteResponse, SitecrawlError> {
         self.stop_interaction(job_id).await
     }
 
@@ -442,7 +442,7 @@ impl Client {
     pub async fn delete_scrape_browser(
         &self,
         job_id: impl AsRef<str>,
-    ) -> Result<ScrapeBrowserDeleteResponse, FirecrawlError> {
+    ) -> Result<ScrapeBrowserDeleteResponse, SitecrawlError> {
         self.stop_interaction(job_id).await
     }
 }
@@ -457,7 +457,7 @@ mod tests {
     fn test_query_format_serializes_mode() {
         let options = ScrapeOptions {
             formats: Some(vec![Format::Query(QueryFormat {
-                prompt: "What is Firecrawl?".to_string(),
+                prompt: "What is Sitecrawl?".to_string(),
                 mode: Some(QueryFormatMode::DirectQuote),
             })]),
             ..Default::default()
@@ -468,7 +468,7 @@ mod tests {
             payload["formats"][0],
             json!({
                 "type": "query",
-                "prompt": "What is Firecrawl?",
+                "prompt": "What is Sitecrawl?",
                 "mode": "directQuote"
             })
         );
@@ -479,10 +479,10 @@ mod tests {
         let options = ScrapeOptions {
             formats: Some(vec![
                 Format::Question(QuestionFormat {
-                    question: "What is Firecrawl?".to_string(),
+                    question: "What is Sitecrawl?".to_string(),
                 }),
                 Format::Highlights(HighlightsFormat {
-                    query: "What is Firecrawl?".to_string(),
+                    query: "What is Sitecrawl?".to_string(),
                 }),
             ]),
             ..Default::default()
@@ -493,14 +493,14 @@ mod tests {
             payload["formats"][0],
             json!({
                 "type": "question",
-                "question": "What is Firecrawl?"
+                "question": "What is Sitecrawl?"
             })
         );
         assert_eq!(
             payload["formats"][1],
             json!({
                 "type": "highlights",
-                "query": "What is Firecrawl?"
+                "query": "What is Sitecrawl?"
             })
         );
     }

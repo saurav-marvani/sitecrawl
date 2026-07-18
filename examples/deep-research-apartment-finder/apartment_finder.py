@@ -5,7 +5,7 @@ import sys
 import json
 from typing import Dict, List, Any
 import anthropic
-from firecrawl import FirecrawlApp
+from sitecrawl import SitecrawlApp
 from dotenv import load_dotenv
 
 # Define colors for terminal output
@@ -22,16 +22,16 @@ class Colors:
 # Load environment variables
 load_dotenv()
 
-FIRECRAWL_API_KEY = os.getenv("FIRECRAWL_API_KEY")
+SITECRAWL_API_KEY = os.getenv("SITECRAWL_API_KEY")
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
 
-if not FIRECRAWL_API_KEY or not ANTHROPIC_API_KEY:
-    print(f"{Colors.RED}Error: API keys not found. Please set FIRECRAWL_API_KEY and ANTHROPIC_API_KEY environment variables.{Colors.RESET}")
+if not SITECRAWL_API_KEY or not ANTHROPIC_API_KEY:
+    print(f"{Colors.RED}Error: API keys not found. Please set SITECRAWL_API_KEY and ANTHROPIC_API_KEY environment variables.{Colors.RESET}")
     print(f"{Colors.YELLOW}You can create a .env file with these variables or set them in your shell.{Colors.RESET}")
     sys.exit(1)
 
 # Initialize clients
-firecrawl = FirecrawlApp(api_key=FIRECRAWL_API_KEY)
+sitecrawl = SitecrawlApp(api_key=SITECRAWL_API_KEY)
 claude = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
 
 def get_user_preferences():
@@ -67,7 +67,7 @@ def build_search_query(user_prefs):
     return f"{user_prefs['bedrooms']} bedroom apartments for rent in {user_prefs['location']} under {user_prefs['budget']}{amenities_str}"
 
 def research_apartments(query: str) -> Dict[str, Any]:
-    """Use Firecrawl's deep research to find apartment listings"""
+    """Use Sitecrawl's deep research to find apartment listings"""
     print(f"\n{Colors.BOLD}{Colors.CYAN}🔍 INITIATING DEEP RESEARCH 🔍{Colors.RESET}")
     print(f"{Colors.BLUE}Researching apartments with query: '{query}'{Colors.RESET}")
     print(f"{Colors.BLUE}This may take a few minutes...{Colors.RESET}\n")
@@ -98,7 +98,7 @@ def research_apartments(query: str) -> Dict[str, Any]:
         print(f"[{color}{activity_type}{Colors.RESET}] {message}")
     
     # Run deep research
-    results = firecrawl.deep_research(
+    results = sitecrawl.deep_research(
         query=query,
         params=params,
         on_activity=on_activity

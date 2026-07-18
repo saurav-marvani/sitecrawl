@@ -128,12 +128,12 @@ describe("V2 Types Validation", () => {
     it("should accept query format without markdown", () => {
       const input: ScrapeRequestInput = {
         url: "https://example.com",
-        formats: [{ type: "query", prompt: "What is Firecrawl?" }],
+        formats: [{ type: "query", prompt: "What is Sitecrawl?" }],
       };
 
       const result = scrapeRequestSchema.parse(input);
       expect(result.formats).toEqual([
-        { type: "query", prompt: "What is Firecrawl?", mode: "freeform" },
+        { type: "query", prompt: "What is Sitecrawl?", mode: "freeform" },
       ]);
     });
 
@@ -143,7 +143,7 @@ describe("V2 Types Validation", () => {
         formats: [
           {
             type: "query",
-            prompt: "What is Firecrawl?",
+            prompt: "What is Sitecrawl?",
             mode: "directQuote",
           },
         ],
@@ -151,31 +151,31 @@ describe("V2 Types Validation", () => {
 
       const result = scrapeRequestSchema.parse(input);
       expect(result.formats).toEqual([
-        { type: "query", prompt: "What is Firecrawl?", mode: "directQuote" },
+        { type: "query", prompt: "What is Sitecrawl?", mode: "directQuote" },
       ]);
     });
 
     it("should accept question format", () => {
       const input: ScrapeRequestInput = {
         url: "https://example.com",
-        formats: [{ type: "question", question: "What is Firecrawl?" }],
+        formats: [{ type: "question", question: "What is Sitecrawl?" }],
       };
 
       const result = scrapeRequestSchema.parse(input);
       expect(result.formats).toEqual([
-        { type: "question", question: "What is Firecrawl?" },
+        { type: "question", question: "What is Sitecrawl?" },
       ]);
     });
 
     it("should accept highlights format", () => {
       const input: ScrapeRequestInput = {
         url: "https://example.com",
-        formats: [{ type: "highlights", query: "What is Firecrawl?" }],
+        formats: [{ type: "highlights", query: "What is Sitecrawl?" }],
       };
 
       const result = scrapeRequestSchema.parse(input);
       expect(result.formats).toEqual([
-        { type: "highlights", query: "What is Firecrawl?" },
+        { type: "highlights", query: "What is Sitecrawl?" },
       ]);
     });
 
@@ -190,7 +190,7 @@ describe("V2 Types Validation", () => {
       expect(() =>
         scrapeRequestSchema.parse({
           url: "https://example.com",
-          formats: [{ type: "question", prompt: "What is Firecrawl?" } as any],
+          formats: [{ type: "question", prompt: "What is Sitecrawl?" } as any],
         }),
       ).toThrow();
 
@@ -205,7 +205,7 @@ describe("V2 Types Validation", () => {
         scrapeRequestSchema.parse({
           url: "https://example.com",
           formats: [
-            { type: "highlights", prompt: "What is Firecrawl?" } as any,
+            { type: "highlights", prompt: "What is Sitecrawl?" } as any,
           ],
         }),
       ).toThrow();
@@ -1117,13 +1117,13 @@ describe("V2 Types Validation", () => {
       const input: SearchRequestInput = {
         query: "test",
         scrapeOptions: {
-          formats: [{ type: "query", prompt: "What is Firecrawl?" }],
+          formats: [{ type: "query", prompt: "What is Sitecrawl?" }],
         },
       };
 
       const result = searchRequestSchema.parse(input);
       expect(result.scrapeOptions?.formats).toEqual([
-        { type: "query", prompt: "What is Firecrawl?", mode: "freeform" },
+        { type: "query", prompt: "What is Sitecrawl?", mode: "freeform" },
       ]);
     });
 
@@ -1132,16 +1132,16 @@ describe("V2 Types Validation", () => {
         query: "test",
         scrapeOptions: {
           formats: [
-            { type: "question", question: "What is Firecrawl?" },
-            { type: "highlights", query: "What is Firecrawl?" },
+            { type: "question", question: "What is Sitecrawl?" },
+            { type: "highlights", query: "What is Sitecrawl?" },
           ],
         },
       };
 
       const result = searchRequestSchema.parse(input);
       expect(result.scrapeOptions?.formats).toEqual([
-        { type: "question", question: "What is Firecrawl?" },
-        { type: "highlights", query: "What is Firecrawl?" },
+        { type: "question", question: "What is Sitecrawl?" },
+        { type: "highlights", query: "What is Sitecrawl?" },
       ]);
     });
 
@@ -1152,7 +1152,7 @@ describe("V2 Types Validation", () => {
           formats: [
             {
               type: "query",
-              prompt: "What is Firecrawl?",
+              prompt: "What is Sitecrawl?",
               mode: "quoted",
             } as any,
           ],
@@ -1169,7 +1169,7 @@ describe("V2 Types Validation", () => {
           formats: [
             {
               type: "query",
-              prompt: "What is Firecrawl?",
+              prompt: "What is Sitecrawl?",
               directQuote: true,
             } as any,
           ],
@@ -1419,7 +1419,7 @@ describe("V2 Types Validation", () => {
 
   describe("monitor search target goal validation", () => {
     const searchTargets = [
-      { type: "search" as const, queries: ["firecrawl launch"] },
+      { type: "search" as const, queries: ["sitecrawl launch"] },
     ];
 
     it("create rejects a search target without a goal", () => {
@@ -1468,7 +1468,7 @@ describe("V2 Types Validation", () => {
         name: "Judged search monitor",
         schedule: { text: "every 30 minutes" },
         targets: searchTargets,
-        goal: "Alert when Firecrawl launches",
+        goal: "Alert when Sitecrawl launches",
       });
       expect(result.judgeEnabled).toBe(true);
     });

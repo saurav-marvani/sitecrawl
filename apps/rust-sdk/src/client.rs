@@ -1,15 +1,15 @@
-//! Firecrawl API v2 client.
+//! Sitecrawl API v2 client.
 
 use reqwest::Response;
 use serde::de::DeserializeOwned;
 use serde_json::Value;
 
-use crate::error::FirecrawlError;
+use crate::error::SitecrawlError;
 
 pub(crate) const API_VERSION: &str = "/v2";
-const CLOUD_API_URL: &str = "https://api.firecrawl.dev";
+const CLOUD_API_URL: &str = "https://api.sitecrawl.dev";
 
-/// Firecrawl API v2 client.
+/// Sitecrawl API v2 client.
 ///
 /// This client provides access to all v2 API endpoints including scrape, crawl,
 /// search, map, batch scrape, and agent operations.
@@ -17,11 +17,11 @@ const CLOUD_API_URL: &str = "https://api.firecrawl.dev";
 /// # Example
 ///
 /// ```no_run
-/// use firecrawl::Client;
+/// use sitecrawl::Client;
 ///
 /// #[tokio::main]
 /// async fn main() -> Result<(), Box<dyn std::error::Error>> {
-///     // Create a client for the Firecrawl cloud service
+///     // Create a client for the Sitecrawl cloud service
 ///     let client = Client::new("your-api-key")?;
 ///
 ///     // Or create a client for a self-hosted instance
@@ -38,11 +38,11 @@ pub struct Client {
 }
 
 impl Client {
-    /// Creates a new client for the Firecrawl cloud service.
+    /// Creates a new client for the Sitecrawl cloud service.
     ///
     /// # Arguments
     ///
-    /// * `api_key` - Your Firecrawl API key.
+    /// * `api_key` - Your Sitecrawl API key.
     ///
     /// # Errors
     ///
@@ -51,19 +51,19 @@ impl Client {
     /// # Example
     ///
     /// ```no_run
-    /// use firecrawl::Client;
+    /// use sitecrawl::Client;
     ///
     /// let client = Client::new("your-api-key").unwrap();
     /// ```
-    pub fn new(api_key: impl AsRef<str>) -> Result<Self, FirecrawlError> {
+    pub fn new(api_key: impl AsRef<str>) -> Result<Self, SitecrawlError> {
         Client::new_selfhosted(CLOUD_API_URL, Some(api_key))
     }
 
-    /// Creates a new client for a self-hosted Firecrawl instance.
+    /// Creates a new client for a self-hosted Sitecrawl instance.
     ///
     /// # Arguments
     ///
-    /// * `api_url` - The base URL of your Firecrawl instance.
+    /// * `api_url` - The base URL of your Sitecrawl instance.
     /// * `api_key` - Optional API key (required for cloud, optional for self-hosted).
     ///
     /// # Errors
@@ -73,7 +73,7 @@ impl Client {
     /// # Example
     ///
     /// ```no_run
-    /// use firecrawl::Client;
+    /// use sitecrawl::Client;
     ///
     /// // Self-hosted without authentication
     /// let client = Client::new_selfhosted("http://localhost:3000", None::<&str>).unwrap();
@@ -84,7 +84,7 @@ impl Client {
     pub fn new_selfhosted(
         api_url: impl AsRef<str>,
         api_key: Option<impl AsRef<str>>,
-    ) -> Result<Self, FirecrawlError> {
+    ) -> Result<Self, SitecrawlError> {
         // Normalize URL by trimming trailing slashes for consistent comparison
         let url = api_url.as_ref().trim_end_matches('/').to_string();
         let api_key = api_key.map(|k| k.as_ref().to_string());
@@ -143,16 +143,16 @@ impl Client {
         &self,
         response: Response,
         action: impl AsRef<str>,
-    ) -> Result<T, FirecrawlError> {
+    ) -> Result<T, SitecrawlError> {
         let (is_success, status) = (response.status().is_success(), response.status());
 
         let response = response
             .text()
             .await
-            .map_err(FirecrawlError::ResponseParseErrorText)
+            .map_err(SitecrawlError::ResponseParseErrorText)
             .and_then(|response_json| {
                 serde_json::from_str::<Value>(&response_json)
-                    .map_err(FirecrawlError::ResponseParseError)
+                    .map_err(SitecrawlError::ResponseParseError)
             })
             .and_then(|response_value| {
                 // Check for success field, or allow responses without it for status checks
@@ -162,24 +162,24 @@ impl Client {
                     || response_value.get("success").is_none()
                 {
                     serde_json::from_value::<T>(response_value)
-                        .map_err(FirecrawlError::ResponseParseError)
+                        .map_err(SitecrawlError::ResponseParseError)
                 } else {
-                    Err(FirecrawlError::APIError(
+                    Err(SitecrawlError::APIError(
                         action.as_ref().to_string(),
                         serde_json::from_value(response_value)
-                            .map_err(FirecrawlError::ResponseParseError)?,
+                            .map_err(SitecrawlError::ResponseParseError)?,
                     ))
                 }
             });
 
         match &response {
             Ok(_) => response,
-            Err(FirecrawlError::ResponseParseError(_))
-            | Err(FirecrawlError::ResponseParseErrorText(_)) => {
+            Err(SitecrawlError::ResponseParseError(_))
+            | Err(SitecrawlError::ResponseParseErrorText(_)) => {
                 if is_success {
                     response
                 } else {
-                    Err(FirecrawlError::HttpRequestFailed(
+                    Err(SitecrawlError::HttpRequestFailed(
                         action.as_ref().to_string(),
                         status.as_u16(),
                         status.as_str().to_string(),
@@ -238,18 +238,18 @@ mod tests {
     #[test]
     fn test_url_builder() {
         let client = Client::new("test-key").unwrap();
-        assert_eq!(client.url("/scrape"), "https://api.firecrawl.dev/v2/scrape");
+        assert_eq!(client.url("/scrape"), "https://api.sitecrawl.dev/v2/scrape");
     }
 
     #[test]
     fn test_url_normalization_trailing_slash() {
         // Cloud URL with trailing slash is normalized; no API key required (keyless).
-        let client = Client::new_selfhosted("https://api.firecrawl.dev/", None::<&str>).unwrap();
-        assert_eq!(client.api_url, "https://api.firecrawl.dev");
+        let client = Client::new_selfhosted("https://api.sitecrawl.dev/", None::<&str>).unwrap();
+        assert_eq!(client.api_url, "https://api.sitecrawl.dev");
 
         // Should also work with an API key
-        let client = Client::new_selfhosted("https://api.firecrawl.dev/", Some("key")).unwrap();
-        assert_eq!(client.api_url, "https://api.firecrawl.dev");
+        let client = Client::new_selfhosted("https://api.sitecrawl.dev/", Some("key")).unwrap();
+        assert_eq!(client.api_url, "https://api.sitecrawl.dev");
 
         // Self-hosted URL normalization
         let client = Client::new_selfhosted("http://localhost:3000/", None::<&str>).unwrap();

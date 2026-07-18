@@ -1,2 +1,2 @@
-firecrawl-py
+sitecrawl-py
 openai

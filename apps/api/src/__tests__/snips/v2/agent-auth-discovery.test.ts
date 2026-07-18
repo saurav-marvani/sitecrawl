@@ -3,7 +3,7 @@ import { describeIf, TEST_API_URL, TEST_PRODUCTION } from "../lib";
 import request from "supertest";
 
 const CANONICAL_PRM_URL =
-  "https://www.firecrawl.dev/.well-known/oauth-protected-resource";
+  "https://www.sitecrawl.dev/.well-known/oauth-protected-resource";
 
 const EXPECTED_WWW_AUTHENTICATE = `Bearer resource_metadata="${CANONICAL_PRM_URL}"`;
 

@@ -34,7 +34,7 @@ export type StoredCrawl = {
 };
 
 export async function saveCrawl(id: string, crawl: StoredCrawl) {
-  return await withSpan("firecrawl-redis-save-crawl", async span => {
+  return await withSpan("sitecrawl-redis-save-crawl", async span => {
     setSpanAttributes(span, {
       "crawl.id": id,
       "crawl.team_id": crawl.team_id,
@@ -110,7 +110,7 @@ export async function markCrawlActive(id: string) {
 }
 
 export async function getCrawl(id: string): Promise<StoredCrawl | null> {
-  return await withSpan("firecrawl-redis-get-crawl", async span => {
+  return await withSpan("sitecrawl-redis-get-crawl", async span => {
     setSpanAttributes(span, {
       "crawl.id": id,
       operation: "get_crawl",
@@ -148,7 +148,7 @@ export async function addCrawlJob(
   job_id: string,
   __logger: Logger = _logger,
 ) {
-  return await withSpan("firecrawl-redis-add-crawl-job", async span => {
+  return await withSpan("sitecrawl-redis-add-crawl-job", async span => {
     setSpanAttributes(span, {
       "crawl.id": id,
       "crawl.job_id": job_id,
@@ -490,7 +490,7 @@ export async function lockURL(
   sc: StoredCrawl,
   url: string,
 ): Promise<boolean> {
-  return await withSpan("firecrawl-redis-lock-url", async span => {
+  return await withSpan("sitecrawl-redis-lock-url", async span => {
     const normalizedUrl = normalizeURL(url, sc);
     setSpanAttributes(span, {
       "crawl.id": id,

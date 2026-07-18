@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """
-Firecrawl + Gemini 2.5 Flash Image CLI Editor
+Sitecrawl + Gemini 2.5 Flash Image CLI Editor
 =============================================
 
-A professional CLI tool that captures website screenshots using Firecrawl
+A professional CLI tool that captures website screenshots using Sitecrawl
 and applies AI-powered image editing using Google's Gemini 2.5 Flash Image model.
 
 Features:
-- Website screenshot capture with Firecrawl API
+- Website screenshot capture with Sitecrawl API
 - Text-to-image generation
 - Advanced style transfer (Van Gogh, Monet, etc.)
 - Multi-image composition
@@ -36,7 +36,7 @@ try:
     from google import genai
     from PIL import Image
     from io import BytesIO
-    from firecrawl import Firecrawl
+    from sitecrawl import Sitecrawl
     import requests
 except ImportError as e:
     print(f"Error: Missing dependency: {e}")
@@ -44,7 +44,7 @@ except ImportError as e:
     sys.exit(1)
 
 
-class FirecrawlGeminiEditor:
+class SitecrawlGeminiEditor:
     """Main class for screenshot capture and AI editing with advanced features."""
 
     # Advanced style prompts for artistic transformations
@@ -61,12 +61,12 @@ class FirecrawlGeminiEditor:
         'comic_book': "Apply comic book style with bold outlines, Ben Day dots, and vibrant colors"
     }
 
-    def __init__(self, firecrawl_key: str, gemini_key: str, firecrawl_url: str = None, verbose: bool = False):
+    def __init__(self, sitecrawl_key: str, gemini_key: str, sitecrawl_url: str = None, verbose: bool = False):
         """Initialize with API keys and configuration."""
         self.verbose = verbose
-        self.firecrawl = Firecrawl(
-            api_key=firecrawl_key,
-            api_url=firecrawl_url or "https://api.firecrawl.dev"
+        self.sitecrawl = Sitecrawl(
+            api_key=sitecrawl_key,
+            api_url=sitecrawl_url or "https://api.sitecrawl.dev"
         )
 
         # Initialize Gemini client
@@ -78,7 +78,7 @@ class FirecrawlGeminiEditor:
 
     def capture_screenshot(self, url: str, full_page: bool = True, mobile: bool = False,
                          wait_time: int = 3) -> str:
-        """Capture screenshot using Firecrawl with enhanced options."""
+        """Capture screenshot using Sitecrawl with enhanced options."""
         try:
             if self.verbose:
                 print(f"Capturing screenshot: {url}")
@@ -99,7 +99,7 @@ class FirecrawlGeminiEditor:
                 options["mobile"] = True
 
             # Capture screenshot
-            result = self.firecrawl.scrape(url, **options)
+            result = self.sitecrawl.scrape(url, **options)
 
             # Extract screenshot data
             if hasattr(result, 'screenshot'):
@@ -435,12 +435,12 @@ class FirecrawlGeminiEditor:
 
 def validate_environment():
     """Check for required environment variables."""
-    firecrawl_key = os.getenv('FIRECRAWL_API_KEY')
+    sitecrawl_key = os.getenv('SITECRAWL_API_KEY')
     gemini_key = os.getenv('GEMINI_API_KEY')
 
     missing = []
-    if not firecrawl_key:
-        missing.append('FIRECRAWL_API_KEY')
+    if not sitecrawl_key:
+        missing.append('SITECRAWL_API_KEY')
     if not gemini_key:
         missing.append('GEMINI_API_KEY')
 
@@ -449,11 +449,11 @@ def validate_environment():
         for var in missing:
             print(f"  - {var}")
         print("\nSet them in .env file or export them:")
-        print("  export FIRECRAWL_API_KEY='your-key-here'")
+        print("  export SITECRAWL_API_KEY='your-key-here'")
         print("  export GEMINI_API_KEY='your-key-here'")
         sys.exit(1)
 
-    return firecrawl_key, gemini_key
+    return sitecrawl_key, gemini_key
 
 
 def main():
@@ -461,7 +461,7 @@ def main():
     parser = argparse.ArgumentParser(
         prog='cli.py',
         usage='%(prog)s [URL] [MODE] [OPTIONS]',
-        description="Firecrawl + Gemini 2.5 Flash Image CLI - Transform website screenshots with AI",
+        description="Sitecrawl + Gemini 2.5 Flash Image CLI - Transform website screenshots with AI",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 EXAMPLES:
@@ -552,17 +552,17 @@ PRESET STYLES:
 
     # API configuration
     api_group = parser.add_argument_group('API Configuration')
-    api_group.add_argument('--firecrawl-url', help='Custom Firecrawl endpoint')
+    api_group.add_argument('--sitecrawl-url', help='Custom Sitecrawl endpoint')
 
     args = parser.parse_args()
 
     # Validate environment
-    firecrawl_key, gemini_key = validate_environment()
+    sitecrawl_key, gemini_key = validate_environment()
 
     # Initialize editor
-    editor = FirecrawlGeminiEditor(
-        firecrawl_key, gemini_key,
-        firecrawl_url=args.firecrawl_url,
+    editor = SitecrawlGeminiEditor(
+        sitecrawl_key, gemini_key,
+        sitecrawl_url=args.sitecrawl_url,
         verbose=args.verbose
     )
 

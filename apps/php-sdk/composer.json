@@ -1,18 +1,18 @@
 {
     "$schema": "https://getcomposer.org/schema.json",
-    "name": "firecrawl/firecrawl-sdk",
-    "description": "PHP SDK for the Firecrawl v2 API with Laravel support",
+    "name": "sitecrawl/sitecrawl-sdk",
+    "description": "PHP SDK for the Sitecrawl v2 API with Laravel support",
     "license": "MIT",
     "type": "library",
     "keywords": [
-        "firecrawl",
+        "sitecrawl",
         "web-scraping",
         "crawling",
         "api",
         "laravel",
         "php"
     ],
-    "homepage": "https://firecrawl.dev",
+    "homepage": "https://sitecrawl.dev",
     "require": {
         "php": "^8.1",
         "guzzlehttp/guzzle": "^7.9",
@@ -32,11 +32,11 @@
     "suggest": {
         "illuminate/contracts": "Required for Laravel integration (^10.0|^11.0|^12.0)",
         "illuminate/support": "Required for Laravel integration (^10.0|^11.0|^12.0)",
-        "laravel/ai": "Required for the Laravel AI SDK tool classes in Firecrawl\\Laravel\\Tools (^0.9, needs PHP 8.3+ and Laravel 12+)"
+        "laravel/ai": "Required for the Laravel AI SDK tool classes in Sitecrawl\\Laravel\\Tools (^0.9, needs PHP 8.3+ and Laravel 12+)"
     },
     "autoload": {
         "psr-4": {
-            "Firecrawl\\": "src/"
+            "Sitecrawl\\": "src/"
         }
     },
     "autoload-dev": {
@@ -54,10 +54,10 @@
     "extra": {
         "laravel": {
             "providers": [
-                "Firecrawl\\Laravel\\FirecrawlServiceProvider"
+                "Sitecrawl\\Laravel\\SitecrawlServiceProvider"
             ],
             "aliases": {
-                "Firecrawl": "Firecrawl\\Laravel\\Facades\\Firecrawl"
+                "Sitecrawl": "Sitecrawl\\Laravel\\Facades\\Sitecrawl"
             }
         }
     },

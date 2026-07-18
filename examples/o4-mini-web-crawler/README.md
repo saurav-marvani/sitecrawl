@@ -1,6 +1,6 @@
 # O4 Mini Web Crawler
 
-A simple web crawler that uses Firecrawl and OpenAI's o4-mini model to search websites based on user objectives.
+A simple web crawler that uses Sitecrawl and OpenAI's o4-mini model to search websites based on user objectives.
 
 ## Features
 
@@ -12,7 +12,7 @@ A simple web crawler that uses Firecrawl and OpenAI's o4-mini model to search we
 ## Prerequisites
 
 - Python 3.6+
-- Firecrawl API key
+- Sitecrawl API key
 - OpenAI API key
 
 ## Installation

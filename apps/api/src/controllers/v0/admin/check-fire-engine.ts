@@ -17,7 +17,7 @@ export async function checkFireEngine(req: Request, res: Response) {
     const timeout = setTimeout(() => controller.abort(), 30000);
 
     const urls = [
-      "https://firecrawl-test-site.vercel.app",
+      "https://sitecrawl-test-site.vercel.app",
       "https://example.com",
     ];
     let lastError: any = null;

@@ -152,7 +152,7 @@ export async function scrapePDFWithFirePDF(
       }),
       ...(zdr ? {} : { url: meta.rewrittenUrl ?? meta.url }),
       pdf_sha256: pdfSha256,
-      source: "firecrawl",
+      source: "sitecrawl",
       zdr,
       ...deadlineFields,
     },

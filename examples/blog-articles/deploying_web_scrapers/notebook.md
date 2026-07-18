@@ -136,16 +136,16 @@ Before starting with any deployment method, you'll need to create accounts on th
    - [Heroku account](https://signup.heroku.com/)
    - [PythonAnywhere account](https://www.pythonanywhere.com/)
 
-3. **[Firecrawl account](https://firecrawl.dev)** (Optional)
-   - Only needed if you decide to use an AI-based scraper (more on Firecrawl soon).  
+3. **[Sitecrawl account](https://sitecrawl.dev)** (Optional)
+   - Only needed if you decide to use an AI-based scraper (more on Sitecrawl soon).  
 
 Note: Most cloud platforms require a credit card for verification, even when using free tiers. However, they won't charge you unless you exceed free tier limits.
 
 ### Building a basic scraper
 
-To demonstrate deployment concepts effectively, we'll start by building a basic web scraper using Firecrawl, a modern scraping API that simplifies many common challenges.
+To demonstrate deployment concepts effectively, we'll start by building a basic web scraper using Sitecrawl, a modern scraping API that simplifies many common challenges.
 
-[Firecrawl](https://docs.firecrawl.dev) offers several key advantages compared to traditional Python web scraping libraries:
+[Sitecrawl](https://docs.sitecrawl.dev) offers several key advantages compared to traditional Python web scraping libraries:
 
 - Dead simple to use with only a few dependencies
 - Handles complex scraping challenges automatically (proxies, anti-bot mechanisms, dynamic JS content)
@@ -162,7 +162,7 @@ As an example, we will build a simple scraper for [ProductHunt](https://www.prod
 
 The scraper extracts the following information from each product:
 
-![Sample Product Hunt product card showing key data fields including product name, description, upvotes, comments, topics and logo that our Firecrawl scraper will extract](deploying-web-scrapers-images/ph-sample.png)
+![Sample Product Hunt product card showing key data fields including product name, description, upvotes, comments, topics and logo that our Sitecrawl scraper will extract](deploying-web-scrapers-images/ph-sample.png)
 
 Let's get building:
 
@@ -172,18 +172,18 @@ cd product-hunt-scraper
 touch scraper.py .env
 python -m venv venv
 source venv/bin/activate
-pip install pydantic firecrawl-py
-echo "FIRECRAWL_API_KEY='your-api-key-here' >> .env"
+pip install pydantic sitecrawl-py
+echo "SITECRAWL_API_KEY='your-api-key-here' >> .env"
 ```
 
-These commands set up a working directory for the scraper, along with a virtual environment and the main script. The last part also saves your Firecrawl API key, which you can get through their free plan by [signing up for an account](firecrawl.dev).
+These commands set up a working directory for the scraper, along with a virtual environment and the main script. The last part also saves your Sitecrawl API key, which you can get through their free plan by [signing up for an account](sitecrawl.dev).
 
 Let's work on the code now:
 
 ```python
 import json
 
-from firecrawl import FirecrawlApp
+from sitecrawl import SitecrawlApp
 from dotenv import load_dotenv
 from pydantic import BaseModel, Field
 from datetime import datetime
@@ -191,7 +191,7 @@ from datetime import datetime
 load_dotenv()
 ```
 
-First, we import a few packages and the `FirecrawlApp` class - we use it to establish a connection with Firecrawl's scraping engine. Then, we define a Pydantic class outlining the details we want to scrape from each product:
+First, we import a few packages and the `SitecrawlApp` class - we use it to establish a connection with Sitecrawl's scraping engine. Then, we define a Pydantic class outlining the details we want to scrape from each product:
 
 ```python
 class Product(BaseModel):
@@ -214,7 +214,7 @@ class Product(BaseModel):
 
 The field descriptions in this class play a crucial role in guiding the LLM scraping engine. By providing natural language descriptions for each field, we tell the LLM exactly what information to look for and where to find it on the page. For example, when we say "A list of topics under the product description", the LLM understands both the content we want (topics) and its location (below the description).
 
-This natural language approach allows Firecrawl to intelligently parse the page's HTML structure and extract the right information without requiring explicit CSS selectors or XPaths. The LLM analyzes the semantic meaning of our descriptions and matches them to the appropriate elements on the page.
+This natural language approach allows Sitecrawl to intelligently parse the page's HTML structure and extract the right information without requiring explicit CSS selectors or XPaths. The LLM analyzes the semantic meaning of our descriptions and matches them to the appropriate elements on the page.
 
 This approach offers two practical advantages: it reduces initial development time since you don't need to manually inspect HTML structures, and it provides long-lasting resilience against HTML changes. Since the LLM understands the semantic meaning of the elements rather than relying on specific selectors, it can often continue working even when class names or IDs are updated. This makes it suitable for scenarios where long-term maintenance is a consideration.
 
@@ -227,7 +227,7 @@ class YesterdayTopProducts(BaseModel):
     )
 ```
 
-The `YesterdayTopProducts` parent class is essential - without it, Firecrawl would only scrape a single product instead of the full list. This happens because Firecrawl strictly adheres to the provided schema structure, ensuring consistent and reliable output on every scraping run.
+The `YesterdayTopProducts` parent class is essential - without it, Sitecrawl would only scrape a single product instead of the full list. This happens because Sitecrawl strictly adheres to the provided schema structure, ensuring consistent and reliable output on every scraping run.
 
 Now, we define a function that scrapes ProductHunt based on the schema we just defined:
 
@@ -236,7 +236,7 @@ BASE_URL = "https://www.producthunt.com"
 
 
 def get_yesterday_top_products():
-    app = FirecrawlApp()
+    app = SitecrawlApp()
 
     data = app.scrape_url(
         BASE_URL,
@@ -253,9 +253,9 @@ def get_yesterday_top_products():
     return data["extract"]["products"]
 ```
 
-This function initializes a Firecrawl app, which reads your Firecrawl API key stored in an `.env` file and scrapes the URL. Notice the parameters being passed to the `scrape_url()` method:
+This function initializes a Sitecrawl app, which reads your Sitecrawl API key stored in an `.env` file and scrapes the URL. Notice the parameters being passed to the `scrape_url()` method:
 
-- `formats` specifies how the data should be scraped and extracted. Firecrawl supports other formats like markdown, HTML, screenshots or links.
+- `formats` specifies how the data should be scraped and extracted. Sitecrawl supports other formats like markdown, HTML, screenshots or links.
 - `schema`: The JSON schema produced by the Pydantic class
 - `prompt`: A general prompt guiding the underlying LLM on what to do. Providing a prompt usually improves the performance.
 
@@ -361,7 +361,7 @@ jobs:
         
     - name: Run scraper
       env:
-        FIRECRAWL_API_KEY: ${{ secrets.FIRECRAWL_API_KEY }}
+        SITECRAWL_API_KEY: ${{ secrets.SITECRAWL_API_KEY }}
       run: python scraper.py
         
     - name: Commit and push if changes
@@ -404,7 +404,7 @@ For simple projects, you can create this file manually and adding each package o
 
 ```text
 pydantic
-firecrawl-py
+sitecrawl-py
 ```
 
 However, if you have a large project with multiple files and dozens of dependencies, you need an automated method. The simplest one I can suggest is using `pipreqs` package:
@@ -423,11 +423,11 @@ If you notice, the workflow file has a step that executes `scraper.py`:
 ```yml
 - name: Run scraper
       env:
-        FIRECRAWL_API_KEY: ${{ secrets.FIRECRAWL_API_KEY }}
+        SITECRAWL_API_KEY: ${{ secrets.SITECRAWL_API_KEY }}
       run: python scraper.py
 ```
 
-The workflow retrieves environment variables using the `secrets.SECRET_NAME` syntax. Since the `.env` file containing your Firecrawl API key isn't uploaded to GitHub for security reasons, you'll need to store the key in your GitHub repository secrets.
+The workflow retrieves environment variables using the `secrets.SECRET_NAME` syntax. Since the `.env` file containing your Sitecrawl API key isn't uploaded to GitHub for security reasons, you'll need to store the key in your GitHub repository secrets.
 
 To add your API key as a secret:
 
@@ -435,7 +435,7 @@ To add your API key as a secret:
 2. Click on "Settings"
 3. Select "Secrets and variables" then "Actions"
 4. Click "New repository secret"
-5. Enter "FIRECRAWL_API_KEY" as the name
+5. Enter "SITECRAWL_API_KEY" as the name
 6. Paste your API key as the value
 7. Click "Add secret"
 
@@ -522,7 +522,7 @@ echo "python-3.10.12" > runtime.txt
 Instead of using a `.env` file, Heroku requires you to set your environment variables directly using the Heroku CLI:
 
 ```bash
-heroku config:set FIRECRAWL_API_KEY='your-api-key-here'
+heroku config:set SITECRAWL_API_KEY='your-api-key-here'
 ```
 
 You can verify the variables are set correctly with:
@@ -699,7 +699,7 @@ $ pip install -r requirements.txt
 
 # Recreate your .env file
 $ touch .env
-$ echo "FIRECRAWL_API_KEY='your-api-key-here'" >> .env
+$ echo "SITECRAWL_API_KEY='your-api-key-here'" >> .env
 ```
 
 ### Scheduling the Scraper
@@ -792,7 +792,7 @@ from tenacity import retry, stop_after_attempt, wait_exponential
 )
 def get_yesterday_top_products():
     try:
-        app = FirecrawlApp()
+        app = SitecrawlApp()
         data = app.scrape_url(
             BASE_URL,
             params={
@@ -981,8 +981,8 @@ Remember, start small and scale up as needed. No need to jump straight into comp
 Here are some related resources that might interest you:
 
 - [GitHub Actions documentation](https://docs.github.com/en/actions)
-- [Firecrawl documentation](docs.firecrawl.dev)
-- [Comprehensive guide on Firecrawl's `scrape_url` method](https://www.firecrawl.dev/blog/mastering-firecrawl-scrape-endpoint)
-- [How to generate sitemaps in Python using Firecrawl](https://www.firecrawl.dev/blog/how-to-generate-sitemaps-using-firecrawl-map-endpoint)
+- [Sitecrawl documentation](docs.sitecrawl.dev)
+- [Comprehensive guide on Sitecrawl's `scrape_url` method](https://www.sitecrawl.dev/blog/mastering-sitecrawl-scrape-endpoint)
+- [How to generate sitemaps in Python using Sitecrawl](https://www.sitecrawl.dev/blog/how-to-generate-sitemaps-using-sitecrawl-map-endpoint)
 
 Thank you for reading!

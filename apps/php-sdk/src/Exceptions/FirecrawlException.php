@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Firecrawl\Exceptions;
+namespace Sitecrawl\Exceptions;
 
 use RuntimeException;
 use Throwable;
 
-class FirecrawlException extends RuntimeException
+class SitecrawlException extends RuntimeException
 {
     public function __construct(
         string $message = '',

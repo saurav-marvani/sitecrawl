@@ -17,9 +17,9 @@ Everyone’s been asking for this – an endpoint that combines search with scra
 Using /search in code is straightforward. Here’s a quick example:
 
 ```python
-from firecrawl import FirecrawlApp, ScrapeOptions
+from sitecrawl import SitecrawlApp, ScrapeOptions
 
-app = FirecrawlApp(api_key="fc-YOUR_API_KEY")
+app = SitecrawlApp(api_key="fc-YOUR_API_KEY")
 
 # Search and scrape in one call
 results = app.search(
@@ -50,13 +50,13 @@ On day one, we’ve added /search to all our integrations - Zapier, n8n, MCP, an
 
 Ready to discover and extract web data with one API call?
 
-- Read the [/search documentation](https://docs.firecrawl.dev/features/search)
-- Experiment in the [Playground](https://firecrawl.link/search-pg)
-- See /search [examples and templates](https://www.firecrawl.dev/templates)
-- Share your projects on [Discord](https://discord.gg/firecrawl)
+- Read the [/search documentation](https://docs.sitecrawl.dev/features/search)
+- Experiment in the [Playground](https://sitecrawl.link/search-pg)
+- See /search [examples and templates](https://www.sitecrawl.dev/templates)
+- Share your projects on [Discord](https://discord.gg/sitecrawl)
 
 That’s /search — the simplest way to discover and scrape web pages. Excited to see what you build with it!
 
 ---
 
-P.S. We’re no longer actively supporting our alpha endpoints /llmstxt and /deep-research starting June 30, 2025. Both will remain active but we just will not be pushing further updates. For an /llmstxt alternative, see this [Firecrawl example](https://github.com/firecrawl/create-llmstxt-py). For deep research, check out our new Search API or our open source [Firesearch](https://github.com/firecrawl/firesearch) project.
+P.S. We’re no longer actively supporting our alpha endpoints /llmstxt and /deep-research starting June 30, 2025. Both will remain active but we just will not be pushing further updates. For an /llmstxt alternative, see this [Sitecrawl example](https://github.com/sitecrawl/create-llmstxt-py). For deep research, check out our new Search API or our open source [Firesearch](https://github.com/sitecrawl/firesearch) project.

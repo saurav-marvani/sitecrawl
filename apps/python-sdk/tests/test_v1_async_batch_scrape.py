@@ -1,10 +1,10 @@
 import asyncio
 
-from firecrawl.v1.client import AsyncV1FirecrawlApp
+from sitecrawl.v1.client import AsyncV1SitecrawlApp
 
 
 def test_async_batch_scrape_urls_accepts_parsed_json_response(monkeypatch):
-    app = AsyncV1FirecrawlApp(api_key="fc-test", api_url="http://localhost:9")
+    app = AsyncV1SitecrawlApp(api_key="fc-test", api_url="http://localhost:9")
     calls = []
 
     async def fake_post_request(url, data, headers):

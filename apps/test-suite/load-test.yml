@@ -1,5 +1,5 @@
 config:
-  target: "https://staging-firecrawl-scraper-js.fly.dev/v0"
+  target: "https://staging-sitecrawl-scraper-js.fly.dev/v0"
   http:
     timeout: 30
   phases:
@@ -69,7 +69,7 @@ scenarios:
   #     - post:
   #         url: "/search"
   #         json:
-  #           query: "firecrawl"
+  #           query: "sitecrawl"
   #           pageOptions:
   #             fetchPageContent: true
   #         capture:

@@ -18,7 +18,7 @@ const KEYLESS_REQUESTS_PER_DAY = config.KEYLESS_REQUESTS_PER_DAY;
 const KEYLESS_CREDITS_PER_DAY = config.KEYLESS_CREDITS_PER_DAY;
 
 // Shared 429 copy for both keyless request-cap and credit-cap failures.
-export const KEYLESS_FREE_TIER_LIMIT_MESSAGE = `You've hit Firecrawl's keyless free tier rate limit. To continue now, create a free API key at https://www.firecrawl.dev/signin.
+export const KEYLESS_FREE_TIER_LIMIT_MESSAGE = `You've hit Sitecrawl's keyless free tier rate limit. To continue now, create a free API key at https://www.sitecrawl.dev/signin.
 
 Then authenticate with:
 Authorization: Bearer YOUR_API_KEY`;
@@ -72,7 +72,7 @@ export function keylessTeamUuid(
  * Keyless is allowed only for a *valid IPv4* client identity. This both:
  *  - denies IPv6 (a single client controls a huge block — a /64 is ~18
  *    quintillion addresses — so a per-IP cap is trivially bypassed), and
- *  - rejects malformed/unknown values (e.g. a forwarded `x-firecrawl-keyless-ip`
+ *  - rejects malformed/unknown values (e.g. a forwarded `x-sitecrawl-keyless-ip`
  *    that isn't a real IP), so they can't be used to mint arbitrary buckets and
  *    weaken per-IP quota enforcement.
  * IPv4-mapped IPv6 (e.g. "::ffff:1.2.3.4", how dual-stack sockets surface IPv4)

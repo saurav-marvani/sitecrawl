@@ -1,4 +1,4 @@
-//! Type definitions for Firecrawl API v2.
+//! Type definitions for Sitecrawl API v2.
 
 use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
 use serde_json::Value;
@@ -547,7 +547,7 @@ impl From<&str> for AgentWebhookConfig {
 #[derive(Deserialize, Serialize, Debug, Default, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct DocumentMetadata {
-    // Firecrawl specific
+    // Sitecrawl specific
     #[serde(rename = "sourceURL")]
     pub source_url: Option<String>,
     pub status_code: Option<u16>,
@@ -1029,7 +1029,7 @@ mod tests {
     fn test_full_document_with_array_metadata() {
         let json = json!({
             "markdown": "# Hello",
-            "video": "https://storage.googleapis.com/firecrawl/video.mp4",
+            "video": "https://storage.googleapis.com/sitecrawl/video.mp4",
             "metadata": {
                 "sourceURL": "https://example.com",
                 "statusCode": 200,
@@ -1038,14 +1038,14 @@ mod tests {
                 "robots": ["index", "follow"],
                 "ogImage": ["https://img.jpg"],
                 "language": "en",
-                "keywords": ["rust", "sdk", "firecrawl"]
+                "keywords": ["rust", "sdk", "sitecrawl"]
             }
         });
         let doc: Document = serde_json::from_value(json).unwrap();
         assert_eq!(doc.markdown, Some("# Hello".to_string()));
         assert_eq!(
             doc.video,
-            Some("https://storage.googleapis.com/firecrawl/video.mp4".to_string())
+            Some("https://storage.googleapis.com/sitecrawl/video.mp4".to_string())
         );
         let meta = doc.metadata.unwrap();
         assert_eq!(meta.title, Some("Example Page".to_string()));
@@ -1056,7 +1056,7 @@ mod tests {
         assert_eq!(meta.robots, Some("index, follow".to_string()));
         assert_eq!(meta.og_image, Some("https://img.jpg".to_string()));
         assert_eq!(meta.language, Some("en".to_string()));
-        assert_eq!(meta.keywords, Some("rust, sdk, firecrawl".to_string()));
+        assert_eq!(meta.keywords, Some("rust, sdk, sitecrawl".to_string()));
     }
 
     #[test]

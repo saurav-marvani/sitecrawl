@@ -1,29 +1,29 @@
 # Build an agent that checks your website for contradictions
 
-Learn how to use Firecrawl and Claude to scrape your website's data and look for contradictions and inconsistencies in a few lines of code. When you are shipping fast, data is bound to get stale, with FireCrawl and LLMs you can make sure your public web data is always consistent! We will be using Opus's huge 200k context window and Firecrawl's parellization, making this process accurate and fast.
+Learn how to use Sitecrawl and Claude to scrape your website's data and look for contradictions and inconsistencies in a few lines of code. When you are shipping fast, data is bound to get stale, with Sitecrawl and LLMs you can make sure your public web data is always consistent! We will be using Opus's huge 200k context window and Sitecrawl's parellization, making this process accurate and fast.
 
 ## Setup
 
-Install our python dependencies, including anthropic and firecrawl-py.
+Install our python dependencies, including anthropic and sitecrawl-py.
 
 ```bash
-pip install firecrawl-py anthropic
+pip install sitecrawl-py anthropic
 ```
 
-## Getting your Claude and Firecrawl API Keys
+## Getting your Claude and Sitecrawl API Keys
 
-To use Claude Opus and Firecrawl, you will need to get your API keys. You can get your Anthropic API key from [here](https://www.anthropic.com/) and your Firecrawl API key from [here](https://firecrawl.dev).
+To use Claude Opus and Sitecrawl, you will need to get your API keys. You can get your Anthropic API key from [here](https://www.anthropic.com/) and your Sitecrawl API key from [here](https://sitecrawl.dev).
 
-## Load website with Firecrawl
+## Load website with Sitecrawl
 
-To be able to get all the data from our website page put it into an easy to read format for the LLM, we will use [FireCrawl](https://firecrawl.dev). It handles by-passing JS-blocked websites, extracting the main content, and outputting in a LLM-readable format for increased accuracy.
+To be able to get all the data from our website page put it into an easy to read format for the LLM, we will use [Sitecrawl](https://sitecrawl.dev). It handles by-passing JS-blocked websites, extracting the main content, and outputting in a LLM-readable format for increased accuracy.
 
-Here is how we will scrape a website url using Firecrawl-py
+Here is how we will scrape a website url using Sitecrawl-py
 
 ```python
-from firecrawl import FirecrawlApp
+from sitecrawl import SitecrawlApp
 
-app = FirecrawlApp(api_key="YOUR-KEY")
+app = SitecrawlApp(api_key="YOUR-KEY")
 
 crawl_result = app.crawl_url('mendable.ai', {'crawlerOptions': {'excludes': ['blog/*','usecases/*']}})
 
@@ -75,4 +75,4 @@ for page_combination in page_combinations:
 
 You have now built an agent that looks at your website and spots any inconsistencies it might have.
 
-If you have any questions or need help, feel free to reach out to us at [Firecrawl](https://firecrawl.dev).
+If you have any questions or need help, feel free to reach out to us at [Sitecrawl](https://sitecrawl.dev).

@@ -3,7 +3,7 @@ import { config } from "../../../../config";
 import { EngineScrapeResult } from "..";
 import { Meta } from "../..";
 import { robustFetch } from "../../lib/fetch";
-import { getInnerJson } from "@mendable/firecrawl-rs";
+import { getInnerJson } from "@mendable/sitecrawl-rs";
 
 export async function scrapeURLWithPlaywright(
   meta: Meta,

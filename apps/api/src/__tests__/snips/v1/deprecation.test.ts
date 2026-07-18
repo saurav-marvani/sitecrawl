@@ -19,7 +19,7 @@ describe("Deprecation warnings on legacy endpoints", () => {
       .post("/v1/llmstxt")
       .set("Authorization", `Bearer ${identity.apiKey}`)
       .set("Content-Type", "application/json")
-      .send({ url: "https://firecrawl.dev" });
+      .send({ url: "https://sitecrawl.dev" });
 
     expect(res.statusCode).toBe(200);
     expect(res.body.success).toBe(true);
@@ -57,7 +57,7 @@ describe("Deprecation warnings on legacy endpoints", () => {
       .set("Authorization", `Bearer ${identity.apiKey}`)
       .set("Content-Type", "application/json")
       .send({
-        query: "what is firecrawl",
+        query: "what is sitecrawl",
         maxDepth: 1,
         maxUrls: 1,
         timeLimit: 60,
@@ -81,7 +81,7 @@ describe("Deprecation warnings on legacy endpoints", () => {
       .post("/v1/scrape")
       .set("Authorization", `Bearer ${identity.apiKey}`)
       .set("Content-Type", "application/json")
-      .send({ url: "https://firecrawl.dev" });
+      .send({ url: "https://sitecrawl.dev" });
 
     expect(res.headers["deprecation"]).toBeUndefined();
     expect(res.headers["warning"]).toBeUndefined();

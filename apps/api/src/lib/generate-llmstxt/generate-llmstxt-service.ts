@@ -30,12 +30,12 @@ const descriptionSchema = z.object({
 
 // Helper function to remove page separators
 function removePageSeparators(text: string): string {
-  return text.replace(/<\|firecrawl-page-\d+-lllmstxt\|>\n/g, "");
+  return text.replace(/<\|sitecrawl-page-\d+-lllmstxt\|>\n/g, "");
 }
 
 // Helper function to limit pages in full text
 function limitPages(fullText: string, maxPages: number): string {
-  const pages = fullText.split(/<\|firecrawl-page-\d+-lllmstxt\|>\n/);
+  const pages = fullText.split(/<\|sitecrawl-page-\d+-lllmstxt\|>\n/);
   // First element is the header, so we start from index 1
   const limitedPages = pages.slice(0, maxPages + 1);
   return limitedPages.join("");
@@ -221,7 +221,7 @@ export async function performGenerateLlmsTxt(
         if (!result) continue;
 
         llmstxt += `- [${result.title}](${result.url}): ${result.description}\n`;
-        llmsFulltxt += `<|firecrawl-page-${i + batchResults.indexOf(result) + 1}-lllmstxt|>\n## ${result.title}\n${result.markdown}\n\n`;
+        llmsFulltxt += `<|sitecrawl-page-${i + batchResults.indexOf(result) + 1}-lllmstxt|>\n## ${result.title}\n${result.markdown}\n\n`;
       }
 
       // Update progress after each batch

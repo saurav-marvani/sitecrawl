@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Firecrawl\Exceptions;
+namespace Sitecrawl\Exceptions;
 
-class AuthenticationException extends FirecrawlException
+class AuthenticationException extends SitecrawlException
 {
     public function __construct(
         string $message = 'Authentication failed. Check your API key.',

@@ -68,7 +68,7 @@ type RequestSurface =
  * (scrape/crawl/search/map/agent/parse/browser) — only feedback/interact/
  * search-feedback also set `origin: "cli"`. So CLI must be detected via
  * `integration`, or the bulk of CLI traffic is miscounted as `api`. (Verified
- * against firecrawl/cli.)
+ * against sitecrawl/cli.)
  */
 function originToSurface(
   origin?: string | null,
@@ -86,7 +86,7 @@ function originToSurface(
 }
 
 /**
- * Resolve the PostHog distinct_id for a request. firecrawl-web identifies
+ * Resolve the PostHog distinct_id for a request. sitecrawl-web identifies
  * persons by email (`posthog.identify(user.email)`), so to attribute backend
  * events to the same person we key on the API key owner's email. Falls back to
  * the team_id (team-level) when the owner/email can't be resolved.
@@ -155,7 +155,7 @@ export function trackFirstSurfaceUse(args: {
   void (async () => {
     try {
       const surface = originToSurface(origin, integration);
-      const key = `firecrawl:surface_first:${teamId}:${surface}`;
+      const key = `sitecrawl:surface_first:${teamId}:${surface}`;
       // SET key 1 NX → "OK" only the very first time; null otherwise. Atomic.
       const isFirst = await redisEvictConnection.set(key, "1", "NX");
       if (isFirst !== "OK") return;

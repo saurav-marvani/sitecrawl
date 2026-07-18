@@ -352,10 +352,10 @@ for (let i = 0; i < replay.actions.length; i += 1) {
       case "screenshot":
       case "pdf":
       case "scrape":
-        console.log(\`[firecrawl-replay] skipping output-only action: \${action.type}\`);
+        console.log(\`[sitecrawl-replay] skipping output-only action: \${action.type}\`);
         break;
       default:
-        console.log(\`[firecrawl-replay] skipping unsupported action type: \${String(action.type)}\`);
+        console.log(\`[sitecrawl-replay] skipping unsupported action type: \${String(action.type)}\`);
         break;
     }
 

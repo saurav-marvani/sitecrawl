@@ -79,7 +79,7 @@ describe("Scrape tests", () => {
         identity,
       );
 
-      expect(response.markdown).toContain("Firecrawl");
+      expect(response.markdown).toContain("Sitecrawl");
     },
     scrapeTimeout,
   );
@@ -219,8 +219,8 @@ describe("Scrape tests", () => {
 
     expect(response.images).toBeDefined();
     expect(response.images?.length).toBeGreaterThan(0);
-    // Firecrawl website should have at least the logo
-    expect(response.images?.some(img => img.includes("firecrawl"))).toBe(true);
+    // Sitecrawl website should have at least the logo
+    expect(response.images?.some(img => img.includes("sitecrawl"))).toBe(true);
   });
 
   concurrentIf(ALLOW_TEST_SUITE_WEBSITE)(
@@ -311,7 +311,7 @@ describe("Scrape tests", () => {
         identity,
       );
 
-      expect(response.markdown).toContain("Firecrawl");
+      expect(response.markdown).toContain("Sitecrawl");
     },
     scrapeTimeout,
   );
@@ -350,7 +350,7 @@ describe("Scrape tests", () => {
         identity,
       );
 
-      expect(response.markdown).toContain("Firecrawl");
+      expect(response.markdown).toContain("Sitecrawl");
     },
     scrapeTimeout,
   );
@@ -426,7 +426,7 @@ describe("Scrape tests", () => {
           identity,
         );
 
-        expect(response.markdown).toContain("Firecrawl");
+        expect(response.markdown).toContain("Sitecrawl");
 
         // Give time to propagate to read replica
         await new Promise(resolve => setTimeout(resolve, 1000));

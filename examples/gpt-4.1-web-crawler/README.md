@@ -12,7 +12,7 @@ A smart web crawler powered by GPT-4.1 that intelligently searches websites to f
 ## Prerequisites
 
 - Python 3.8+
-- Firecrawl API key
+- Sitecrawl API key
 - OpenAI API key (with access to GPT-4.1 models)
 
 ## Installation
@@ -65,7 +65,7 @@ The crawler will then:
 
 ## How It Works
 
-1. **Mapping**: The crawler uses Firecrawl to map the website structure and find relevant pages based on search terms derived from your objective.
+1. **Mapping**: The crawler uses Sitecrawl to map the website structure and find relevant pages based on search terms derived from your objective.
 
 2. **Ranking**: GPT-4.1 analyzes the URLs to determine which pages are most likely to contain the information you're looking for.
 

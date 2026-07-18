@@ -1,1 +1,1 @@
-rootProject.name = "firecrawl-java"
+rootProject.name = "sitecrawl-java"

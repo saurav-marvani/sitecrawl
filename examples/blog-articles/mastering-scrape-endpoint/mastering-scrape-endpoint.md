@@ -1,12 +1,12 @@
 ---
-title: "How to Use Firecrawl's Scrape API: Complete Web Scraping Tutorial"
-meta_description: Learn how to scrape websites using Firecrawl's /scrape endpoint. Master JavaScript rendering, structured data extraction, and batch operations with Python code examples.
-slug: mastering-firecrawl-scrape-endpoint
+title: "How to Use Sitecrawl's Scrape API: Complete Web Scraping Tutorial"
+meta_description: Learn how to scrape websites using Sitecrawl's /scrape endpoint. Master JavaScript rendering, structured data extraction, and batch operations with Python code examples.
+slug: mastering-sitecrawl-scrape-endpoint
 date: 22 Nov, 2024
 author: Bex Tuychiev
 image: to_fill_in_later
 categories: [tutorials]
-keywords: ["firecrawl", "web scraping", "scrape endpoint", "data extraction", "javascript rendering", "structured data", "web automation", "python sdk", "api", "web crawling", "data collection", "web data", "web scraping tutorial", "python"]
+keywords: ["sitecrawl", "web scraping", "scrape endpoint", "data extraction", "javascript rendering", "structured data", "web automation", "python sdk", "api", "web crawling", "data collection", "web data", "web scraping tutorial", "python"]
 ---
 
 ## Getting Started with Modern Web Scraping: An Introduction
@@ -15,15 +15,15 @@ Traditional web scraping offers unique challenges. Relevant information is often
 
 Even after successfully scraping, the content requires specific formatting to be useful for downstream processes like data engineering or training AI and machine learning models.
 
-Firecrawl addresses these challenges by providing a specialized scraping solution. Its [`/scrape` endpoint](https://docs.firecrawl.dev/features/scrape) offers features like JavaScript rendering, automatic content extraction, bypassing blockers and flexible output formats that make it easier to collect high-quality information and training data at scale.
+Sitecrawl addresses these challenges by providing a specialized scraping solution. Its [`/scrape` endpoint](https://docs.sitecrawl.dev/features/scrape) offers features like JavaScript rendering, automatic content extraction, bypassing blockers and flexible output formats that make it easier to collect high-quality information and training data at scale.
 
-In this guide, we'll explore how to effectively use Firecrawl's `/scrape` endpoint to extract structured data from static and dynamic websites. We'll start with basic scraping setup and then dive into a real-world example of scraping weather data from weather.com, demonstrating how to handle JavaScript-based interactions, extract structured data using schemas, and capture screenshots during the scraping process.
+In this guide, we'll explore how to effectively use Sitecrawl's `/scrape` endpoint to extract structured data from static and dynamic websites. We'll start with basic scraping setup and then dive into a real-world example of scraping weather data from weather.com, demonstrating how to handle JavaScript-based interactions, extract structured data using schemas, and capture screenshots during the scraping process.
 
 ## Table of Contents
 
 - [Getting Started with Modern Web Scraping: An Introduction](#getting-started-with-modern-web-scraping-an-introduction)
-- [What Is Firecrawl's `/scrape` Endpoint? The Short Answer](#what-is-firecrawls-scrape-endpoint-the-short-answer)
-- [Prerequisites: Setting Up Firecrawl](#prerequisites-setting-up-firecrawl)
+- [What Is Sitecrawl's `/scrape` Endpoint? The Short Answer](#what-is-sitecrawls-scrape-endpoint-the-short-answer)
+- [Prerequisites: Setting Up Sitecrawl](#prerequisites-setting-up-sitecrawl)
 - [Basic Scraping Setup](#basic-scraping-setup)
 - [Large-scale Scraping With Batch Operations](#large-scale-scraping-with-batch-operations)
   - [Batch Scraping with `batch_scrape_urls`](#batch-scraping-with-batch_scrape_urls)
@@ -31,9 +31,9 @@ In this guide, we'll explore how to effectively use Firecrawl's `/scrape` endpoi
 - [How to Scrape Dynamic JavaScript Websites](#how-to-scrape-dynamic-javascript-websites)
 - [Conclusion](#conclusion)
 
-## What Is Firecrawl's `/scrape` Endpoint? The Short Answer
+## What Is Sitecrawl's `/scrape` Endpoint? The Short Answer
 
-The `/scrape` endpoint is Firecrawl's core web scraping API that enables automated extraction of content from any webpage. It handles common web scraping challenges like:
+The `/scrape` endpoint is Sitecrawl's core web scraping API that enables automated extraction of content from any webpage. It handles common web scraping challenges like:
 
 - JavaScript rendering - Executes JavaScript to capture dynamically loaded content
 - Content extraction - Automatically identifies and extracts main content while filtering out noise
@@ -46,39 +46,39 @@ The endpoint accepts a URL and configuration parameters, then returns the scrape
 
 Now that we understand what the endpoint does at a high level, let's look at how to set it up and start using it in practice.
 
-## Prerequisites: Setting Up Firecrawl
+## Prerequisites: Setting Up Sitecrawl
 
-Firecrawl's scraping engine is exposed as a REST API, so you can use command-line tools like cURL to use it. However, for a more comfortable experience, better flexibility and control, I recommend using one of its SDKs for Python, Node, Rust or Go. This tutorial will focus on the Python version.
+Sitecrawl's scraping engine is exposed as a REST API, so you can use command-line tools like cURL to use it. However, for a more comfortable experience, better flexibility and control, I recommend using one of its SDKs for Python, Node, Rust or Go. This tutorial will focus on the Python version.
 
 To get started, please make sure to:
 
-1. Sign up at [firecrawl.dev](firecrawl.dev).
+1. Sign up at [sitecrawl.dev](sitecrawl.dev).
 2. Choose a plan (the free one will work fine for this tutorial).
 
-Once you sign up, you will be given an API token which you can copy from your [dashboard](https://www.firecrawl.dev/app). The best way to save your key is by using a `.env` file, ideal for the purposes of this article:
+Once you sign up, you will be given an API token which you can copy from your [dashboard](https://www.sitecrawl.dev/app). The best way to save your key is by using a `.env` file, ideal for the purposes of this article:
 
 ```bash
 touch .env
-echo "FIRECRAWL_API_KEY='YOUR_API_KEY'" >> .env
+echo "SITECRAWL_API_KEY='YOUR_API_KEY'" >> .env
 ```
 
-Now, let's install Firecrawl Python SDK, `python-dotenv` to read `.env` files, and Pandas for data analysis later:
+Now, let's install Sitecrawl Python SDK, `python-dotenv` to read `.env` files, and Pandas for data analysis later:
 
 ```bash
-pip install firecrawl-py python-dotenv pandas
+pip install sitecrawl-py python-dotenv pandas
 ```
 
 ## Basic Scraping Setup
 
-Scraping with Firecrawl starts by creating an instance of the `FirecrawlApp` class:
+Scraping with Sitecrawl starts by creating an instance of the `SitecrawlApp` class:
 
 ```python
-from firecrawl import FirecrawlApp
+from sitecrawl import SitecrawlApp
 from dotenv import load_dotenv
 
 load_dotenv()
 
-app = FirecrawlApp()
+app = SitecrawlApp()
 ```
 
 When you use the `load_dotenv()` function, the app can automatically use your loaded API key to establish a connection with the scraping engine. Then, scraping any URL takes a single line of code:
@@ -174,7 +174,7 @@ data.keys()
 dict_keys(['rawHtml', 'screenshot', 'metadata', 'html', 'links'])
 ```
 
-Let's display the screenshot Firecrawl took of arXiv.org:
+Let's display the screenshot Sitecrawl took of arXiv.org:
 
 ```python
 from IPython.display import Image
@@ -182,7 +182,7 @@ from IPython.display import Image
 Image(data['screenshot'])
 ```
 
-![Screenshot of arXiv.org homepage that was taken with Firecrawl's screenshot feature showing research paper categories like Computer Science, Mathematics, Physics and other scientific disciplines](notebook_files/notebook_20_0.png)
+![Screenshot of arXiv.org homepage that was taken with Sitecrawl's screenshot feature showing research paper categories like Computer Science, Mathematics, Physics and other scientific disciplines](notebook_files/notebook_20_0.png)
 
 Notice how the screenshot is cropped to fit a certain viewport. For most pages, it is better to capture the entire screen by using the `screenshot@fullPage` format:
 
@@ -199,7 +199,7 @@ data = app.scrape_url(
 Image(data['screenshot'])
 ```
 
-![Full page screenshot of arXiv.org homepage taken with Firecrawl's full-page screenshot capture feature showing research paper categories, search functionality, and recent submissions in an academic layout](notebook_files/notebook_22_0.png)
+![Full page screenshot of arXiv.org homepage taken with Sitecrawl's full-page screenshot capture feature showing research paper categories, search functionality, and recent submissions in an academic layout](notebook_files/notebook_22_0.png)
 
 As a bonus, the `/scrape` endpoint can handle PDF links as well:
 
@@ -223,7 +223,7 @@ coindex and Hessian spectrum, confirms that these metrics on
 
 ### Further Scrape Configuration Options
 
-By default, `scrape_url` converts everything it sees on a webpage to one of the specified formats. To control this behavior, Firecrawl offers the following parameters:
+By default, `scrape_url` converts everything it sees on a webpage to one of the specified formats. To control this behavior, Sitecrawl offers the following parameters:
 
 - `onlyMainContent`
 - `includeTags`
@@ -262,7 +262,7 @@ These configuration options help ensure efficient and precise scraping. While `o
 
 ## Advanced Data Extraction: Structured Techniques
 
-Scraping clean, LLM-ready data is the core philosophy of Firecrawl. However, certain web pages with their complex structures can interfere with this philosophy when scraped in their entirety. For this reason, Firecrawl offers two scraping methods for better structured outputs:
+Scraping clean, LLM-ready data is the core philosophy of Sitecrawl. However, certain web pages with their complex structures can interfere with this philosophy when scraped in their entirety. For this reason, Sitecrawl offers two scraping methods for better structured outputs:
 
 1. Natural language extraction - Use prompts to extract specific information and have an LLM structure the response
 2. Manual structured data extraction - Define JSON schemas to have an LLM scrape data in a predefined format
@@ -363,7 +363,7 @@ The LLM not only identified the specific amounts but also provided relevant cont
 
 While natural language scraping is powerful for exploration and prototyping, production systems typically require more structured and deterministic approaches. LLM responses can vary between runs of the same prompt, making the output format inconsistent and difficult to reliably parse in automated workflows.
 
-For this reason, Firecrawl allows you to pass a predefined schema to guide the LLM's output when transforming the scraped content. To facilitate this feature, Firecrawl uses Pydantic models.
+For this reason, Sitecrawl allows you to pass a predefined schema to guide the LLM's output when transforming the scraped content. To facilitate this feature, Sitecrawl uses Pydantic models.
 
 In the example below, we will extract only news article links, their titles with some additional details from the New York Times:
 
@@ -397,7 +397,7 @@ Above, we define a Pydantic schema that specifies the structure of the data we w
 - `read_duration`
 - `topics`
 
-`NewsArticlesSchema` acts as a container model that holds a list of `IndividualArticle` objects, representing multiple articles extracted from the page. If we don't use this container model, Firecrawl will only return the first news article it finds.
+`NewsArticlesSchema` acts as a container model that holds a list of `IndividualArticle` objects, representing multiple articles extracted from the page. If we don't use this container model, Sitecrawl will only return the first news article it finds.
 
 Each model field uses Pydantic's `Field` class to provide descriptions that help guide the LLM in correctly identifying and extracting the requested data. This structured approach ensures consistent output formatting.
 
@@ -660,7 +660,7 @@ The scraping was performed according to our specifications, extracting the metad
 
 ### Asynchronous batch scraping with `async_batch_scrape_urls`
 
-Scraping the 19 NY Times articles in a batch took about 10 seconds on my machine. While that's not much, in practice, we cannot wait around as Firecrawl batch-scrapes thousands of URLs. For these larger workloads, Firecrawl provides an asynchronous batch scraping API that lets you submit jobs and check their status later, rather than blocking until completion. This is especially useful when integrating web scraping into automated workflows or processing large URL lists.
+Scraping the 19 NY Times articles in a batch took about 10 seconds on my machine. While that's not much, in practice, we cannot wait around as Sitecrawl batch-scrapes thousands of URLs. For these larger workloads, Sitecrawl provides an asynchronous batch scraping API that lets you submit jobs and check their status later, rather than blocking until completion. This is especially useful when integrating web scraping into automated workflows or processing large URL lists.
 
 This feature is available through the `async_batch_scrape_urls` method and it works a bit differently:
 
@@ -686,7 +686,7 @@ batch_scrape_job
 ```python
     {'success': True,
      'id': '77a94b62-c676-4db2-b61b-4681e99f4704',
-     'url': 'https://api.firecrawl.dev/v1/batch/scrape/77a94b62-c676-4db2-b61b-4681e99f4704'}
+     'url': 'https://api.sitecrawl.dev/v1/batch/scrape/77a94b62-c676-4db2-b61b-4681e99f4704'}
 ```
 
 The response contains an ID belonging the background task that was initiated to process the URLs under the hood.
@@ -729,7 +729,7 @@ The response always includes the `data` field, whether the job is complete or no
 
 Out in the wild, many websites you encounter will be dynamic, meaning their content is generated on-the-fly using JavaScript rather than being pre-rendered on the server. These sites often require user interaction like clicking buttons or typing into forms before displaying their full content. Traditional web scrapers that only look at the initial HTML fail to capture this dynamic content, which is why browser automation capabilities are essential for comprehensive web scraping.
 
-Firecrawl supports dynamic scraping by default. In the parameters of `scrape_url` or `batch_scrape_url`, you can define necessary actions to reach the target state of the page you are scraping. As an example, we will build a scraper that will extract the following information from `https://weather.com`:
+Sitecrawl supports dynamic scraping by default. In the parameters of `scrape_url` or `batch_scrape_url`, you can define necessary actions to reach the target state of the page you are scraping. As an example, we will build a scraper that will extract the following information from `https://weather.com`:
 
 - Current Temperature
 - Temperature High
@@ -748,7 +748,7 @@ These details are displayed for every city you search through the website:
 
 Unlike websites such as Amazon where you can simply modify the URL's search parameter (e.g. `?search=your-query`), weather.com presents a unique challenge. The site generates dynamic and unique IDs for each city, making traditional URL manipulation techniques ineffective. To scrape weather data for any given city, you must simulate the actual user journey: visiting the homepage, interacting with the search bar, entering the city name, and selecting the appropriate result from the dropdown list. This multi-step interaction process is necessary because of how weather.com structures its dynamic content delivery (at this point, I urge to visit the website and visit a few city pages).
 
-Fortunately, Firecrawl natively supports such interactions through the `actions` parameter. It accepts a list of dictionaries, where each dictionary represents one of the following interactions:
+Fortunately, Sitecrawl natively supports such interactions through the `actions` parameter. It accepts a list of dictionaries, where each dictionary represents one of the following interactions:
 
 - Waiting for the page to load
 - Clicking on an element
@@ -847,7 +847,7 @@ data['actions']
 ```
 
 ```python
-    {'screenshots': ['https://service.firecrawl.dev/storage/v1/object/public/media/screenshot-16bf71d8-dcb5-47eb-9af4-5fa84195b91d.png'],
+    {'screenshots': ['https://service.sitecrawl.dev/storage/v1/object/public/media/screenshot-16bf71d8-dcb5-47eb-9af4-5fa84195b91d.png'],
      'scrapes': []}
 ```
 
@@ -861,7 +861,7 @@ from IPython.display import Image
 Image(data['actions']['screenshots'][0])
 ```
 
-![Screenshot of weather.com search interface showing search bar with typed city name, demonstrating automated web scraping process with Firecrawl](notebook_files/notebook_96_0.png)
+![Screenshot of weather.com search interface showing search bar with typed city name, demonstrating automated web scraping process with Sitecrawl](notebook_files/notebook_96_0.png)
 
 The image shows the stage where the scraper just typed the search query.
 
@@ -892,7 +892,7 @@ class WeatherData(BaseModel):
     moon_phase: str = Field(description="The current moon phase")
 
 
-def scrape_weather_data(app: FirecrawlApp, city: str) -> Optional[WeatherData]:
+def scrape_weather_data(app: SitecrawlApp, city: str) -> Optional[WeatherData]:
     try:
         # Define the actions to search for the city
         actions = [
@@ -958,11 +958,11 @@ print(df.head())
 | Paris, France | 34° | 36° | 30° | 93% | 29.42 in | 2.4 mi | 11 mph | 33° | 0 of 11 | Waning Gibbous |
 | Istanbul, Türkiye | 47° | 67° | 44° | 79% | 29.98 in | 8 mi | 4 mph | 41° | 0 of 11 | Waning Gibbous |
 
-We have successfully scraped weather data from multiple cities using Firecrawl and organized it into a structured DataFrame. This demonstrates how we can efficiently collect and analyze data generated by dynamic websites for further analysis and monitoring.
+We have successfully scraped weather data from multiple cities using Sitecrawl and organized it into a structured DataFrame. This demonstrates how we can efficiently collect and analyze data generated by dynamic websites for further analysis and monitoring.
 
 ## Conclusion
 
-In this comprehensive guide, we've explored Firecrawl's `/scrape` endpoint and its powerful capabilities for modern web scraping. We covered:
+In this comprehensive guide, we've explored Sitecrawl's `/scrape` endpoint and its powerful capabilities for modern web scraping. We covered:
 
 - Basic scraping setup and configuration options
 - Multiple output formats including HTML, markdown, and screenshots
@@ -970,14 +970,14 @@ In this comprehensive guide, we've explored Firecrawl's `/scrape` endpoint and i
 - Batch operations for processing multiple URLs efficiently
 - Advanced techniques for scraping JavaScript-heavy dynamic websites
 
-Through practical examples like extracting news articles from the NY Times and weather data from weather.com, we've demonstrated how Firecrawl simplifies complex scraping tasks while providing flexible output formats suitable for data engineering and AI/ML pipelines.
+Through practical examples like extracting news articles from the NY Times and weather data from weather.com, we've demonstrated how Sitecrawl simplifies complex scraping tasks while providing flexible output formats suitable for data engineering and AI/ML pipelines.
 
-The combination of LLM-powered extraction, structured schemas, and browser automation capabilities makes Firecrawl a versatile tool for gathering high-quality web data at scale, whether you're building training datasets, monitoring websites, or conducting research.
+The combination of LLM-powered extraction, structured schemas, and browser automation capabilities makes Sitecrawl a versatile tool for gathering high-quality web data at scale, whether you're building training datasets, monitoring websites, or conducting research.
 
-To discover more what Firecrawl has to offer, refer to [our guide on the `/crawl` endpoint](https://www.firecrawl.dev/blog/mastering-the-crawl-endpoint-in-firecrawl), which scrapes websites in their entirety with a single command while using the `/scrape` endpoint under the hood.
+To discover more what Sitecrawl has to offer, refer to [our guide on the `/crawl` endpoint](https://www.sitecrawl.dev/blog/mastering-the-crawl-endpoint-in-sitecrawl), which scrapes websites in their entirety with a single command while using the `/scrape` endpoint under the hood.
 
-For more hands-on uses-cases of Firecrawl, these posts may interest you as well:
+For more hands-on uses-cases of Sitecrawl, these posts may interest you as well:
 
-- [Using Prompt Caching With Anthropic](https://www.firecrawl.dev/blog/using-prompt-caching-with-anthropic)
-- [Scraping Job Boards With Firecrawl and OpenAI](https://www.firecrawl.dev/blog/scrape-job-boards-firecrawl-openai)
-- [Scraping and Analyzing Airbnb Listings in Python Tutorial](https://www.firecrawl.dev/blog/scrape-analyze-airbnb-data-with-e2b)
+- [Using Prompt Caching With Anthropic](https://www.sitecrawl.dev/blog/using-prompt-caching-with-anthropic)
+- [Scraping Job Boards With Sitecrawl and OpenAI](https://www.sitecrawl.dev/blog/scrape-job-boards-sitecrawl-openai)
+- [Scraping and Analyzing Airbnb Listings in Python Tutorial](https://www.sitecrawl.dev/blog/scrape-analyze-airbnb-data-with-e2b)

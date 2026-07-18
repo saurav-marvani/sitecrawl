@@ -1,4 +1,4 @@
-from firecrawl import V1JsonConfig, FirecrawlApp, AsyncFirecrawlApp, V1ScrapeOptions, V1JsonConfig
+from sitecrawl import V1JsonConfig, SitecrawlApp, AsyncSitecrawlApp, V1ScrapeOptions, V1JsonConfig
 from pydantic import BaseModel, Field
 from typing import List
 import time
@@ -14,16 +14,16 @@ load_dotenv()
 
 # Get API key from environment
 api_key = os.getenv("TEST_API_KEY")
-api_url = os.getenv("TEST_API_URL", "https://api.firecrawl.dev")
+api_url = os.getenv("TEST_API_URL", "https://api.sitecrawl.dev")
 
-app = FirecrawlApp(api_key=api_key, api_url=api_url)
+app = SitecrawlApp(api_key=api_key, api_url=api_url)
 
 # Scrape a website: 
 scrape_result = app.v1.scrape_url('example.com', formats=["markdown", "html"])
 print(scrape_result.markdown)
 
 # # # Test batch scrape
-urls = ['https://example.com', 'https://docs.firecrawl.dev']
+urls = ['https://example.com', 'https://docs.sitecrawl.dev']
 # # Synchronous batch scrape
 batch_result = app.v1.batch_scrape_urls(urls, formats=["markdown", "html"])
 print("Synchronous Batch Scrape Result:")
@@ -35,11 +35,11 @@ print("\nAsynchronous Batch Scrape Result:")
 print(async_batch_result)
 
 # # Crawl a website:
-crawl_result = app.v1.crawl_url('firecrawl.dev', exclude_paths=['blog/*'])
+crawl_result = app.v1.crawl_url('sitecrawl.dev', exclude_paths=['blog/*'])
 print(crawl_result.data[0].markdown)
 
 # # Asynchronous Crawl a website:
-async_result = app.v1.async_crawl_url('firecrawl.dev', exclude_paths=['blog/*'])
+async_result = app.v1.async_crawl_url('sitecrawl.dev', exclude_paths=['blog/*'])
 print(async_result)
 
 crawl_status = app.v1.check_crawl_status(async_result.id)
@@ -84,7 +84,7 @@ llm_extraction_result = app.v1.scrape_url('https://news.ycombinator.com', format
 print(llm_extraction_result.json)
 
 # Map a website:
-map_result = app.v1.map_url('https://firecrawl.dev', search="blog")
+map_result = app.v1.map_url('https://sitecrawl.dev', search="blog")
 print(map_result)
 
 # Extract URLs:
@@ -97,7 +97,7 @@ class ExtractSchema(BaseModel):
 extract_schema = ExtractSchema.schema()
 
 # Perform the extraction
-extract_result = app.v1.extract(['https://firecrawl.dev'], prompt="Extract the title, description, and links from the website", schema=extract_schema)
+extract_result = app.v1.extract(['https://sitecrawl.dev'], prompt="Extract the title, description, and links from the website", schema=extract_schema)
 print(extract_result)
 
 
@@ -110,7 +110,7 @@ print("Research Results:", research_result)
 
 # Generate LLMs.txt example
 llms_result = app.v1.generate_llms_text(
-    "https://firecrawl.dev")
+    "https://sitecrawl.dev")
 print("LLMs.txt Results:", llms_result)
 
 
@@ -132,7 +132,7 @@ def on_done(detail):
     # Function to start the crawl and watch process
 async def start_crawl_and_watch():
     # Initiate the crawl job and get the watcher
-    watcher = app.crawl_url_and_watch('firecrawl.dev', { 'excludePaths': ['blog/*'], 'limit': 5 })
+    watcher = app.crawl_url_and_watch('sitecrawl.dev', { 'excludePaths': ['blog/*'], 'limit': 5 })
 
     # Add event listeners
     watcher.add_event_listener("document", on_document)
@@ -150,12 +150,12 @@ class ExtractSchema(BaseModel):
     is_in_yc: bool
 
 extract_config = V1JsonConfig(schema=ExtractSchema.model_json_schema())
-data = app.scrape_url('https://docs.firecrawl.dev/', formats=['json'], json_options=extract_config)
+data = app.scrape_url('https://docs.sitecrawl.dev/', formats=['json'], json_options=extract_config)
 print(data.json)
 
 # --- Async
 
-async_app = AsyncFirecrawlApp(api_url="https://api.firecrawl.dev")
+async_app = AsyncSitecrawlApp(api_url="https://api.sitecrawl.dev")
 
 async def example_scrape():
     # Scrape a website:
@@ -164,7 +164,7 @@ async def example_scrape():
 
 async def example_batch_scrape():
     # Batch scrape
-    urls = ['https://example.com', 'https://docs.firecrawl.dev']
+    urls = ['https://example.com', 'https://docs.sitecrawl.dev']
 
     # Synchronous batch scrape
     batch_result = await async_app.v1.batch_scrape_urls(urls, formats=["markdown", "html"])
@@ -178,11 +178,11 @@ async def example_batch_scrape():
 
 async def example_crawl():
     # Crawl a website:
-    crawl_result = await async_app.v1.crawl_url('firecrawl.dev', exclude_paths=['blog/*'])
+    crawl_result = await async_app.v1.crawl_url('sitecrawl.dev', exclude_paths=['blog/*'])
     print(crawl_result.data[0].markdown)
 
     # Asynchronous Crawl a website:
-    async_result = await async_app.v1.async_crawl_url('firecrawl.dev', exclude_paths=['blog/*'])
+    async_result = await async_app.v1.async_crawl_url('sitecrawl.dev', exclude_paths=['blog/*'])
     print(async_result)
 
     crawl_status = await async_app.v1.check_crawl_status(async_result.id)
@@ -217,7 +217,7 @@ async def example_llm_extraction():
 
 async def example_map_and_extract():
     # Map a website:
-    map_result = await async_app.v1.map_url('https://firecrawl.dev', search="blog")
+    map_result = await async_app.v1.map_url('https://sitecrawl.dev', search="blog")
     print(map_result)
 
     # Extract URLs:
@@ -230,7 +230,7 @@ async def example_map_and_extract():
     extract_schema = ExtractSchema.schema()
 
     # Perform the extraction
-    extract_result = await async_app.v1.extract(['https://firecrawl.dev'], prompt="Extract the title, description, and links from the website", schema=extract_schema)
+    extract_result = await async_app.v1.extract(['https://sitecrawl.dev'], prompt="Extract the title, description, and links from the website", schema=extract_schema)
     print(extract_result)
 
 async def example_deep_research():
@@ -244,7 +244,7 @@ async def example_deep_research():
 async def example_generate_llms_text():
     # Generate LLMs.txt example
     llms_result = await async_app.v1.generate_llms_text(
-        "https://firecrawl.dev")
+        "https://sitecrawl.dev")
     print("LLMs.txt Results:", llms_result)
 
 # Define event handlers for websocket
@@ -259,7 +259,7 @@ def on_done(detail):
 
 async def example_websocket_crawl():
     # Initiate the crawl job and get the watcher
-    watcher = await async_app.v1.crawl_url_and_watch('firecrawl.dev', { 'excludePaths': ['blog/*'], 'limit': 5 })
+    watcher = await async_app.v1.crawl_url_and_watch('sitecrawl.dev', { 'excludePaths': ['blog/*'], 'limit': 5 })
 
     # Add event listeners
     watcher.add_event_listener("document", on_document)

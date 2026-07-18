@@ -1,5 +1,5 @@
 {
-  "name": "firecrawl-scraper-js",
+  "name": "sitecrawl-scraper-js",
   "version": "1.0.0",
   "description": "",
   "main": "src/index.ts",
@@ -41,7 +41,7 @@
     "zdr-worker:production": "node dist/src/services/zdr-worker.js",
     "mongo-docker": "docker run -d -p 2717:27017 -v ./mongo-data:/data/db --name mongodb mongo:latest",
     "mongo-docker-console": "docker exec -it mongodb mongosh",
-    "sentry:sourcemaps": "sentry-cli sourcemaps inject --org caleb-peffer --project firecrawl-scraper-js ./dist && sentry-cli sourcemaps upload --org caleb-peffer --project firecrawl-scraper-js ./dist",
+    "sentry:sourcemaps": "sentry-cli sourcemaps inject --org caleb-peffer --project sitecrawl-scraper-js ./dist && sentry-cli sourcemaps upload --org caleb-peffer --project sitecrawl-scraper-js ./dist",
     "prepare": "cd ../.. && husky ./apps/api/.husky",
     "knip": "knip"
   },
@@ -87,7 +87,7 @@
     "@clickhouse/client": "^1.8.1",
     "@dqbd/tiktoken": "^1.0.22",
     "@google-cloud/storage": "^7.21.0",
-    "@mendable/firecrawl-rs": "workspace:*",
+    "@mendable/sitecrawl-rs": "workspace:*",
     "@openrouter/ai-sdk-provider": "^2.9.1",
     "@sentry/cli": "^2.58.2",
     "@sentry/node": "^10.27.0",

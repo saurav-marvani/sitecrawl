@@ -1,4 +1,4 @@
-package firecrawl
+package sitecrawl
 
 import (
 	"context"
@@ -11,7 +11,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/firecrawl/firecrawl/apps/go-sdk/option"
+	"github.com/sitecrawl/sitecrawl/apps/go-sdk/option"
 )
 
 func TestParseSendsMultipartRequest(t *testing.T) {

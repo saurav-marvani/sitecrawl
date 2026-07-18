@@ -130,7 +130,7 @@ describe("Map tests", () => {
     async () => {
       const response = await map(
         {
-          url: "http://firecrawl.com",
+          url: "http://sitecrawl.com",
           limit: 5,
           sitemap: "only",
           useIndex: false,
@@ -152,10 +152,10 @@ describe("Map tests", () => {
       expect(response.body.links.length).toBeGreaterThan(0);
 
       expect(
-        response.body.links.every(link => link.url.includes("firecrawl.dev")),
+        response.body.links.every(link => link.url.includes("sitecrawl.dev")),
       ).toBe(true);
       expect(
-        response.body.links.every(link => !link.url.includes("firecrawl.com")),
+        response.body.links.every(link => !link.url.includes("sitecrawl.com")),
       ).toBe(true);
     },
     60000,

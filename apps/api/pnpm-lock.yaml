@@ -87,7 +87,7 @@ importers:
       '@google-cloud/storage':
         specifier: ^7.21.0
         version: 7.21.0
-      '@mendable/firecrawl-rs':
+      '@mendable/sitecrawl-rs':
         specifier: workspace:*
         version: link:native
       '@openrouter/ai-sdk-provider':

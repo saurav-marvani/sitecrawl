@@ -18,9 +18,9 @@ import {
 import { ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 
 //! Hardcoded values (not recommended for production)
-//! Highly recommended to move all Firecrawl API calls to the backend (e.g. Next.js API route)
-const FIRECRAWL_API_URL = "https://api.firecrawl.dev"; // Replace with your actual API URL whether it is local or using Firecrawl Cloud
-const FIRECRAWL_API_KEY = "fc-YOUR_API_KEY"; // Replace with your actual API key
+//! Highly recommended to move all Sitecrawl API calls to the backend (e.g. Next.js API route)
+const SITECRAWL_API_URL = "https://api.sitecrawl.dev"; // Replace with your actual API URL whether it is local or using Sitecrawl Cloud
+const SITECRAWL_API_KEY = "fc-YOUR_API_KEY"; // Replace with your actual API key
 
 interface FormData {
   url: string;
@@ -88,7 +88,7 @@ interface ScrapeResult {
   data: ScrapeResultData;
 }
 
-export default function FirecrawlComponentV1() {
+export default function SitecrawlComponentV1() {
   const [formData, setFormData] = useState<FormData>({
     url: "",
     crawlSubPages: false,
@@ -162,7 +162,7 @@ export default function FirecrawlComponentV1() {
     setShowCrawlStatus(false);
 
     try {
-      const endpoint = `${FIRECRAWL_API_URL}/v1/${
+      const endpoint = `${SITECRAWL_API_URL}/v1/${
         formData.crawlSubPages ? "map" : "scrape"
       }`;
 
@@ -180,7 +180,7 @@ export default function FirecrawlComponentV1() {
       const response = await fetch(endpoint, {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${FIRECRAWL_API_KEY}`,
+          Authorization: `Bearer ${SITECRAWL_API_KEY}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify(requestBody),
@@ -266,10 +266,10 @@ export default function FirecrawlComponentV1() {
 
     for (const [index, url] of selectedUrls.entries()) {
       try {
-        const response = await fetch(`${FIRECRAWL_API_URL}/v1/scrape`, {
+        const response = await fetch(`${SITECRAWL_API_URL}/v1/scrape`, {
           method: "POST",
           headers: {
-            Authorization: `Bearer ${FIRECRAWL_API_KEY}`,
+            Authorization: `Bearer ${SITECRAWL_API_KEY}`,
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
@@ -329,20 +329,20 @@ export default function FirecrawlComponentV1() {
           <CardTitle className="flex items-center justify-between w-full space-x-2">
             <span className="text-base">Extract web content (V1)</span>
             <a
-              href="https://www.firecrawl.dev"
+              href="https://www.sitecrawl.dev"
               className="text-xs text-gray-500 font-normal px-3 py-1 bg-zinc-100 rounded-xl hover:bg-zinc-200 transition-colors"
             >
-              Powered by Firecrawl 🔥
+              Powered by Sitecrawl 🔥
             </a>
           </CardTitle>
           <div className="text-sm text-gray-500 w-11/12 items-center">
             Use this component to quickly give your users the ability to connect
-            their AI apps to web data with Firecrawl. Learn more on the{" "}
+            their AI apps to web data with Sitecrawl. Learn more on the{" "}
             <a
-              href="https://docs.firecrawl.dev/"
+              href="https://docs.sitecrawl.dev/"
               className="text-sm text-blue-500"
             >
-              Firecrawl docs!
+              Sitecrawl docs!
             </a>
           </div>
         </CardHeader>
@@ -350,7 +350,7 @@ export default function FirecrawlComponentV1() {
           <form onSubmit={handleSubmit}>
             <div className="flex items-center space-x-2">
               <Input
-                placeholder="https://www.firecrawl.dev/"
+                placeholder="https://www.sitecrawl.dev/"
                 className="flex-grow"
                 name="url"
                 value={formData.url}

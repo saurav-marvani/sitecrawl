@@ -9,7 +9,7 @@ const loadMocksDirPath = path
   .replace("dist/", "");
 
 export async function saveMock(options: unknown, result: unknown) {
-  if (config.FIRECRAWL_SAVE_MOCKS !== true) return;
+  if (config.SITECRAWL_SAVE_MOCKS !== true) return;
 
   await fs.mkdir(saveMocksDirPath, { recursive: true });
 

@@ -1,6 +1,6 @@
 # Pick your baseUrl here:
 @baseUrl = http://localhost:3002
-# @baseUrl = https://api.firecrawl.dev
+# @baseUrl = https://api.sitecrawl.dev
 
 ### Scrape Website
 # @name scrape
@@ -9,7 +9,7 @@ Authorization: Bearer {{$dotenv TEST_API_KEY}}
 content-type: application/json
 
 {
-  "url": "https://firecrawl.dev"
+  "url": "https://sitecrawl.dev"
 }
 
 ### Scrape Website (Replay-ready for scrape interact APIs)
@@ -19,11 +19,11 @@ Authorization: Bearer {{$dotenv TEST_API_KEY}}
 content-type: application/json
 
 {
-  "url": "https://firecrawl.dev",
+  "url": "https://sitecrawl.dev",
   "actions": [
     {
       "type": "executeJavascript",
-      "script": "window.location.href = 'https://firecrawl-test-site.vercel.app'"
+      "script": "window.location.href = 'https://sitecrawl-test-site.vercel.app'"
     },
     {
       "type": "wait",
@@ -57,7 +57,7 @@ Authorization: Bearer {{$dotenv TEST_API_KEY}}
 content-type: application/json
 
 {
-  "url":"https://firecrawl.dev"
+  "url":"https://sitecrawl.dev"
 }
 
 ### Check Crawl Status
@@ -79,7 +79,7 @@ Authorization: Bearer {{$dotenv TEST_API_KEY}}
 content-type: application/json
 
 {
-  "urls": ["https://firecrawl.dev"],
+  "urls": ["https://sitecrawl.dev"],
   "schema": {
     "type": "object",
     "properties": {
@@ -111,7 +111,7 @@ content-type: application/json
 
 {
   "urls": [
-    "firecrawl.dev",
+    "sitecrawl.dev",
     "mendable.ai"
   ]
 }
@@ -129,7 +129,7 @@ Authorization: Bearer {{$dotenv TEST_API_KEY}}
 content-type: application/json
 
 {
-  "url": "firecrawl.dev",
+  "url": "sitecrawl.dev",
   "sitemapOnly": true
 }
 
@@ -140,7 +140,7 @@ Authorization: Bearer {{$dotenv TEST_API_KEY}}
 content-type: application/json
 
 {
-  "query": "firecrawl",
+  "query": "sitecrawl",
   "limit": 50
 }
 
@@ -156,7 +156,7 @@ Authorization: Bearer {{$dotenv TEST_API_KEY}}
 content-type: application/json
 
 {
-  "url": "https://firecrawl.dev",
+  "url": "https://sitecrawl.dev",
   "maxUrls": 1,
   "showFullText": false,
   "cache": true

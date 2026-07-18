@@ -1,5 +1,5 @@
 import os
-from firecrawl import FirecrawlApp
+from sitecrawl import SitecrawlApp
 import json
 import re
 import requests
@@ -10,11 +10,11 @@ import google.genai as genai
 load_dotenv()
 
 # Retrieve API keys from environment variables
-firecrawl_api_key = os.getenv("FIRECRAWL_API_KEY")
+sitecrawl_api_key = os.getenv("SITECRAWL_API_KEY")
 gemini_api_key = os.getenv("GEMINI_API_KEY")
 
-# Initialize the FirecrawlApp and Gemini client
-app = FirecrawlApp(api_key=firecrawl_api_key)
+# Initialize the SitecrawlApp and Gemini client
+app = SitecrawlApp(api_key=sitecrawl_api_key)
 client = genai.Client(api_key=gemini_api_key)  # Create Gemini client
 model_name = "gemini-2.0-flash"
 types = genai.types

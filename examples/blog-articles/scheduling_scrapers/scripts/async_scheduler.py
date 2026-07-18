@@ -1,6 +1,6 @@
 import asyncio
 import time
-from firecrawl_scraper import save_firecrawl_news_data
+from sitecrawl_scraper import save_sitecrawl_news_data
 
 
 async def schedule_scraper(interval_hours: float = 1):
@@ -14,7 +14,7 @@ async def schedule_scraper(interval_hours: float = 1):
         try:
             print(f"Starting scrape at {time.strftime('%Y-%m-%d %H:%M:%S')}")
             # Run the scraper
-            filename = save_firecrawl_news_data()
+            filename = save_sitecrawl_news_data()
             print(f"Data saved to {filename}")
 
         except Exception as e:

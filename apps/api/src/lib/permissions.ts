@@ -39,7 +39,7 @@ interface PermissionOptions {
   threatProtectionOrgConfig?: { allowRequestOverrides: boolean } | null;
 }
 
-const SUPPORT_EMAIL = "support@firecrawl.com";
+const SUPPORT_EMAIL = "support@sitecrawl.com";
 
 export function checkPermissions(
   request: APIRequest,

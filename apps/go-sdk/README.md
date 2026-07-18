@@ -1,6 +1,6 @@
-# Firecrawl Go SDK
+# Sitecrawl Go SDK
 
-Go SDK for the [Firecrawl](https://firecrawl.dev) v2 web scraping API.
+Go SDK for the [Sitecrawl](https://sitecrawl.dev) v2 web scraping API.
 
 ## Requirements
 
@@ -9,15 +9,15 @@ Go SDK for the [Firecrawl](https://firecrawl.dev) v2 web scraping API.
 ## Installation
 
 ```bash
-go get github.com/firecrawl/firecrawl/apps/go-sdk
+go get github.com/sitecrawl/sitecrawl/apps/go-sdk
 ```
 
 ## API Key Setup
 
-Get your API key from the [Firecrawl Dashboard](https://firecrawl.dev) and set it as an environment variable:
+Get your API key from the [Sitecrawl Dashboard](https://sitecrawl.dev) and set it as an environment variable:
 
 ```bash
-export FIRECRAWL_API_KEY="fc-your-api-key-here"
+export SITECRAWL_API_KEY="fc-your-api-key-here"
 ```
 
 ## Quick Start
@@ -30,19 +30,19 @@ import (
 	"fmt"
 	"log"
 
-	firecrawl "github.com/firecrawl/firecrawl/apps/go-sdk"
-	"github.com/firecrawl/firecrawl/apps/go-sdk/option"
+	sitecrawl "github.com/sitecrawl/sitecrawl/apps/go-sdk"
+	"github.com/sitecrawl/sitecrawl/apps/go-sdk/option"
 )
 
 func main() {
-	// Create a client (reads FIRECRAWL_API_KEY from environment)
-	client, err := firecrawl.NewClient()
+	// Create a client (reads SITECRAWL_API_KEY from environment)
+	client, err := sitecrawl.NewClient()
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// Or provide the API key directly
-	client, err = firecrawl.NewClient(
+	client, err = sitecrawl.NewClient(
 		option.WithAPIKey("fc-your-api-key"),
 	)
 	if err != nil {
@@ -52,7 +52,7 @@ func main() {
 	ctx := context.Background()
 
 	// Scrape a single page
-	doc, err := client.Scrape(ctx, "https://example.com", &firecrawl.ScrapeOptions{
+	doc, err := client.Scrape(ctx, "https://example.com", &sitecrawl.ScrapeOptions{
 		Formats: []string{"markdown"},
 	})
 	if err != nil {
@@ -65,9 +65,9 @@ func main() {
 ## Configuration
 
 ```go
-client, err := firecrawl.NewClient(
-	option.WithAPIKey("fc-your-api-key"),          // API key (or set FIRECRAWL_API_KEY env var)
-	option.WithAPIURL("https://api.firecrawl.dev"), // Custom API URL
+client, err := sitecrawl.NewClient(
+	option.WithAPIKey("fc-your-api-key"),          // API key (or set SITECRAWL_API_KEY env var)
+	option.WithAPIURL("https://api.sitecrawl.dev"), // Custom API URL
 	option.WithMaxRetries(3),                        // Max retry attempts (default: 3)
 	option.WithBackoffFactor(0.5),                   // Backoff factor in seconds (default: 0.5)
 	option.WithTimeout(5 * time.Minute),             // HTTP timeout (default: 5 minutes)
@@ -86,11 +86,11 @@ Scrape a single URL and get its content.
 doc, err := client.Scrape(ctx, "https://example.com", nil)
 
 // With options
-doc, err := client.Scrape(ctx, "https://example.com", &firecrawl.ScrapeOptions{
+doc, err := client.Scrape(ctx, "https://example.com", &sitecrawl.ScrapeOptions{
 	Formats:         []string{"markdown", "html"},
-	OnlyMainContent: firecrawl.Bool(true),
-	WaitFor:         firecrawl.Int(5000),
-	Location:        &firecrawl.LocationConfig{Country: "US"},
+	OnlyMainContent: sitecrawl.Bool(true),
+	WaitFor:         sitecrawl.Int(5000),
+	Location:        &sitecrawl.LocationConfig{Country: "US"},
 })
 ```
 
@@ -99,7 +99,7 @@ doc, err := client.Scrape(ctx, "https://example.com", &firecrawl.ScrapeOptions{
 Use the `video` format on supported video URLs, including YouTube and TikTok. The returned `Video` field is a signed URL to the extracted video file.
 
 ```go
-doc, err := client.Scrape(ctx, "https://www.youtube.com/watch?v=dQw4w9WgXcQ", &firecrawl.ScrapeOptions{
+doc, err := client.Scrape(ctx, "https://www.youtube.com/watch?v=dQw4w9WgXcQ", &sitecrawl.ScrapeOptions{
 	Formats: []string{"video"},
 })
 if err != nil {
@@ -115,7 +115,7 @@ Use the `product` format on product pages for structured product extraction
 `Product` field. This is the deterministic counterpart to the LLM-based `json` format.
 
 ```go
-doc, err := client.Scrape(ctx, "https://example.com/products/widget", &firecrawl.ScrapeOptions{
+doc, err := client.Scrape(ctx, "https://example.com/products/widget", &sitecrawl.ScrapeOptions{
 	Formats: []string{"product"},
 })
 if err != nil {
@@ -131,7 +131,7 @@ Use the `menu` format on menu pages for structured menu extraction
 document's `Menu` field. This is the deterministic counterpart to the LLM-based `json` format.
 
 ```go
-doc, err := client.Scrape(ctx, "https://example.com/menu", &firecrawl.ScrapeOptions{
+doc, err := client.Scrape(ctx, "https://example.com/menu", &sitecrawl.ScrapeOptions{
 	Formats: []string{"menu"},
 })
 if err != nil {
@@ -145,9 +145,9 @@ fmt.Println(doc.Menu)
 Execute code in a scrape-bound browser session:
 
 ```go
-resp, err := client.Interact(ctx, scrapeJobID, "document.title", &firecrawl.InteractParams{
+resp, err := client.Interact(ctx, scrapeJobID, "document.title", &sitecrawl.InteractParams{
 	Language: "node",
-	Timeout:  firecrawl.Int(30),
+	Timeout:  sitecrawl.Int(30),
 })
 
 // Stop the browser session
@@ -163,13 +163,13 @@ waitFor, location, and mobile. The `Proxy` option only accepts `"auto"` or `"bas
 
 ```go
 // From disk
-file, err := firecrawl.NewParseFileFromPath("./document.pdf")
+file, err := sitecrawl.NewParseFileFromPath("./document.pdf")
 
 // Or from memory
-file := firecrawl.NewParseFileFromBytes("upload.html", []byte("<html>hi</html>"))
+file := sitecrawl.NewParseFileFromBytes("upload.html", []byte("<html>hi</html>"))
 file.ContentType = "text/html"
 
-doc, err := client.Parse(ctx, file, &firecrawl.ParseOptions{
+doc, err := client.Parse(ctx, file, &sitecrawl.ParseOptions{
 	Formats: []string{"markdown"},
 })
 fmt.Println(doc.Markdown)
@@ -181,17 +181,17 @@ Crawl a website and get content from multiple pages.
 
 ```go
 // Auto-polling: starts the crawl and waits for completion
-job, err := client.Crawl(ctx, "https://example.com", &firecrawl.CrawlOptions{
-	Limit:             firecrawl.Int(50),
-	MaxDiscoveryDepth: firecrawl.Int(3),
-	ScrapeOptions:     &firecrawl.ScrapeOptions{
+job, err := client.Crawl(ctx, "https://example.com", &sitecrawl.CrawlOptions{
+	Limit:             sitecrawl.Int(50),
+	MaxDiscoveryDepth: sitecrawl.Int(3),
+	ScrapeOptions:     &sitecrawl.ScrapeOptions{
 		Formats: []string{"markdown"},
 	},
 })
 
 // Or manage polling manually
-resp, err := client.StartCrawl(ctx, "https://example.com", &firecrawl.CrawlOptions{
-	Limit: firecrawl.Int(50),
+resp, err := client.StartCrawl(ctx, "https://example.com", &sitecrawl.CrawlOptions{
+	Limit: sitecrawl.Int(50),
 })
 
 // Check status
@@ -216,8 +216,8 @@ urls := []string{
 }
 
 // Auto-polling
-job, err := client.BatchScrape(ctx, urls, &firecrawl.BatchScrapeOptions{
-	ScrapeOptions: &firecrawl.ScrapeOptions{
+job, err := client.BatchScrape(ctx, urls, &sitecrawl.BatchScrapeOptions{
+	ScrapeOptions: &sitecrawl.ScrapeOptions{
 		Formats: []string{"markdown"},
 	},
 })
@@ -233,10 +233,10 @@ _, err = client.CancelBatchScrape(ctx, resp.ID)
 Discover URLs on a website.
 
 ```go
-mapData, err := client.Map(ctx, "https://example.com", &firecrawl.MapOptions{
-	Search:            firecrawl.String("pricing"),
-	IncludeSubdomains: firecrawl.Bool(true),
-	Limit:             firecrawl.Int(100),
+mapData, err := client.Map(ctx, "https://example.com", &sitecrawl.MapOptions{
+	Search:            sitecrawl.String("pricing"),
+	IncludeSubdomains: sitecrawl.Bool(true),
+	Limit:             sitecrawl.Int(100),
 })
 ```
 
@@ -245,9 +245,9 @@ mapData, err := client.Map(ctx, "https://example.com", &firecrawl.MapOptions{
 Search the web and get scraped results.
 
 ```go
-results, err := client.Search(ctx, "firecrawl web scraping", &firecrawl.SearchOptions{
-	Limit: firecrawl.Int(5),
-	ScrapeOptions: &firecrawl.ScrapeOptions{
+results, err := client.Search(ctx, "sitecrawl web scraping", &sitecrawl.SearchOptions{
+	Limit: sitecrawl.Int(5),
+	ScrapeOptions: &sitecrawl.ScrapeOptions{
 		Formats: []string{"markdown"},
 	},
 })
@@ -259,7 +259,7 @@ Run an AI-powered agent to extract structured data.
 
 ```go
 // Auto-polling
-status, err := client.Agent(ctx, &firecrawl.AgentOptions{
+status, err := client.Agent(ctx, &sitecrawl.AgentOptions{
 	Prompt: "Find all pricing plans and their features",
 	URLs:   []string{"https://example.com/pricing"},
 	Schema: map[string]interface{}{
@@ -280,7 +280,7 @@ status, err := client.Agent(ctx, &firecrawl.AgentOptions{
 })
 
 // Or manage manually
-resp, err := client.StartAgent(ctx, &firecrawl.AgentOptions{
+resp, err := client.StartAgent(ctx, &sitecrawl.AgentOptions{
 	Prompt: "Extract product information",
 })
 status, err := client.GetAgentStatus(ctx, resp.ID)
@@ -293,15 +293,15 @@ Create and manage standalone browser sessions.
 
 ```go
 // Create a browser session
-session, err := client.Browser(ctx, &firecrawl.BrowserOptions{
-	TTL:           firecrawl.Int(300),
-	StreamWebView: firecrawl.Bool(true),
+session, err := client.Browser(ctx, &sitecrawl.BrowserOptions{
+	TTL:           sitecrawl.Int(300),
+	StreamWebView: sitecrawl.Bool(true),
 })
 
 // Execute code
-result, err := client.BrowserExecute(ctx, session.ID, "echo 'hello'", &firecrawl.BrowserExecuteParams{
+result, err := client.BrowserExecute(ctx, session.ID, "echo 'hello'", &sitecrawl.BrowserExecuteParams{
 	Language: "bash",
-	Timeout:  firecrawl.Int(30),
+	Timeout:  sitecrawl.Int(30),
 })
 
 // List sessions
@@ -330,10 +330,10 @@ The SDK uses typed errors for different failure scenarios:
 ```go
 doc, err := client.Scrape(ctx, "https://example.com", nil)
 if err != nil {
-	var authErr *firecrawl.AuthenticationError
-	var rateErr *firecrawl.RateLimitError
-	var timeoutErr *firecrawl.JobTimeoutError
-	var fcErr *firecrawl.FirecrawlError
+	var authErr *sitecrawl.AuthenticationError
+	var rateErr *sitecrawl.RateLimitError
+	var timeoutErr *sitecrawl.JobTimeoutError
+	var fcErr *sitecrawl.SitecrawlError
 
 	switch {
 	case errors.As(err, &authErr):
@@ -373,11 +373,11 @@ doc, err := client.Scrape(ctx, "https://example.com", nil)
 The SDK provides convenience functions for optional fields:
 
 ```go
-firecrawl.Bool(true)     // *bool
-firecrawl.Int(50)        // *int
-firecrawl.Int64(1000)    // *int64
-firecrawl.String("test") // *string
-firecrawl.Float64(0.5)   // *float64
+sitecrawl.Bool(true)     // *bool
+sitecrawl.Int(50)        // *int
+sitecrawl.Int64(1000)    // *int64
+sitecrawl.String("test") // *string
+sitecrawl.Float64(0.5)   // *float64
 ```
 
 ## Releases
@@ -410,14 +410,14 @@ To cut a release:
    - create the `apps/go-sdk/v{Version}` tag on the merge commit,
    - push it to the repository,
    - warm `proxy.golang.org` to trigger indexing on
-     [pkg.go.dev](https://pkg.go.dev/github.com/firecrawl/firecrawl/apps/go-sdk).
+     [pkg.go.dev](https://pkg.go.dev/github.com/sitecrawl/sitecrawl/apps/go-sdk).
 
 The workflow is idempotent: if the tag already exists, it is a no-op.
 
 ### Consuming a specific version
 
 ```bash
-go get github.com/firecrawl/firecrawl/apps/go-sdk@v1.3.0
+go get github.com/sitecrawl/sitecrawl/apps/go-sdk@v1.3.0
 ```
 
 Users pin via the semantic version suffix; they never reference the

@@ -3,7 +3,7 @@ import json
 import os
 
 from dotenv import load_dotenv
-from firecrawl import FirecrawlApp
+from sitecrawl import SitecrawlApp
 from openai import OpenAI
 from serpapi import GoogleSearch
 from swarm import Agent
@@ -11,12 +11,12 @@ from swarm.repl import run_demo_loop
 
 load_dotenv()
 
-# Initialize FirecrawlApp and OpenAI
-app = FirecrawlApp(api_key=os.getenv("FIRECRAWL_API_KEY"))
+# Initialize SitecrawlApp and OpenAI
+app = SitecrawlApp(api_key=os.getenv("SITECRAWL_API_KEY"))
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 def crawl_and_analyze_url(url, objective):
-    """Crawl a website using Firecrawl and analyze the content."""
+    """Crawl a website using Sitecrawl and analyze the content."""
     print(f"Parameters: url={url}, objective={objective}")
     # Crawl the website
     crawl_status = app.crawl_url(

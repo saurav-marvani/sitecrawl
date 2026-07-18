@@ -41,8 +41,8 @@ describe("Search Query Builder", () => {
     });
 
     it("should handle multiple simple categories", () => {
-      const result = buildSearchQuery("firecrawl", ["github", "research"]);
-      expect(result.query).toContain("firecrawl (");
+      const result = buildSearchQuery("sitecrawl", ["github", "research"]);
+      expect(result.query).toContain("sitecrawl (");
       expect(result.query).toContain("site:github.com");
       expect(result.query).toContain("site:arxiv.org");
       expect(result.query).toContain(" OR ");
@@ -113,10 +113,10 @@ describe("Search Query Builder", () => {
 
     it("should add include domain filters", () => {
       const result = buildSearchQuery("web scraping", undefined, {
-        includeDomains: ["firecrawl.dev", "docs.firecrawl.dev"],
+        includeDomains: ["sitecrawl.dev", "docs.sitecrawl.dev"],
       });
       expect(result.query).toBe(
-        "web scraping (site:firecrawl.dev OR site:docs.firecrawl.dev)",
+        "web scraping (site:sitecrawl.dev OR site:docs.sitecrawl.dev)",
       );
       expect(result.categoryMap.size).toBe(0);
     });
@@ -142,10 +142,10 @@ describe("Search Query Builder", () => {
 
     it("should combine categories with domain filters", () => {
       const result = buildSearchQuery("web scraping", ["github"], {
-        includeDomains: ["firecrawl.dev"],
+        includeDomains: ["sitecrawl.dev"],
       });
       expect(result.query).toBe(
-        "web scraping (site:github.com) (site:firecrawl.dev)",
+        "web scraping (site:github.com) (site:sitecrawl.dev)",
       );
       expect(result.categoryMap.get("github.com")).toBe("github");
     });

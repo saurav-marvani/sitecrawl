@@ -24,7 +24,7 @@ type SubmitArgs = {
 };
 
 /**
- * The submit request may have reached FirePDF even though Firecrawl could not
+ * The submit request may have reached FirePDF even though Sitecrawl could not
  * observe a valid success response. The caller should best-effort DELETE the
  * idempotent scrape_id before falling back, then rethrow `originalError`.
  */
@@ -63,7 +63,7 @@ export async function submitJob(args: SubmitArgs): Promise<SubmitOutcome> {
   const body = {
     pdf_b64: base64Content,
     scrape_id: scrapeId,
-    source: "firecrawl" as const,
+    source: "sitecrawl" as const,
     zdr: false as const,
     deadline_at: deadlineAt,
     ...(meta.internalOptions.teamId && {

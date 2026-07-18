@@ -21,7 +21,7 @@ load_dotenv()
 
 # Initialize clients
 client = OpenAI(api_key=os.getenv("DEEPSEEK_API_KEY"), base_url="https://api.deepseek.com")
-firecrawl_api_key = os.getenv("FIRECRAWL_API_KEY")
+sitecrawl_api_key = os.getenv("SITECRAWL_API_KEY")
 serp_api_key = os.getenv("SERP_API_KEY")
 
 def search_google(query):
@@ -95,8 +95,8 @@ def select_urls_with_r1(company, objective, serp_results):
         return []
 
 def extract_company_info(urls, prompt, company, api_key):
-    """Use requests to call Firecrawl's extract endpoint with selected URLs."""
-    print(f"{Colors.YELLOW}Extracting structured data from the provided URLs using Firecrawl...{Colors.RESET}")
+    """Use requests to call Sitecrawl's extract endpoint with selected URLs."""
+    print(f"{Colors.YELLOW}Extracting structured data from the provided URLs using Sitecrawl...{Colors.RESET}")
     
     headers = {
         'Content-Type': 'application/json',
@@ -111,7 +111,7 @@ def extract_company_info(urls, prompt, company, api_key):
     
     try:
         response = requests.post(
-            "https://api.firecrawl.dev/v1/extract",
+            "https://api.sitecrawl.dev/v1/extract",
             headers=headers,
             json=payload,
             timeout=30
@@ -123,14 +123,14 @@ def extract_company_info(urls, prompt, company, api_key):
             print(f"{Colors.RED}API returned error: {data.get('error', 'No error message')}{Colors.RESET}")
             return None
         
-        # Assuming Firecrawl provides a way to retrieve data with 'id'
+        # Assuming Sitecrawl provides a way to retrieve data with 'id'
         extraction_id = data.get('id')
         if not extraction_id:
             print(f"{Colors.RED}No extraction ID found in response.{Colors.RESET}")
             return None
 
         # Polling for the extraction result
-        return poll_firecrawl_result(extraction_id, api_key)
+        return poll_sitecrawl_result(extraction_id, api_key)
 
     except requests.exceptions.RequestException as e:
         print(f"{Colors.RED}Request failed: {e}{Colors.RESET}")
@@ -142,9 +142,9 @@ def extract_company_info(urls, prompt, company, api_key):
         print(f"{Colors.RED}Failed to extract data: {e}{Colors.RESET}")
         return None
 
-def poll_firecrawl_result(extraction_id, api_key, interval=5, max_attempts=36):
-    """Poll Firecrawl API to get the extraction result."""
-    url = f"https://api.firecrawl.dev/v1/extract/{extraction_id}"
+def poll_sitecrawl_result(extraction_id, api_key, interval=5, max_attempts=36):
+    """Poll Sitecrawl API to get the extraction result."""
+    url = f"https://api.sitecrawl.dev/v1/extract/{extraction_id}"
     headers = {
         'Authorization': f'Bearer {api_key}'
     }
@@ -192,7 +192,7 @@ def main():
         print(f"{Colors.RED}R1 did not return any URLs.{Colors.RESET}")
         return
     
-    data = extract_company_info(selected_urls, objective, company, firecrawl_api_key)
+    data = extract_company_info(selected_urls, objective, company, sitecrawl_api_key)
     
     if data:
         print(f"{Colors.GREEN}Extraction completed successfully.{Colors.RESET}")

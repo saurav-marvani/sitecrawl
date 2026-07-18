@@ -80,7 +80,7 @@ export async function getSlackInstallationByTeam(
 }
 
 // Inbound Slack traffic (slash commands, events) arrives keyed by the Slack
-// workspace id. If two Firecrawl teams share a workspace we take the most
+// workspace id. If two Sitecrawl teams share a workspace we take the most
 // recent install; this is a documented edge case.
 export async function getSlackInstallationBySlackTeam(
   slackTeamId: string,

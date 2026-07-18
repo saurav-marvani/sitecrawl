@@ -8,7 +8,7 @@ describe("markdown change tracking diff", () => {
   it("treats command substitution syntax as text", () => {
     const marker = join(
       tmpdir(),
-      `firecrawl-change-diff-${process.pid}-${Date.now()}`,
+      `sitecrawl-change-diff-${process.pid}-${Date.now()}`,
     );
     const current = `visible text $(touch ${marker}) and \`touch ${marker}.bt\``;
 
@@ -30,7 +30,7 @@ describe("markdown change tracking diff", () => {
   it("uses the shell-free diff path for monitor markdown diffs", () => {
     const marker = join(
       tmpdir(),
-      `firecrawl-monitor-diff-${process.pid}-${Date.now()}`,
+      `sitecrawl-monitor-diff-${process.pid}-${Date.now()}`,
     );
 
     try {

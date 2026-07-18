@@ -1,5 +1,5 @@
 import os
-from firecrawl import FirecrawlApp
+from sitecrawl import SitecrawlApp
 import json
 from dotenv import load_dotenv
 from openai import OpenAI
@@ -18,11 +18,11 @@ class Colors:
 load_dotenv()
 
 # Retrieve API keys from environment variables
-firecrawl_api_key = os.getenv("FIRECRAWL_API_KEY")
+sitecrawl_api_key = os.getenv("SITECRAWL_API_KEY")
 openrouter_api_key = os.getenv("OPENROUTER_API_KEY")
 
-# Initialize the FirecrawlApp and OpenRouter client
-app = FirecrawlApp(api_key=firecrawl_api_key)
+# Initialize the SitecrawlApp and OpenRouter client
+app = SitecrawlApp(api_key=sitecrawl_api_key)
 client = OpenAI(
     base_url="https://openrouter.ai/api/v1",
     api_key=openrouter_api_key

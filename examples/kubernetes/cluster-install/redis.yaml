@@ -29,7 +29,7 @@ spec:
           - name: REDIS_PASSWORD
             valueFrom:
               secretKeyRef:
-                name: firecrawl-secret
+                name: sitecrawl-secret
                 key: REDIS_PASSWORD
 ---
 apiVersion: v1

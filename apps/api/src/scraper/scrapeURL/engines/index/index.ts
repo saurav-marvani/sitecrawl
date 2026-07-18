@@ -52,7 +52,7 @@ export async function sendDocumentToIndex(meta: Meta, document: Document) {
     !meta.internalOptions.zeroDataRetention &&
     meta.winnerEngine !== "index" &&
     meta.winnerEngine !== "index;documents" &&
-    // Exchange-delivered content is never stored on the Firecrawl side:
+    // Exchange-delivered content is never stored on the Sitecrawl side:
     // every access must go through the Exchange and its ledger.
     meta.winnerEngine !== "exchange" &&
     !(meta.winnerEngine === "pdf" && !shouldParsePDF(meta.options.parsers)) &&
@@ -252,7 +252,7 @@ export async function scrapeURLWithIndex(
 
     if (
       domainSplitsHash.length === 0 ||
-      config.FIRECRAWL_INDEX_WRITE_ONLY ||
+      config.SITECRAWL_INDEX_WRITE_ONLY ||
       config.USE_DB_AUTHENTICATION !== true
     ) {
       maxAge = defaultMaxAge;

@@ -2,24 +2,24 @@
 
 declare(strict_types=1);
 
-namespace Firecrawl\Laravel\Tools;
+namespace Sitecrawl\Laravel\Tools;
 
-use Firecrawl\Models\SearchOptions;
+use Sitecrawl\Models\SearchOptions;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Ai\Tools\Request;
 
-class FirecrawlSearch extends FirecrawlTool
+class SitecrawlSearch extends SitecrawlTool
 {
     public function name(): string
     {
-        return 'firecrawl_search';
+        return 'sitecrawl_search';
     }
 
     public function description(): string
     {
-        return 'Search the web with Firecrawl and return matching results as a JSON array of '
+        return 'Search the web with Sitecrawl and return matching results as a JSON array of '
             . '{title, url, description} objects. Use this to find relevant pages when you do not '
-            . 'already know the URL. Follow up with firecrawl_scrape to read the full content of a result.';
+            . 'already know the URL. Follow up with sitecrawl_scrape to read the full content of a result.';
     }
 
     public function handle(Request $request): string

@@ -14,7 +14,7 @@ import type { Logger } from "winston";
 import {
   computeEngpickerVerdict,
   type EngpickerUrlResult,
-} from "@mendable/firecrawl-rs";
+} from "@mendable/sitecrawl-rs";
 
 type EngpickerJob = {
   id: number;

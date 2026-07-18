@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Firecrawl\Models;
+namespace Sitecrawl\Models;
 
 /**
  * Structured menu information extracted via the `menu` scrape format.

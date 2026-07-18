@@ -68,19 +68,19 @@ function makeDb(
 const useDbAuthentication = config.USE_DB_AUTHENTICATION;
 
 const mainDb = useDbAuthentication
-  ? makeDb(config.DATABASE_URL, "firecrawl-api")
+  ? makeDb(config.DATABASE_URL, "sitecrawl-api")
   : null;
 const replicaDb = useDbAuthentication
   ? makeDb(
       config.DATABASE_REPLICA_URL ?? config.DATABASE_URL,
-      "firecrawl-api-rr",
+      "sitecrawl-api-rr",
     )
   : null;
 // The index pool was the sole consumer behind the 2026-06-11 pgbouncer
 // `08P01: no more connections allowed (max_client_conn)` incident. It runs
 // against the transaction pooler, so cap it well below the generic 20 to keep
 // the fleet-wide client-connection count under Supabase's 12000 ceiling.
-const indexDb = makeDb(config.INDEX_DATABASE_URL, "firecrawl-index", {
+const indexDb = makeDb(config.INDEX_DATABASE_URL, "sitecrawl-index", {
   max: 6,
   min: 0,
 });

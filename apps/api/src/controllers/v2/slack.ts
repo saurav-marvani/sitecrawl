@@ -21,7 +21,7 @@ import {
 } from "../../services/integrations/slack/client";
 import { verifySlackSignature } from "../../services/integrations/slack/signature";
 import {
-  handleFirecrawlCommand,
+  handleSitecrawlCommand,
   handleSlashCommand,
 } from "../../services/integrations/slack/commands";
 import type { SlackConnectionStatus } from "../../services/integrations/slack/types";
@@ -37,7 +37,7 @@ const startBodySchema = z.object({
 
 // Builds an absolute dashboard URL for post-OAuth browser redirects.
 function dashboardRedirect(path: string, params: Record<string, string>): string {
-  const url = new URL(path, config.FIRECRAWL_DASHBOARD_URL);
+  const url = new URL(path, config.SITECRAWL_DASHBOARD_URL);
   for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
   return url.toString();
 }
@@ -199,7 +199,7 @@ export async function slackDisconnectController(
 }
 
 // POST /v2/slack/commands (public, signature-verified) — the /monitor and
-// /firecrawl slash commands. Slack enforces a 3-second ack deadline, so we
+// /sitecrawl slash commands. Slack enforces a 3-second ack deadline, so we
 // respond immediately and deliver results via response_url.
 export async function slackCommandsController(req: Request, res: Response) {
   const rawBody = (req as Request & { rawBody?: Buffer }).rawBody;
@@ -236,15 +236,15 @@ export async function slackCommandsController(req: Request, res: Response) {
     if (!installation) {
       return {
         response_type: "ephemeral",
-        text: `This workspace isn't linked to Firecrawl yet. Connect it from the dashboard: ${config.FIRECRAWL_DASHBOARD_URL}/app/monitoring`,
+        text: `This workspace isn't linked to Sitecrawl yet. Connect it from the dashboard: ${config.SITECRAWL_DASHBOARD_URL}/app/monitoring`,
       };
     }
 
-    // Both /monitor and /firecrawl post to this endpoint; route by which
+    // Both /monitor and /sitecrawl post to this endpoint; route by which
     // command Slack sent so account/workspace commands stay off /monitor.
     const command = (body.command ?? "").toLowerCase();
     const handler =
-      command === "/firecrawl" ? handleFirecrawlCommand : handleSlashCommand;
+      command === "/sitecrawl" ? handleSitecrawlCommand : handleSlashCommand;
     return handler({
       installation,
       text: body.text ?? "",

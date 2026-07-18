@@ -41,10 +41,10 @@ load_dotenv()
 
 # Initialize clients
 client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY"))
-firecrawl_api_key = os.getenv("FIRECRAWL_API_KEY")
+sitecrawl_api_key = os.getenv("SITECRAWL_API_KEY")
 
-if not firecrawl_api_key:
-    print(f"{Colors.RED}{Emojis.WARNING} Warning: FIRECRAWL_API_KEY not found in environment variables{Colors.RESET}")
+if not sitecrawl_api_key:
+    print(f"{Colors.RED}{Emojis.WARNING} Warning: SITECRAWL_API_KEY not found in environment variables{Colors.RESET}")
 
 def print_header(text, emoji, color=Colors.BLUE):
     """Print a formatted section header with emoji."""
@@ -59,8 +59,8 @@ def print_section(title, content, emoji):
     print(f"{content}")
 
 def poll_extraction_result(extraction_id, api_key, interval=2, max_attempts=15):
-    """Poll Firecrawl API for extraction results with shorter intervals."""
-    url = f"https://api.firecrawl.dev/v1/extract/{extraction_id}"
+    """Poll Sitecrawl API for extraction results with shorter intervals."""
+    url = f"https://api.sitecrawl.dev/v1/extract/{extraction_id}"
     headers = {'Authorization': f'Bearer {api_key}'}
 
     print(f"{Colors.YELLOW}Processing profile data...{Colors.RESET}")
@@ -92,9 +92,9 @@ def poll_extraction_result(extraction_id, api_key, interval=2, max_attempts=15):
     return None
 
 def extract_github_profile(username, api_key):
-    """Extract GitHub profile data using Firecrawl with optimized settings."""
+    """Extract GitHub profile data using Sitecrawl with optimized settings."""
     if not api_key:
-        print(f"{Colors.RED}Error: Firecrawl API key is missing{Colors.RESET}")
+        print(f"{Colors.RED}Error: Sitecrawl API key is missing{Colors.RESET}")
         return None
 
     headers = {
@@ -119,7 +119,7 @@ def extract_github_profile(username, api_key):
     try:
         print(f"{Colors.YELLOW}Starting extraction for: {username}{Colors.RESET}")
         response = requests.post(
-            "https://api.firecrawl.dev/v1/extract",
+            "https://api.sitecrawl.dev/v1/extract",
             headers=headers,
             json=payload,
             timeout=15
@@ -258,7 +258,7 @@ def main():
         return
 
     print("Analyzing profile...")
-    profile_data = extract_github_profile(username, firecrawl_api_key)
+    profile_data = extract_github_profile(username, sitecrawl_api_key)
     
     if not profile_data:
         print(f"{Colors.RED}Profile analysis failed.{Colors.RESET}")

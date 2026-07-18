@@ -2,7 +2,7 @@
 import os
 import datetime
 import time
-from firecrawl import FirecrawlApp
+from sitecrawl import SitecrawlApp
 import json
 import google.generativeai as genai
 from dotenv import load_dotenv
@@ -12,17 +12,17 @@ load_dotenv()
 
 # Retrieve API keys from environment variables
 google_api_key = os.getenv("GOOGLE_API_KEY")
-firecrawl_api_key = os.getenv("FIRECRAWL_API_KEY")
+sitecrawl_api_key = os.getenv("SITECRAWL_API_KEY")
 
 # Configure the Google Generative AI module with the API key
 genai.configure(api_key=google_api_key)
 model = genai.GenerativeModel("gemini-1.5-pro-001")
 
 # Set the docs URL
-docs_url = "https://docs.firecrawl.dev/api-reference"
+docs_url = "https://docs.sitecrawl.dev/api-reference"
 
-# Initialize the FirecrawlApp with your API key
-app = FirecrawlApp(api_key=firecrawl_api_key)
+# Initialize the SitecrawlApp with your API key
+app = SitecrawlApp(api_key=sitecrawl_api_key)
 
 # %%
 # Crawl all pages on docs

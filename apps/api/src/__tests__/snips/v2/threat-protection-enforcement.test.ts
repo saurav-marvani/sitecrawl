@@ -383,11 +383,11 @@ describeIf(TEST_PRODUCTION)("Threat protection enforcement", () => {
       async () => {
         const results = await search(
           {
-            query: "firecrawl",
+            query: "sitecrawl",
             limit: 10,
             threatProtection: {
               mode: "normal",
-              blacklist: ["firecrawl.dev"],
+              blacklist: ["sitecrawl.dev"],
               failurePolicy: "open",
             },
           } as any,
@@ -396,7 +396,7 @@ describeIf(TEST_PRODUCTION)("Threat protection enforcement", () => {
         for (const result of results.web ?? []) {
           const hostname = new URL(result.url).hostname;
           expect(
-            hostname === "firecrawl.dev" || hostname.endsWith(".firecrawl.dev"),
+            hostname === "sitecrawl.dev" || hostname.endsWith(".sitecrawl.dev"),
           ).toBe(false);
         }
       },

@@ -54,11 +54,11 @@ export const logger = winston.createLogger({
     },
   }),
   transports: [
-    ...(config.FIRECRAWL_LOG_TO_FILE
+    ...(config.SITECRAWL_LOG_TO_FILE
       ? [
           new winston.transports.File({
             filename:
-              "firecrawl-" +
+              "sitecrawl-" +
               (process.argv[1].includes("worker") ? "worker" : "app") +
               ".log",
             format: winston.format.combine(

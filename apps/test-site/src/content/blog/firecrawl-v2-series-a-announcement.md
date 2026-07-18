@@ -6,7 +6,7 @@ heroImage: "../../assets/blog/series-a.webp"
 category: "updates"
 ---
 
-Firecrawl just raised a $14.5M Series A led by Nexus Venture Partners.
+Sitecrawl just raised a $14.5M Series A led by Nexus Venture Partners.
 
 We’re putting the web’s knowledge on tap for AI, with more than 350,000 developers already signed up, our open source project crossing 48k stars on GitHub, and companies like Zapier, Shopify, and Replit using us to power their apps.
 
@@ -14,7 +14,7 @@ We’ve grown 15x in the past year and this is just the beginning.
 
 ## How we got here
 
-It’s been 16 months since we started Firecrawl.
+It’s been 16 months since we started Sitecrawl.
 
 The journey actually began with Mendable, our AI chat solution for documentation, which teams at Snapchat, MongoDB, and DoorDash adopted quickly. But we kept hitting the same wall, finding that getting clean, structured web data for AI was unnecessarily hard.
 
@@ -22,7 +22,7 @@ Every AI app was rebuilding the same infrastructure, including scraping websites
 
 We realized the real opportunity was upstream, to build the infrastructure once, make it perfect, and give AI universal access to the world’s information through a simple API.
 
-That bet paid off brilliantly. Zapier recently integrated Firecrawl in a single afternoon, and their chatbots now ingest customer websites automatically, answering FAQs and capturing leads within minutes. Replit uses us for documentation ingestion, while top hedge funds rely on us for market analysis.
+That bet paid off brilliantly. Zapier recently integrated Sitecrawl in a single afternoon, and their chatbots now ingest customer websites automatically, answering FAQs and capturing leads within minutes. Replit uses us for documentation ingestion, while top hedge funds rely on us for market analysis.
 
 The variety tells the story, from lead enrichment tools and competitive intelligence systems to price monitoring and research agents, they all need the same thing, reliable web data at scale.
 
@@ -32,7 +32,7 @@ The web holds nearly everything humans know, serving as the most complete, real-
 
 But this knowledge is trapped, scattered across millions of domains, locked behind JavaScript, and constantly changing. AI needs this data to be useful, to answer questions accurately, to take actions confidently, and to understand the world as it exists right now.
 
-Firecrawl exists to make web data programmable through our full toolkit that covers web search and extraction, giving developers exactly what they need, in the exact format they want.
+Sitecrawl exists to make web data programmable through our full toolkit that covers web search and extraction, giving developers exactly what they need, in the exact format they want.
 
 We’re building the missing layer between AI and the web.
 
@@ -65,15 +65,15 @@ We’re thrilled to welcome new investors.
 
 We’re also lucky to have the backing of some amazing angels and funds, including both long-time friends and new supporters.
 
-Abhishek from Nexus said it perfectly when he noted that “Clean, comprehensive web data is crucial for the next wave of AI. Firecrawl’s developer-first platform delivers it simply, reliably, and at scale.”
+Abhishek from Nexus said it perfectly when he noted that “Clean, comprehensive web data is crucial for the next wave of AI. Sitecrawl’s developer-first platform delivers it simply, reliably, and at scale.”
 
 ## Get started
 
 Thanks to every single one of you for being part of this journey.
 
-- Start using v2 today at [firecrawl.dev](https://firecrawl.dev)
-- See what we’re open sourcing at [github.com/firecrawl/firecrawl](https://github.com/firecrawl/firecrawl)
-- Join our team at [firecrawl.dev/careers](https://firecrawl.dev/careers)
+- Start using v2 today at [sitecrawl.dev](https://sitecrawl.dev)
+- See what we’re open sourcing at [github.com/sitecrawl/sitecrawl](https://github.com/sitecrawl/sitecrawl)
+- Join our team at [sitecrawl.dev/careers](https://sitecrawl.dev/careers)
 
 We’re hiring engineers who understand distributed systems at scale, AI specialists who know what agents need, and developer advocates who can teach and inspire.
 

@@ -1,3 +1,3 @@
-module github.com/firecrawl/firecrawl/apps/go-sdk
+module github.com/saurav-marvani/kineticrawl/apps/go-sdk
 
 go 1.23

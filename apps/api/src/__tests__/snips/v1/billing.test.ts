@@ -234,7 +234,7 @@ describeIf(TEST_PRODUCTION)("Billing tests", () => {
 
       const results = await search(
         {
-          query: "firecrawl",
+          query: "sitecrawl",
         },
         identity,
       );
@@ -265,7 +265,7 @@ describeIf(TEST_PRODUCTION)("Billing tests", () => {
 
       const results = await search(
         {
-          query: "firecrawl",
+          query: "sitecrawl",
           scrapeOptions: {
             formats: ["markdown"],
           },
@@ -294,7 +294,7 @@ describeIf(TEST_PRODUCTION)("Billing tests", () => {
 
       const results = await search(
         {
-          query: "firecrawl filetype:pdf",
+          query: "sitecrawl filetype:pdf",
           scrapeOptions: {
             formats: ["markdown"],
             parsePDF: true,
@@ -329,7 +329,7 @@ describeIf(TEST_PRODUCTION)("Billing tests", () => {
 
       const results = await search(
         {
-          query: "firecrawl filetype:pdf",
+          query: "sitecrawl filetype:pdf",
           scrapeOptions: {
             formats: ["markdown"],
             parsePDF: false,

@@ -90,7 +90,7 @@ async function saveJobToGCS(params: {
 
   const attempts: GCSOperationAttempt[] = [];
 
-  return await withSpan("firecrawl-gcs-save-job", async span => {
+  return await withSpan("sitecrawl-gcs-save-job", async span => {
     setSpanAttributes(span, {
       "gcs.operation": "save_job",
       "job.id": params.id,
@@ -381,7 +381,7 @@ export async function saveLlmsTxtToGCS(
 }
 
 export async function getJobFromGCS(jobId: string): Promise<Document[] | null> {
-  return await withSpan("firecrawl-gcs-get-job", async span => {
+  return await withSpan("sitecrawl-gcs-get-job", async span => {
     setSpanAttributes(span, {
       "gcs.operation": "get_job",
       "job.id": jobId,
@@ -424,7 +424,7 @@ export async function removeJobFromGCS(
   jobId: string,
   _logger: Logger = logger,
 ): Promise<void> {
-  return await withSpan("firecrawl-gcs-remove-job", async span => {
+  return await withSpan("sitecrawl-gcs-remove-job", async span => {
     setSpanAttributes(span, {
       "gcs.operation": "remove_job",
       "job.id": jobId,

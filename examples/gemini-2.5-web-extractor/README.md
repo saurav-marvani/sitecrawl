@@ -1,19 +1,19 @@
 # Gemini 2.5 Web Extractor
 
-A powerful web information extraction tool that combines Google's Gemini 2.5 Pro (Experimental) model with Firecrawl's web extraction capabilities to gather structured information about companies from the web.
+A powerful web information extraction tool that combines Google's Gemini 2.5 Pro (Experimental) model with Sitecrawl's web extraction capabilities to gather structured information about companies from the web.
 
 ## Features
 
 - Uses Google Search (via SerpAPI) to find relevant web pages
 - Leverages Gemini 2.5 Pro (Experimental) to intelligently select the most relevant URLs
-- Extracts structured information using Firecrawl's advanced web extraction
+- Extracts structured information using Sitecrawl's advanced web extraction
 - Real-time progress monitoring and colorized console output
 
 ## Prerequisites
 
 - Python 3.8 or higher
 - Google API Key (Gemini)
-- Firecrawl API Key
+- Sitecrawl API Key
 - SerpAPI Key
 
 ## Setup
@@ -35,7 +35,7 @@ pip install -r requirements.txt
    - Copy `.env.example` to `.env`
    - Fill in your API keys in the `.env` file:
      - `GOOGLE_API_KEY`: Your Google API key for Gemini
-     - `FIRECRAWL_API_KEY`: Your Firecrawl API key
+     - `SITECRAWL_API_KEY`: Your Sitecrawl API key
      - `SERP_API_KEY`: Your SerpAPI key
 
 ## Usage
@@ -52,7 +52,7 @@ The script will:
 2. Ask what information you want to extract about the company
 3. Search for relevant web pages
 4. Use Gemini to select the most relevant URLs
-5. Extract structured information using Firecrawl
+5. Extract structured information using Sitecrawl
 6. Display the results in a formatted JSON output
 
 ## Example

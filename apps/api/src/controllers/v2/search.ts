@@ -152,7 +152,7 @@ export async function searchController(
         return res.status(403).json({
           success: false,
           error:
-            "Zero Data Retention (ZDR) search is not enabled for your team. Contact support@firecrawl.com to enable this feature.",
+            "Zero Data Retention (ZDR) search is not enabled for your team. Contact support@sitecrawl.com to enable this feature.",
         });
       }
     }

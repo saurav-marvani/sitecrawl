@@ -1,6 +1,6 @@
-# Firecrawl Ruby SDK
+# Sitecrawl Ruby SDK
 
-Ruby SDK for the [Firecrawl](https://firecrawl.dev) v2 web scraping API.
+Ruby SDK for the [Sitecrawl](https://sitecrawl.dev) v2 web scraping API.
 
 ## Prerequisites
 
@@ -11,25 +11,25 @@ Ruby SDK for the [Firecrawl](https://firecrawl.dev) v2 web scraping API.
 Add to your `Gemfile`:
 
 ```ruby
-gem "firecrawl-sdk", "~> 1.5"
+gem "sitecrawl-sdk", "~> 1.5"
 ```
 
 Or install directly:
 
 ```bash
-gem install firecrawl-sdk
+gem install sitecrawl-sdk
 ```
 
 ## Quick Start
 
 ```ruby
-require "firecrawl"
+require "sitecrawl"
 
 # Create a client
-client = Firecrawl::Client.new(api_key: "fc-your-api-key")
+client = Sitecrawl::Client.new(api_key: "fc-your-api-key")
 
-# Or load from FIRECRAWL_API_KEY environment variable
-client = Firecrawl::Client.from_env
+# Or load from SITECRAWL_API_KEY environment variable
+client = Sitecrawl::Client.from_env
 
 # Scrape a single page
 doc = client.scrape("https://example.com")
@@ -39,9 +39,9 @@ puts doc.markdown
 ## Environment Setup
 
 ```bash
-export FIRECRAWL_API_KEY="fc-your-api-key"
+export SITECRAWL_API_KEY="fc-your-api-key"
 # Optional: custom API URL
-export FIRECRAWL_API_URL="http://localhost:3002"
+export SITECRAWL_API_URL="http://localhost:3002"
 ```
 
 ## API Reference
@@ -55,7 +55,7 @@ puts doc.markdown
 
 # Scrape with options
 doc = client.scrape("https://example.com",
-  Firecrawl::Models::ScrapeOptions.new(
+  Sitecrawl::Models::ScrapeOptions.new(
     formats: ["markdown", "html"],
     only_main_content: true,
     wait_for: 1000
@@ -69,7 +69,7 @@ Use the `video` format on supported video URLs, including YouTube and TikTok. Th
 
 ```ruby
 doc = client.scrape("https://www.youtube.com/watch?v=dQw4w9WgXcQ",
-  Firecrawl::Models::ScrapeOptions.new(formats: ["video"]))
+  Sitecrawl::Models::ScrapeOptions.new(formats: ["video"]))
 
 puts doc.video
 ```
@@ -83,7 +83,7 @@ returned `product` field contains the extracted fields.
 
 ```ruby
 doc = client.scrape("https://example.com/products/widget",
-  Firecrawl::Models::ScrapeOptions.new(formats: ["product"]))
+  Sitecrawl::Models::ScrapeOptions.new(formats: ["product"]))
 
 puts doc.product
 ```
@@ -98,7 +98,7 @@ field contains the extracted fields.
 
 ```ruby
 doc = client.scrape("https://example.com/menu",
-  Firecrawl::Models::ScrapeOptions.new(formats: ["menu"]))
+  Sitecrawl::Models::ScrapeOptions.new(formats: ["menu"]))
 
 puts doc.menu
 ```
@@ -112,17 +112,17 @@ wait_for, location, and mobile. The `proxy` option only accepts `"auto"` or `"ba
 
 ```ruby
 # From disk
-file = Firecrawl::Models::ParseFile.from_path("./document.pdf")
+file = Sitecrawl::Models::ParseFile.from_path("./document.pdf")
 
 # Or from memory
-file = Firecrawl::Models::ParseFile.new(
+file = Sitecrawl::Models::ParseFile.new(
   filename: "upload.html",
   content: "<html>hi</html>",
   content_type: "text/html"
 )
 
 doc = client.parse(file,
-  Firecrawl::Models::ParseOptions.new(formats: ["markdown"]))
+  Sitecrawl::Models::ParseOptions.new(formats: ["markdown"]))
 puts doc.markdown
 ```
 
@@ -131,12 +131,12 @@ puts doc.markdown
 ```ruby
 # Crawl with auto-polling (blocks until complete)
 job = client.crawl("https://example.com",
-  Firecrawl::Models::CrawlOptions.new(limit: 50))
+  Sitecrawl::Models::CrawlOptions.new(limit: 50))
 job.data.each { |doc| puts doc.markdown }
 
 # Async crawl
 response = client.start_crawl("https://example.com",
-  Firecrawl::Models::CrawlOptions.new(limit: 10))
+  Sitecrawl::Models::CrawlOptions.new(limit: 10))
 puts response.id
 
 # Check status
@@ -154,8 +154,8 @@ urls = ["https://example.com/page1", "https://example.com/page2"]
 
 # Batch scrape with auto-polling
 job = client.batch_scrape(urls,
-  Firecrawl::Models::BatchScrapeOptions.new(
-    options: Firecrawl::Models::ScrapeOptions.new(formats: ["markdown"])
+  Sitecrawl::Models::BatchScrapeOptions.new(
+    options: Sitecrawl::Models::ScrapeOptions.new(formats: ["markdown"])
   ))
 job.data.each { |doc| puts doc.markdown }
 ```
@@ -169,19 +169,19 @@ result.links.each { |link| puts link["url"] }
 
 # With options
 result = client.map("https://example.com",
-  Firecrawl::Models::MapOptions.new(limit: 100, search: "blog"))
+  Sitecrawl::Models::MapOptions.new(limit: 100, search: "blog"))
 ```
 
 ### Search
 
 ```ruby
 # Web search
-results = client.search("firecrawl web scraping")
+results = client.search("sitecrawl web scraping")
 results.web&.each { |r| puts r["url"] }
 
 # With options
 results = client.search("latest news",
-  Firecrawl::Models::SearchOptions.new(limit: 5, location: "US"))
+  Sitecrawl::Models::SearchOptions.new(limit: 5, location: "US"))
 ```
 
 ### Agent
@@ -189,7 +189,7 @@ results = client.search("latest news",
 ```ruby
 # Run an AI agent task (blocks until complete)
 status = client.agent(
-  Firecrawl::Models::AgentOptions.new(
+  Sitecrawl::Models::AgentOptions.new(
     prompt: "Find the pricing information",
     urls: ["https://example.com"]
   ))
@@ -211,9 +211,9 @@ puts usage.remaining_credits
 ## Configuration
 
 ```ruby
-client = Firecrawl::Client.new(
+client = Sitecrawl::Client.new(
   api_key: "fc-your-api-key",
-  api_url: "https://api.firecrawl.dev",  # custom API URL
+  api_url: "https://api.sitecrawl.dev",  # custom API URL
   timeout: 300,                           # HTTP timeout in seconds
   max_retries: 3,                         # automatic retries
   backoff_factor: 0.5                     # exponential backoff factor
@@ -225,13 +225,13 @@ client = Firecrawl::Client.new(
 ```ruby
 begin
   doc = client.scrape("https://example.com")
-rescue Firecrawl::AuthenticationError => e
+rescue Sitecrawl::AuthenticationError => e
   puts "Invalid API key: #{e.message}"
-rescue Firecrawl::RateLimitError => e
+rescue Sitecrawl::RateLimitError => e
   puts "Rate limited: #{e.message}"
-rescue Firecrawl::JobTimeoutError => e
+rescue Sitecrawl::JobTimeoutError => e
   puts "Job #{e.job_id} timed out after #{e.timeout_seconds}s"
-rescue Firecrawl::FirecrawlError => e
+rescue Sitecrawl::SitecrawlError => e
   puts "Error (#{e.status_code}): #{e.message}"
 end
 ```
@@ -252,7 +252,7 @@ bundle install
 bundle exec rake test
 
 # With API key for E2E tests
-FIRECRAWL_API_KEY=fc-your-key bundle exec rake test
+SITECRAWL_API_KEY=fc-your-key bundle exec rake test
 ```
 
 ## License

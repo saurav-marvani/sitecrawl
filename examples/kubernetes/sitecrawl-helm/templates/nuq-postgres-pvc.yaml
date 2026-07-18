@@ -1,0 +1,17 @@
+{{- if .Values.nuqPostgres.persistence.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "sitecrawl.fullname" . }}-nuq-postgres-pvc
+  labels:
+    app: {{ include "sitecrawl.name" . }}-nuq-postgres
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.nuqPostgres.persistence.size | quote }}
+  {{- if .Values.nuqPostgres.persistence.storageClass }}
+  storageClassName: {{ .Values.nuqPostgres.persistence.storageClass | quote }}
+  {{- end }}
+{{- end }}

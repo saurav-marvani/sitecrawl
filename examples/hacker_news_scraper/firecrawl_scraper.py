@@ -1,6 +1,6 @@
-# firecrawl_scraper.py
+# sitecrawl_scraper.py
 import json
-from firecrawl import FirecrawlApp
+from sitecrawl import SitecrawlApp
 from dotenv import load_dotenv
 from pydantic import BaseModel, Field
 from typing import List
@@ -26,8 +26,8 @@ class NewsData(BaseModel):
     news_items: List[NewsItem]
 
 
-def get_firecrawl_news_data():
-    app = FirecrawlApp()
+def get_sitecrawl_news_data():
+    app = SitecrawlApp()
 
     data = app.scrape_url(
         BASE_URL,
@@ -40,15 +40,15 @@ def get_firecrawl_news_data():
     return data
 
 
-def save_firecrawl_news_data():
+def save_sitecrawl_news_data():
     """
     Save the scraped news data to a JSON file with the current date in the filename.
     """
     # Get the data
-    data = get_firecrawl_news_data()
+    data = get_sitecrawl_news_data()
     # Format current date for filename
     date_str = datetime.now().strftime("%Y_%m_%d_%H_%M")
-    filename = f"firecrawl_hacker_news_data_{date_str}.json"
+    filename = f"sitecrawl_hacker_news_data_{date_str}.json"
 
     # Save the news items to JSON file
     with open(filename, "w") as f:
@@ -58,4 +58,4 @@ def save_firecrawl_news_data():
 
 
 if __name__ == "__main__":
-    save_firecrawl_news_data()
+    save_sitecrawl_news_data()

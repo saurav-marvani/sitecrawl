@@ -1,5 +1,5 @@
 import os
-from firecrawl import FirecrawlApp
+from sitecrawl import SitecrawlApp
 import json
 from dotenv import load_dotenv
 from together import Together
@@ -18,11 +18,11 @@ class Colors:
 load_dotenv()
 
 # Retrieve API keys from environment variables
-firecrawl_api_key = os.getenv("FIRECRAWL_API_KEY")
+sitecrawl_api_key = os.getenv("SITECRAWL_API_KEY")
 together_api_key = os.getenv("TOGETHER_API_KEY")
 
-# Initialize the FirecrawlApp and Together client
-app = FirecrawlApp(api_key=firecrawl_api_key)
+# Initialize the SitecrawlApp and Together client
+app = SitecrawlApp(api_key=sitecrawl_api_key)
 client = Together(api_key=together_api_key)
 
 # Find the page that most likely contains the objective

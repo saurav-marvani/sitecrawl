@@ -3,22 +3,22 @@ import os
 from dotenv import load_dotenv
 from openai import OpenAI
 from hubspot import HubSpot
-from firecrawl import FirecrawlApp
+from sitecrawl import SitecrawlApp
 
 # Load environment variables
 load_dotenv()
 
 # Initialize clients
 def initialize_clients():
-    firecrawl_api_key = os.getenv("FIRECRAWL_API_KEY")
+    sitecrawl_api_key = os.getenv("SITECRAWL_API_KEY")
     openai_api_key = os.getenv("OPENAI_API_KEY")
     hubspot_api_key = os.getenv("HUBSPOT_API_KEY")
     
     openai_client = OpenAI(api_key=openai_api_key)
     hubspot_client = HubSpot(access_token=hubspot_api_key)
-    firecrawl_client = FirecrawlApp(api_key=firecrawl_api_key)
+    sitecrawl_client = SitecrawlApp(api_key=sitecrawl_api_key)
     
-    return openai_client, hubspot_client, firecrawl_client
+    return openai_client, hubspot_client, sitecrawl_client
 
 # Get list of companies from HubSpot
 def get_companies_from_hubspot(hubspot_client):
@@ -40,10 +40,10 @@ def get_companies_from_hubspot(hubspot_client):
             break
     return [company for company in companies if company.properties.get("website")]
 
-# Scrape URL using Firecrawl
-def scrape_url(firecrawl_client, url):
+# Scrape URL using Sitecrawl
+def scrape_url(sitecrawl_client, url):
     try:
-        return firecrawl_client.scrape_url(url, params={'formats': ['markdown']})
+        return sitecrawl_client.scrape_url(url, params={'formats': ['markdown']})
     except Exception as e:
         print(f"Error scraping URL {url}: {str(e)}")
         return None
@@ -101,7 +101,7 @@ def update_hubspot(hubspot_client, company, extracted_info):
 
 # Main process
 def main():
-    openai_client, hubspot_client, firecrawl_client = initialize_clients()
+    openai_client, hubspot_client, sitecrawl_client = initialize_clients()
     companies = get_companies_from_hubspot(hubspot_client)
     
     scraped_data = []
@@ -110,7 +110,7 @@ def main():
         url = company.properties["website"]
         print(f"Processing {company_name} at {url}...")
         
-        scrape_status = scrape_url(firecrawl_client, url)
+        scrape_status = scrape_url(sitecrawl_client, url)
         if not scrape_status:
             continue
         

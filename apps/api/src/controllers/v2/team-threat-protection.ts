@@ -15,7 +15,7 @@ import {
 
 const logger = _logger.child({ module: "team-threat-protection" });
 
-const SUPPORT_EMAIL = "support@firecrawl.com";
+const SUPPORT_EMAIL = "support@sitecrawl.com";
 
 function rejectWithoutFlag(
   req: RequestWithAuth<any, any, any>,

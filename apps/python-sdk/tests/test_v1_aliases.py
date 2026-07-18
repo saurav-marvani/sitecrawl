@@ -18,14 +18,14 @@ ALIAS_MAP = {
 
 class TestV2ClientAliases:
     def test_aliases_exist(self):
-        from firecrawl.v2.client import FirecrawlClient
-        client = FirecrawlClient(api_key="fc-test", api_url="http://localhost:9")
+        from sitecrawl.v2.client import SitecrawlClient
+        client = SitecrawlClient(api_key="fc-test", api_url="http://localhost:9")
         for alias in ALIAS_MAP:
             assert hasattr(client, alias), f"Missing alias: {alias}"
 
     def test_aliases_delegate(self):
-        from firecrawl.v2.client import FirecrawlClient
-        client = FirecrawlClient(api_key="fc-test", api_url="http://localhost:9")
+        from sitecrawl.v2.client import SitecrawlClient
+        client = SitecrawlClient(api_key="fc-test", api_url="http://localhost:9")
         sentinel = object()
         for alias, target in ALIAS_MAP.items():
             with patch.object(client, target, return_value=sentinel) as mock:
@@ -34,16 +34,16 @@ class TestV2ClientAliases:
                 assert result is sentinel
 
 
-class TestTopLevelFirecrawlAliases:
+class TestTopLevelSitecrawlAliases:
     def test_aliases_exposed(self):
-        from firecrawl import Firecrawl
-        client = Firecrawl(api_key="fc-test", api_url="http://localhost:9")
+        from sitecrawl import Sitecrawl
+        client = Sitecrawl(api_key="fc-test", api_url="http://localhost:9")
         for alias in ALIAS_MAP:
-            assert hasattr(client, alias), f"Missing on Firecrawl: {alias}"
+            assert hasattr(client, alias), f"Missing on Sitecrawl: {alias}"
 
     def test_aliases_delegate(self):
-        from firecrawl import Firecrawl
-        client = Firecrawl(api_key="fc-test", api_url="http://localhost:9")
+        from sitecrawl import Sitecrawl
+        client = Sitecrawl(api_key="fc-test", api_url="http://localhost:9")
         sentinel = object()
         for alias, target in ALIAS_MAP.items():
             with patch.object(client._v2_client, target, return_value=sentinel) as mock:
@@ -52,9 +52,9 @@ class TestTopLevelFirecrawlAliases:
                 assert result is sentinel
 
 
-class TestAsyncFirecrawlAliases:
+class TestAsyncSitecrawlAliases:
     def test_aliases_exposed(self):
-        from firecrawl import AsyncFirecrawl
-        client = AsyncFirecrawl(api_key="fc-test", api_url="http://localhost:9")
+        from sitecrawl import AsyncSitecrawl
+        client = AsyncSitecrawl(api_key="fc-test", api_url="http://localhost:9")
         for alias in ALIAS_MAP:
-            assert hasattr(client, alias), f"Missing on AsyncFirecrawl: {alias}"
+            assert hasattr(client, alias), f"Missing on AsyncSitecrawl: {alias}"

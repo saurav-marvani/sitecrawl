@@ -427,8 +427,8 @@ function isExchangeEligibleRequest(input: RouteInput): boolean {
     return false;
   }
 
-  // minAge requests ask for Firecrawl-cached data; the Exchange serves
-  // provider data and Firecrawl never caches it, so the semantics cannot
+  // minAge requests ask for Sitecrawl-cached data; the Exchange serves
+  // provider data and Sitecrawl never caches it, so the semantics cannot
   // be honored here.
   if (input.minAge !== undefined) {
     return false;
@@ -509,7 +509,7 @@ export async function canUseExchangeForRequest(
 }
 
 function getThirdPartyDataTermsSettingsUrl(): string {
-  return `${config.FIRECRAWL_DASHBOARD_URL.replace(/\/+$/, "")}/app/settings?tab=data-sources`;
+  return `${config.SITECRAWL_DASHBOARD_URL.replace(/\/+$/, "")}/app/settings?tab=data-sources`;
 }
 
 export function getThirdPartyDataTermsRequiredResponse(terms: ExchangeTerms) {

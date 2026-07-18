@@ -232,7 +232,7 @@ async function fetchResearchUpstream(
     const v = req.headers[h];
     if (typeof v === "string") headers[h] = v;
   }
-  headers["firecrawl-team-id"] = req.auth.team_id;
+  headers["sitecrawl-team-id"] = req.auth.team_id;
 
   return fetch(url, {
     method: "GET",

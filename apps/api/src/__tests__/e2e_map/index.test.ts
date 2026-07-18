@@ -12,7 +12,7 @@ describe("E2E Tests for Map API Routes", () => {
         .set("Authorization", `Bearer ${config.TEST_API_KEY}`)
         .set("Content-Type", "application/json")
         .send({
-          url: "https://firecrawl.dev",
+          url: "https://sitecrawl.dev",
           sitemapOnly: false,
           search: "smart-crawl",
         });
@@ -21,20 +21,20 @@ describe("E2E Tests for Map API Routes", () => {
       expect(response.statusCode).toBe(200);
       expect(response.body).toHaveProperty("links");
       expect(response.body.links.length).toBeGreaterThan(0);
-      expect(response.body.links[0]).toContain("firecrawl.dev/smart-crawl");
+      expect(response.body.links[0]).toContain("sitecrawl.dev/smart-crawl");
     },
     60000,
   );
 
   it.concurrent(
-    "(feat-subdomains) should return mapped links for firecrawl.dev with subdomains included",
+    "(feat-subdomains) should return mapped links for sitecrawl.dev with subdomains included",
     async () => {
       const response = await request(TEST_URL)
         .post("/v1/map")
         .set("Authorization", `Bearer ${config.TEST_API_KEY}`)
         .set("Content-Type", "application/json")
         .send({
-          url: "https://firecrawl.dev",
+          url: "https://sitecrawl.dev",
           sitemapOnly: false,
           includeSubdomains: true,
         });
@@ -44,21 +44,21 @@ describe("E2E Tests for Map API Routes", () => {
       expect(response.body).toHaveProperty("links");
       expect(response.body.links.length).toBeGreaterThan(0);
       expect(response.body.links[response.body.links.length - 1]).toContain(
-        "docs.firecrawl.dev",
+        "docs.sitecrawl.dev",
       );
     },
     60000,
   );
 
   it.concurrent(
-    "(feat-sitemap-only) should return mapped links for firecrawl.dev with sitemap only",
+    "(feat-sitemap-only) should return mapped links for sitecrawl.dev with sitemap only",
     async () => {
       const response = await request(TEST_URL)
         .post("/v1/map")
         .set("Authorization", `Bearer ${config.TEST_API_KEY}`)
         .set("Content-Type", "application/json")
         .send({
-          url: "https://firecrawl.dev",
+          url: "https://sitecrawl.dev",
           sitemapOnly: true,
         });
 
@@ -67,21 +67,21 @@ describe("E2E Tests for Map API Routes", () => {
       expect(response.body).toHaveProperty("links");
       expect(response.body.links.length).toBeGreaterThan(0);
       expect(response.body.links[response.body.links.length - 1]).not.toContain(
-        "docs.firecrawl.dev",
+        "docs.sitecrawl.dev",
       );
     },
     60000,
   );
 
   it.concurrent(
-    "(feat-limit) should return mapped links for firecrawl.dev with a limit",
+    "(feat-limit) should return mapped links for sitecrawl.dev with a limit",
     async () => {
       const response = await request(TEST_URL)
         .post("/v1/map")
         .set("Authorization", `Bearer ${config.TEST_API_KEY}`)
         .set("Content-Type", "application/json")
         .send({
-          url: "https://firecrawl.dev",
+          url: "https://sitecrawl.dev",
           sitemapOnly: false,
           limit: 10,
         });

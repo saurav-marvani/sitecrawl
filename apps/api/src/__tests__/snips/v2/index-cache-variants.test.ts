@@ -21,7 +21,7 @@ describeIf(TEST_PRODUCTION)("V2 index lookup variant matching", () => {
     "screenshot-capable index entry serves a request without screenshot",
     async () => {
       const id = crypto.randomUUID();
-      const url = "https://firecrawl.dev/?testId=" + id;
+      const url = "https://sitecrawl.dev/?testId=" + id;
 
       const data1 = await scrape(
         {
@@ -52,7 +52,7 @@ describeIf(TEST_PRODUCTION)("V2 index lookup variant matching", () => {
     "screenshot request does not get served by a screenshotless index entry",
     async () => {
       const id = crypto.randomUUID();
-      const url = "https://firecrawl.dev/?testId=" + id;
+      const url = "https://sitecrawl.dev/?testId=" + id;
 
       const data1 = await scrape(
         {

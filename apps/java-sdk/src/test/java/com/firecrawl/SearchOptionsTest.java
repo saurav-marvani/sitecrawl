@@ -1,8 +1,8 @@
-package com.firecrawl;
+package com.sitecrawl;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.firecrawl.models.SearchOptions;
+import com.sitecrawl.models.SearchOptions;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;

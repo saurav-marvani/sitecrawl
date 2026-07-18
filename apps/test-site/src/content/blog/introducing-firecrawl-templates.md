@@ -1,12 +1,12 @@
 ---
-title: "Introducing Templates: Ready to use Firecrawl examples"
-description: "A library of reusable playground setups, code snippets, and repos to help you quickly implement Firecrawl for any use case."
+title: "Introducing Templates: Ready to use Sitecrawl examples"
+description: "A library of reusable playground setups, code snippets, and repos to help you quickly implement Sitecrawl for any use case."
 pubDate: "May 13, 2025"
 heroImage: "../../assets/blog/templateslaunch.webp"
 category: "updates"
 ---
 
-Today we’re launching **Templates** – making it super easy to discover, share, and reuse Firecrawl examples. Our community has built so many amazing things with Firecrawl, and we’re excited to templatize and share them to help you get started faster.
+Today we’re launching **Templates** – making it super easy to discover, share, and reuse Sitecrawl examples. Our community has built so many amazing things with Sitecrawl, and we’re excited to templatize and share them to help you get started faster.
 
 ## Why Templates?
 
@@ -17,7 +17,7 @@ Three Types of Templates
 
 ### 1. Playground Templates
 
-Pre-configured Firecrawl Playground setups you can load instantly. We have several ready to go, including templates for crawling entire websites and scraping JavaScript-heavy pages. Access these directly from the Playground under the Templates dropdown.
+Pre-configured Sitecrawl Playground setups you can load instantly. We have several ready to go, including templates for crawling entire websites and scraping JavaScript-heavy pages. Access these directly from the Playground under the Templates dropdown.
 
 ### 2. Code Snippets
 
@@ -25,11 +25,11 @@ Reusable code segments you can drop into your own applications. Examples include
 
 ### 3. Complete Repositories
 
-Full applications built with Firecrawl that you can run instantly with our Replit integration. Check out Open Deep Research and Trend Finder repositories with the one-click “Run with Replit” button.
+Full applications built with Sitecrawl that you can run instantly with our Replit integration. Check out Open Deep Research and Trend Finder repositories with the one-click “Run with Replit” button.
 
 ## From the Community, For the Community
 
-Our template library lives at [firecrawl.dev/templates](https://www.firecrawl.dev/templates), where you can browse, search, and filter to find exactly what you need.
+Our template library lives at [sitecrawl.dev/templates](https://www.sitecrawl.dev/templates), where you can browse, search, and filter to find exactly what you need.
 
 Anyone can create and share templates:
 
@@ -43,9 +43,9 @@ For now, we’re running a quick review process for public templates to ensure q
 
 Ready to dive in?
 
-- Check out the [Templates Library](https://www.firecrawl.dev/templates)
+- Check out the [Templates Library](https://www.sitecrawl.dev/templates)
 - Try the Templates dropdown in the Playground
 - Run a repo template with the “Run with Replit” button
 - Create your own templates and share with the community
 
-We can’t wait to see what you build and share! Join us on [Discord](https://discord.gg/firecrawl) to discuss templates, share ideas, and connect with other Firecrawl users.
+We can’t wait to see what you build and share! Join us on [Discord](https://discord.gg/sitecrawl) to discuss templates, share ideas, and connect with other Sitecrawl users.

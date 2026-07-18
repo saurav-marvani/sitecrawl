@@ -7,7 +7,7 @@ import {
 import { config } from "../config";
 
 const CANONICAL_PRM_URL =
-  "https://www.firecrawl.dev/.well-known/oauth-protected-resource";
+  "https://www.sitecrawl.dev/.well-known/oauth-protected-resource";
 
 describe("agent-auth-discovery", () => {
   it("defaults AGENT_AUTH_RESOURCE_METADATA_URL to canonical PRM", () => {

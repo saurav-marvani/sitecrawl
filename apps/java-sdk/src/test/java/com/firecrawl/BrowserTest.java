@@ -1,10 +1,10 @@
-package com.firecrawl;
+package com.sitecrawl;
 
-import com.firecrawl.client.FirecrawlClient;
-import com.firecrawl.models.BrowserCreateResponse;
-import com.firecrawl.models.BrowserDeleteResponse;
-import com.firecrawl.models.BrowserExecuteResponse;
-import com.firecrawl.models.BrowserListResponse;
+import com.sitecrawl.client.SitecrawlClient;
+import com.sitecrawl.models.BrowserCreateResponse;
+import com.sitecrawl.models.BrowserDeleteResponse;
+import com.sitecrawl.models.BrowserExecuteResponse;
+import com.sitecrawl.models.BrowserListResponse;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
@@ -14,25 +14,25 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * Browser Sandbox Endpoint Tests
  *
- * Tests the browser session management functionality of the Firecrawl Java SDK.
- * These tests require FIRECRAWL_API_KEY environment variable to be set.
+ * Tests the browser session management functionality of the Sitecrawl Java SDK.
+ * These tests require SITECRAWL_API_KEY environment variable to be set.
  *
- * Run with: FIRECRAWL_API_KEY=fc-xxx gradle test --tests "com.firecrawl.BrowserTest"
+ * Run with: SITECRAWL_API_KEY=fc-xxx gradle test --tests "com.sitecrawl.BrowserTest"
  */
 class BrowserTest {
 
-    private static FirecrawlClient client;
+    private static SitecrawlClient client;
 
     @BeforeAll
     static void setup() {
-        String apiKey = System.getenv("FIRECRAWL_API_KEY");
+        String apiKey = System.getenv("SITECRAWL_API_KEY");
         if (apiKey != null && !apiKey.isBlank()) {
-            client = FirecrawlClient.fromEnv();
+            client = SitecrawlClient.fromEnv();
         }
     }
 
     @Test
-    @EnabledIfEnvironmentVariable(named = "FIRECRAWL_API_KEY", matches = ".*\\S.*")
+    @EnabledIfEnvironmentVariable(named = "SITECRAWL_API_KEY", matches = ".*\\S.*")
     void testBrowserCreateAndDelete() {
         System.out.println("Testing browser session create and delete...");
 
@@ -54,7 +54,7 @@ class BrowserTest {
     }
 
     @Test
-    @EnabledIfEnvironmentVariable(named = "FIRECRAWL_API_KEY", matches = ".*\\S.*")
+    @EnabledIfEnvironmentVariable(named = "SITECRAWL_API_KEY", matches = ".*\\S.*")
     void testBrowserCreateWithOptions() {
         System.out.println("Testing browser session create with options...");
 
@@ -74,7 +74,7 @@ class BrowserTest {
     }
 
     @Test
-    @EnabledIfEnvironmentVariable(named = "FIRECRAWL_API_KEY", matches = ".*\\S.*")
+    @EnabledIfEnvironmentVariable(named = "SITECRAWL_API_KEY", matches = ".*\\S.*")
     void testBrowserExecuteBash() {
         System.out.println("Testing browser execute with bash...");
 
@@ -103,7 +103,7 @@ class BrowserTest {
     }
 
     @Test
-    @EnabledIfEnvironmentVariable(named = "FIRECRAWL_API_KEY", matches = ".*\\S.*")
+    @EnabledIfEnvironmentVariable(named = "SITECRAWL_API_KEY", matches = ".*\\S.*")
     void testBrowserExecuteNode() {
         System.out.println("Testing browser execute with node...");
 
@@ -128,7 +128,7 @@ class BrowserTest {
     }
 
     @Test
-    @EnabledIfEnvironmentVariable(named = "FIRECRAWL_API_KEY", matches = ".*\\S.*")
+    @EnabledIfEnvironmentVariable(named = "SITECRAWL_API_KEY", matches = ".*\\S.*")
     void testBrowserExecutePython() {
         System.out.println("Testing browser execute with python...");
 
@@ -153,7 +153,7 @@ class BrowserTest {
     }
 
     @Test
-    @EnabledIfEnvironmentVariable(named = "FIRECRAWL_API_KEY", matches = ".*\\S.*")
+    @EnabledIfEnvironmentVariable(named = "SITECRAWL_API_KEY", matches = ".*\\S.*")
     void testBrowserExecuteWithTimeout() {
         System.out.println("Testing browser execute with custom timeout...");
 
@@ -178,7 +178,7 @@ class BrowserTest {
     }
 
     @Test
-    @EnabledIfEnvironmentVariable(named = "FIRECRAWL_API_KEY", matches = ".*\\S.*")
+    @EnabledIfEnvironmentVariable(named = "SITECRAWL_API_KEY", matches = ".*\\S.*")
     void testBrowserListSessions() {
         System.out.println("Testing list browser sessions...");
 
@@ -193,7 +193,7 @@ class BrowserTest {
     }
 
     @Test
-    @EnabledIfEnvironmentVariable(named = "FIRECRAWL_API_KEY", matches = ".*\\S.*")
+    @EnabledIfEnvironmentVariable(named = "SITECRAWL_API_KEY", matches = ".*\\S.*")
     void testBrowserListActiveFilter() {
         System.out.println("Testing list browser sessions with active filter...");
 
@@ -219,7 +219,7 @@ class BrowserTest {
     }
 
     @Test
-    @EnabledIfEnvironmentVariable(named = "FIRECRAWL_API_KEY", matches = ".*\\S.*")
+    @EnabledIfEnvironmentVariable(named = "SITECRAWL_API_KEY", matches = ".*\\S.*")
     void testBrowserFullLifecycle() {
         System.out.println("Testing full browser session lifecycle...");
 
@@ -277,7 +277,7 @@ class BrowserTest {
 
     @Test
     void testBrowserExecuteRequiresSessionId() {
-        FirecrawlClient testClient = FirecrawlClient.builder()
+        SitecrawlClient testClient = SitecrawlClient.builder()
                 .apiKey("fc-test-key")
                 .build();
 
@@ -288,7 +288,7 @@ class BrowserTest {
 
     @Test
     void testBrowserExecuteRequiresCode() {
-        FirecrawlClient testClient = FirecrawlClient.builder()
+        SitecrawlClient testClient = SitecrawlClient.builder()
                 .apiKey("fc-test-key")
                 .build();
 
@@ -299,7 +299,7 @@ class BrowserTest {
 
     @Test
     void testBrowserDeleteRequiresSessionId() {
-        FirecrawlClient testClient = FirecrawlClient.builder()
+        SitecrawlClient testClient = SitecrawlClient.builder()
                 .apiKey("fc-test-key")
                 .build();
 

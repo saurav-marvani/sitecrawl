@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace Firecrawl\Laravel\Tools;
+namespace Sitecrawl\Laravel\Tools;
 
-use Firecrawl\Exceptions\FirecrawlException;
-use Firecrawl\Models\CrawlJob;
-use Firecrawl\Models\CrawlOptions;
-use Firecrawl\Models\ScrapeOptions;
+use Sitecrawl\Exceptions\SitecrawlException;
+use Sitecrawl\Models\CrawlJob;
+use Sitecrawl\Models\CrawlOptions;
+use Sitecrawl\Models\ScrapeOptions;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Ai\Tools\Request;
 
-class FirecrawlCrawl extends FirecrawlTool
+class SitecrawlCrawl extends SitecrawlTool
 {
     /**
      * Wall-clock limit for the start request and polling, kept below typical
@@ -26,14 +26,14 @@ class FirecrawlCrawl extends FirecrawlTool
 
     public function name(): string
     {
-        return 'firecrawl_crawl';
+        return 'sitecrawl_crawl';
     }
 
     public function description(): string
     {
-        return 'Crawl a website with Firecrawl starting from a URL, following its links. Returns a '
+        return 'Crawl a website with Sitecrawl starting from a URL, following its links. Returns a '
             . 'JSON object with the crawl status and a pages array of {url, markdown} objects. This '
-            . 'is a slower, multi-page operation. Prefer firecrawl_scrape when you only need one '
+            . 'is a slower, multi-page operation. Prefer sitecrawl_scrape when you only need one '
             . 'known page, and keep the page limit small. Waits up to about a minute.';
     }
 
@@ -56,7 +56,7 @@ class FirecrawlCrawl extends FirecrawlTool
 
             $jobId = $start->getId();
             if ($jobId === null || $jobId === '') {
-                throw new FirecrawlException('Crawl start did not return a job ID.');
+                throw new SitecrawlException('Crawl start did not return a job ID.');
             }
 
             $job = $this->client()->getCrawlStatus($jobId, $this->remainingSeconds($deadline));
@@ -65,7 +65,7 @@ class FirecrawlCrawl extends FirecrawlTool
                 if (time() >= $deadline) {
                     return "The crawl did not finish within {$this->timeoutSeconds} seconds. It may still "
                         . 'complete on the server. Use a smaller limit, or scrape key pages individually '
-                        . 'with firecrawl_scrape.';
+                        . 'with sitecrawl_scrape.';
                 }
 
                 sleep($this->pollIntervalSeconds);
@@ -136,7 +136,7 @@ class FirecrawlCrawl extends FirecrawlTool
 
         if ($job->getNext() !== null && $job->getNext() !== '') {
             $result['note'] = 'More pages exist on the server than fit in this response. '
-                . 'Use a smaller limit or scrape specific pages with firecrawl_scrape.';
+                . 'Use a smaller limit or scrape specific pages with sitecrawl_scrape.';
         }
 
         return $result;

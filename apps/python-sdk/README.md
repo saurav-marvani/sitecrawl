@@ -1,38 +1,38 @@
-# Firecrawl Python SDK
+# Sitecrawl Python SDK
 
-The Firecrawl Python SDK is a library that lets you easily search, scrape, and interact with the web for AI agents — returning clean Markdown or structured data your agents can ship with. It provides a simple and intuitive interface for the Firecrawl API.
+The Sitecrawl Python SDK is a library that lets you easily search, scrape, and interact with the web for AI agents — returning clean Markdown or structured data your agents can ship with. It provides a simple and intuitive interface for the Sitecrawl API.
 
 ## Installation
 
-To install the Firecrawl Python SDK, you can use pip:
+To install the Sitecrawl Python SDK, you can use pip:
 
 ```bash 
-pip install firecrawl-py
+pip install sitecrawl-py
 ```
 
 ## Usage
 
-1. Get an API key from [firecrawl.dev](https://firecrawl.dev)
-2. Set the API key as an environment variable named `FIRECRAWL_API_KEY` or pass it as a parameter to the `Firecrawl` class.
+1. Get an API key from [sitecrawl.dev](https://sitecrawl.dev)
+2. Set the API key as an environment variable named `SITECRAWL_API_KEY` or pass it as a parameter to the `Sitecrawl` class.
 
 Here's an example of how to use the SDK:
 
 ```python 
-from firecrawl import Firecrawl
-from firecrawl.types import ScrapeOptions
+from sitecrawl import Sitecrawl
+from sitecrawl.types import ScrapeOptions
 
-firecrawl = Firecrawl(api_key="fc-YOUR_API_KEY")
+sitecrawl = Sitecrawl(api_key="fc-YOUR_API_KEY")
 
 # Scrape a website (v2):
-data = firecrawl.scrape(
-  'https://firecrawl.dev', 
+data = sitecrawl.scrape(
+  'https://sitecrawl.dev', 
   formats=['markdown', 'html']
 )
 print(data)
 
 # Crawl a website (v2 waiter):
-crawl_status = firecrawl.crawl(
-  'https://firecrawl.dev', 
+crawl_status = sitecrawl.crawl(
+  'https://sitecrawl.dev', 
   limit=100, 
   scrape_options=ScrapeOptions(formats=['markdown', 'html'])
 )
@@ -45,7 +45,7 @@ To scrape a single URL, use the `scrape` method. It takes the URL as a parameter
 
 ```python 
 # Scrape a website (v2):
-scrape_result = firecrawl.scrape('https://firecrawl.dev', formats=['markdown', 'html'])
+scrape_result = sitecrawl.scrape('https://sitecrawl.dev', formats=['markdown', 'html'])
 print(scrape_result)
 ```
 
@@ -54,7 +54,7 @@ print(scrape_result)
 Use the `video` format on supported video URLs, including YouTube and TikTok. The returned `video` field is a signed URL to the extracted video file.
 
 ```python
-doc = firecrawl.scrape('https://www.youtube.com/watch?v=dQw4w9WgXcQ', formats=['video'])
+doc = sitecrawl.scrape('https://www.youtube.com/watch?v=dQw4w9WgXcQ', formats=['video'])
 print(doc.video)
 ```
 
@@ -63,7 +63,7 @@ print(doc.video)
 Use the `product` format on product pages to deterministically pull structured product data (title, price, availability, variants). It is the deterministic counterpart to the LLM-based `json` format.
 
 ```python
-doc = firecrawl.scrape('https://firecrawl.dev', formats=['product'])
+doc = sitecrawl.scrape('https://sitecrawl.dev', formats=['product'])
 print(doc.product)
 ```
 
@@ -72,7 +72,7 @@ print(doc.product)
 Use the `menu` format on menu pages to deterministically pull structured menu data (merchant, sections, items, prices, availability). It is the deterministic counterpart to the LLM-based `json` format.
 
 ```python
-doc = firecrawl.scrape('https://example.com/restaurant/menu', formats=['menu'])
+doc = sitecrawl.scrape('https://example.com/restaurant/menu', formats=['menu'])
 print(doc.menu)
 ```
 
@@ -82,12 +82,12 @@ Use `parse` to upload local bytes/files (`html`, `pdf`, `docx`, etc.) as multipa
 `parse` does not support change tracking or browser-only options (actions, wait_for, location, mobile, screenshot, branding, audio, video).
 
 ```python
-from firecrawl import Firecrawl
-from firecrawl.v2.types import ParseOptions
+from sitecrawl import Sitecrawl
+from sitecrawl.v2.types import ParseOptions
 
-firecrawl = Firecrawl(api_key="fc-YOUR_API_KEY")
+sitecrawl = Sitecrawl(api_key="fc-YOUR_API_KEY")
 
-doc = firecrawl.parse(
+doc = sitecrawl.parse(
   b"<!DOCTYPE html><html><body><h1>Python Parse</h1></body></html>",
   filename="upload.html",
   content_type="text/html",
@@ -102,8 +102,8 @@ print(doc.markdown)
 To crawl a website, use the `crawl` method. It takes the starting URL and optional parameters as arguments. You can control depth, limits, formats, and more.
 
 ```python 
-crawl_status = firecrawl.crawl(
-  'https://firecrawl.dev', 
+crawl_status = sitecrawl.crawl(
+  'https://sitecrawl.dev', 
   limit=100, 
   scrape_options=ScrapeOptions(formats=['markdown', 'html']),
   poll_interval=30
@@ -118,8 +118,8 @@ print(crawl_status)
 To enqueue a crawl asynchronously, use `start_crawl`. It returns the crawl `ID` which you can use to check the status of the crawl job.
 
 ```python 
-crawl_job = firecrawl.start_crawl(
-  'https://firecrawl.dev', 
+crawl_job = sitecrawl.start_crawl(
+  'https://sitecrawl.dev', 
   limit=100, 
   scrape_options=ScrapeOptions(formats=['markdown', 'html']),
 )
@@ -131,7 +131,7 @@ print(crawl_job)
 To check the status of a crawl job, use the `get_crawl_status` method. It takes the job ID as a parameter and returns the current status of the crawl job.
 
 ```python 
-crawl_status = firecrawl.get_crawl_status("<crawl_id>")
+crawl_status = sitecrawl.get_crawl_status("<crawl_id>")
 print(crawl_status)
 ```
 
@@ -140,25 +140,25 @@ print(crawl_status)
 Crawl and batch scrape status responses may include a `next` URL when more data is available. The SDK auto-paginates by default; to page manually, disable auto-pagination and pass the opaque `next` URL back to the SDK.
 
 ```python
-from firecrawl.v2.types import PaginationConfig
+from sitecrawl.v2.types import PaginationConfig
 
 # Crawl: fetch one page at a time
-crawl_job = firecrawl.start_crawl("https://firecrawl.dev", limit=100)
-status = firecrawl.get_crawl_status(
+crawl_job = sitecrawl.start_crawl("https://sitecrawl.dev", limit=100)
+status = sitecrawl.get_crawl_status(
   crawl_job.id,
   pagination_config=PaginationConfig(auto_paginate=False),
 )
 if status.next:
-  page2 = firecrawl.get_crawl_status_page(status.next)
+  page2 = sitecrawl.get_crawl_status_page(status.next)
 
 # Batch scrape: fetch one page at a time
-batch_job = firecrawl.start_batch_scrape(["https://firecrawl.dev"])
-status = firecrawl.get_batch_scrape_status(
+batch_job = sitecrawl.start_batch_scrape(["https://sitecrawl.dev"])
+status = sitecrawl.get_batch_scrape_status(
   batch_job.id,
   pagination_config=PaginationConfig(auto_paginate=False),
 )
 if status.next:
-  page2 = firecrawl.get_batch_scrape_status_page(status.next)
+  page2 = sitecrawl.get_batch_scrape_status_page(status.next)
 ```
 
 ### Cancelling a Crawl
@@ -166,7 +166,7 @@ if status.next:
 To cancel an asynchronous crawl job, use the `cancel_crawl` method. It takes the job ID of the asynchronous crawl as a parameter and returns the cancellation status.
 
 ```python 
-cancel_crawl = firecrawl.cancel_crawl(id)
+cancel_crawl = sitecrawl.cancel_crawl(id)
 print(cancel_crawl)
 ```
 
@@ -176,7 +176,7 @@ Use `map` to generate a list of URLs from a website. Options let you customize t
 
 ```python 
 # Map a website (v2):
-map_result = firecrawl.map('https://firecrawl.dev')
+map_result = sitecrawl.map('https://sitecrawl.dev')
 print(map_result)
 ```
 
@@ -185,7 +185,7 @@ print(map_result)
 Use a scrape job ID to keep interacting with the replayed browser context:
 
 ```python
-doc = firecrawl.scrape(
+doc = sitecrawl.scrape(
   "https://example.com",
   actions=[{"type": "click", "selector": "a[href='/pricing']"}],
 )
@@ -194,7 +194,7 @@ scrape_job_id = doc.metadata_typed.scrape_id
 if not scrape_job_id:
   raise RuntimeError("Missing scrape job id")
 
-run = firecrawl.interact(
+run = sitecrawl.interact(
   scrape_job_id,
   code="print(await page.url())",
   language="python",
@@ -202,7 +202,7 @@ run = firecrawl.interact(
 )
 print(run.stdout)
 
-firecrawl.stop_interaction(scrape_job_id)
+sitecrawl.stop_interaction(scrape_job_id)
 ```
 
 {/* ### Extracting Structured Data from Websites
@@ -232,7 +232,7 @@ def on_done(detail):
     # Function to start the crawl and watch process
 async def start_crawl_and_watch():
     # Initiate the crawl job and get the watcher
-    watcher = app.crawl_url_and_watch('firecrawl.dev', exclude_paths=['blog/*'], limit=5)
+    watcher = app.crawl_url_and_watch('sitecrawl.dev', exclude_paths=['blog/*'], limit=5)
 
     # Add event listeners
     watcher.add_event_listener("document", on_document)
@@ -248,25 +248,25 @@ await start_crawl_and_watch()
 
 ## Error Handling
 
-The SDK handles errors returned by the Firecrawl API and raises appropriate exceptions. If an error occurs during a request, an exception will be raised with a descriptive error message.
+The SDK handles errors returned by the Sitecrawl API and raises appropriate exceptions. If an error occurs during a request, an exception will be raised with a descriptive error message.
 
 ## Async Class
 
-For async operations, you can use the `AsyncFirecrawl` class. Its methods mirror the `Firecrawl` class, but you `await` them.
+For async operations, you can use the `AsyncSitecrawl` class. Its methods mirror the `Sitecrawl` class, but you `await` them.
 
 ```python 
-from firecrawl import AsyncFirecrawl
+from sitecrawl import AsyncSitecrawl
 
-firecrawl = AsyncFirecrawl(api_key="YOUR_API_KEY")
+sitecrawl = AsyncSitecrawl(api_key="YOUR_API_KEY")
 
 # Async Scrape (v2)
 async def example_scrape():
-  scrape_result = await firecrawl.scrape(url="https://example.com")
+  scrape_result = await sitecrawl.scrape(url="https://example.com")
   print(scrape_result)
 
 # Async Parse (v2)
 async def example_parse():
-  parse_result = await firecrawl.parse(
+  parse_result = await sitecrawl.parse(
     b"<!DOCTYPE html><html><body><h1>Async Parse</h1></body></html>",
     filename="upload.html",
     content_type="text/html",
@@ -275,21 +275,21 @@ async def example_parse():
 
 # Async Crawl (v2)
 async def example_crawl():
-  crawl_result = await firecrawl.crawl(url="https://example.com")
+  crawl_result = await sitecrawl.crawl(url="https://example.com")
   print(crawl_result)
 ```
 
 ## v1 compatibility
 
-For legacy code paths, v1 remains available under `firecrawl.v1` with the original method names.
+For legacy code paths, v1 remains available under `sitecrawl.v1` with the original method names.
 
 ```python
-from firecrawl import Firecrawl
+from sitecrawl import Sitecrawl
 
-firecrawl = Firecrawl(api_key="YOUR_API_KEY")
+sitecrawl = Sitecrawl(api_key="YOUR_API_KEY")
 
 # v1 methods (feature‑frozen)
-doc_v1 = firecrawl.v1.scrape_url('https://firecrawl.dev', formats=['markdown', 'html'])
-crawl_v1 = firecrawl.v1.crawl_url('https://firecrawl.dev', limit=100)
-map_v1 = firecrawl.v1.map_url('https://firecrawl.dev')
+doc_v1 = sitecrawl.v1.scrape_url('https://sitecrawl.dev', formats=['markdown', 'html'])
+crawl_v1 = sitecrawl.v1.crawl_url('https://sitecrawl.dev', limit=100)
+map_v1 = sitecrawl.v1.map_url('https://sitecrawl.dev')
 ```

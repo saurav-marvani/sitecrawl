@@ -40,7 +40,7 @@
 //         const server = app.listen(WEBHOOK_PORT_CRAWL);
 
 //         const res = await crawl({
-//             url: "https://firecrawl.dev",
+//             url: "https://sitecrawl.dev",
 //             limit: 10,
 //             webhook: {
 //                 url: `http://localhost:${WEBHOOK_PORT_CRAWL}/webhook`,
@@ -97,8 +97,8 @@
 
 //         const res = await batchScrape({
 //             urls: [
-//                 "https://firecrawl.dev",
-//                 "https://firecrawl.dev/blog",
+//                 "https://sitecrawl.dev",
+//                 "https://sitecrawl.dev/blog",
 //             ],
 //             webhook: {
 //                 url: `http://localhost:${WEBHOOK_PORT_BATCH_SCRAPE}/webhook`,

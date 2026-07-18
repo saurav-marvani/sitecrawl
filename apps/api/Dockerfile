@@ -90,7 +90,7 @@ RUN ARCH=$(dpkg --print-architecture) && \
 EXPOSE 8080
 WORKDIR /app
 ARG GIT_SHA=unknown
-ENV FIRECRAWL_BUILD_SHA=$GIT_SHA
+ENV SITECRAWL_BUILD_SHA=$GIT_SHA
 
 # Copy built application
 COPY --from=build /app/node_modules ./node_modules

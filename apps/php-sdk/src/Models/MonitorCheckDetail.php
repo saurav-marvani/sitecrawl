@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Firecrawl\Models;
+namespace Sitecrawl\Models;
 
 final class MonitorCheckDetail extends MonitorCheck
 {

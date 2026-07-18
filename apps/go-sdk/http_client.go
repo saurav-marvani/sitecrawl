@@ -1,4 +1,4 @@
-package firecrawl
+package sitecrawl
 
 import (
 	"bytes"
@@ -15,13 +15,13 @@ import (
 )
 
 const (
-	defaultAPIURL        = "https://api.firecrawl.dev"
+	defaultAPIURL        = "https://api.sitecrawl.dev"
 	defaultTimeout       = 5 * time.Minute
 	defaultMaxRetries    = 3
 	defaultBackoffFactor = 0.5
 )
 
-// httpClient is the internal HTTP client for the Firecrawl API.
+// httpClient is the internal HTTP client for the Sitecrawl API.
 type httpClient struct {
 	client        *http.Client
 	apiKey        string
@@ -116,7 +116,7 @@ func (h *httpClient) postMultipart(
 
 	body, contentType, err := buildBody()
 	if err != nil {
-		return nil, &FirecrawlError{Message: fmt.Sprintf("failed to build multipart body: %v", err)}
+		return nil, &SitecrawlError{Message: fmt.Sprintf("failed to build multipart body: %v", err)}
 	}
 
 	var lastErr error
@@ -127,20 +127,20 @@ func (h *httpClient) postMultipart(
 			}
 			body, contentType, err = buildBody()
 			if err != nil {
-				return nil, &FirecrawlError{Message: fmt.Sprintf("failed to rebuild multipart body: %v", err)}
+				return nil, &SitecrawlError{Message: fmt.Sprintf("failed to rebuild multipart body: %v", err)}
 			}
 		}
 
 		req, err := http.NewRequestWithContext(ctx, "POST", url, body)
 		if err != nil {
-			return nil, &FirecrawlError{Message: fmt.Sprintf("failed to create request: %v", err)}
+			return nil, &SitecrawlError{Message: fmt.Sprintf("failed to create request: %v", err)}
 		}
 
 		if h.apiKey != "" {
 			req.Header.Set("Authorization", "Bearer "+h.apiKey)
 		}
 		req.Header.Set("Content-Type", contentType)
-		req.Header.Set("User-Agent", "firecrawl-go/"+Version)
+		req.Header.Set("User-Agent", "sitecrawl-go/"+Version)
 		for k, v := range h.extraHeaders {
 			req.Header.Set(k, v)
 		}
@@ -170,28 +170,28 @@ func (h *httpClient) postMultipart(
 		switch resp.StatusCode {
 		case 401:
 			return nil, &AuthenticationError{
-				FirecrawlError: FirecrawlError{StatusCode: 401, ErrorCode: errCode, Message: errMsg},
+				SitecrawlError: SitecrawlError{StatusCode: 401, ErrorCode: errCode, Message: errMsg},
 			}
 		case 429:
 			return nil, &RateLimitError{
-				FirecrawlError: FirecrawlError{StatusCode: 429, ErrorCode: errCode, Message: errMsg},
+				SitecrawlError: SitecrawlError{StatusCode: 429, ErrorCode: errCode, Message: errMsg},
 			}
 		}
 
 		if resp.StatusCode >= 400 && resp.StatusCode < 500 && resp.StatusCode != 408 && resp.StatusCode != 409 {
-			return nil, &FirecrawlError{StatusCode: resp.StatusCode, ErrorCode: errCode, Message: errMsg}
+			return nil, &SitecrawlError{StatusCode: resp.StatusCode, ErrorCode: errCode, Message: errMsg}
 		}
 
-		lastErr = &FirecrawlError{StatusCode: resp.StatusCode, ErrorCode: errCode, Message: errMsg}
+		lastErr = &SitecrawlError{StatusCode: resp.StatusCode, ErrorCode: errCode, Message: errMsg}
 	}
 
 	if lastErr != nil {
-		if fe, ok := lastErr.(*FirecrawlError); ok {
+		if fe, ok := lastErr.(*SitecrawlError); ok {
 			return nil, fe
 		}
-		return nil, &FirecrawlError{Message: fmt.Sprintf("request failed after %d retries: %v", h.maxRetries, lastErr)}
+		return nil, &SitecrawlError{Message: fmt.Sprintf("request failed after %d retries: %v", h.maxRetries, lastErr)}
 	}
-	return nil, &FirecrawlError{Message: "request failed"}
+	return nil, &SitecrawlError{Message: "request failed"}
 }
 
 func (h *httpClient) doJSON(ctx context.Context, method, url string, body interface{}, extraHeaders map[string]string) (json.RawMessage, error) {
@@ -199,7 +199,7 @@ func (h *httpClient) doJSON(ctx context.Context, method, url string, body interf
 	if body != nil {
 		data, err := json.Marshal(body)
 		if err != nil {
-			return nil, &FirecrawlError{Message: fmt.Sprintf("failed to serialize request body: %v", err)}
+			return nil, &SitecrawlError{Message: fmt.Sprintf("failed to serialize request body: %v", err)}
 		}
 		bodyReader = bytes.NewReader(data)
 	}
@@ -220,14 +220,14 @@ func (h *httpClient) doJSON(ctx context.Context, method, url string, body interf
 
 		req, err := http.NewRequestWithContext(ctx, method, url, bodyReader)
 		if err != nil {
-			return nil, &FirecrawlError{Message: fmt.Sprintf("failed to create request: %v", err)}
+			return nil, &SitecrawlError{Message: fmt.Sprintf("failed to create request: %v", err)}
 		}
 
 		if h.apiKey != "" {
 			req.Header.Set("Authorization", "Bearer "+h.apiKey)
 		}
 		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("User-Agent", "firecrawl-go/"+Version)
+		req.Header.Set("User-Agent", "sitecrawl-go/"+Version)
 		// Apply client-level headers.
 		for k, v := range h.extraHeaders {
 			req.Header.Set(k, v)
@@ -265,29 +265,29 @@ func (h *httpClient) doJSON(ctx context.Context, method, url string, body interf
 		switch resp.StatusCode {
 		case 401:
 			return nil, &AuthenticationError{
-				FirecrawlError: FirecrawlError{StatusCode: 401, ErrorCode: errCode, Message: errMsg},
+				SitecrawlError: SitecrawlError{StatusCode: 401, ErrorCode: errCode, Message: errMsg},
 			}
 		case 429:
 			return nil, &RateLimitError{
-				FirecrawlError: FirecrawlError{StatusCode: 429, ErrorCode: errCode, Message: errMsg},
+				SitecrawlError: SitecrawlError{StatusCode: 429, ErrorCode: errCode, Message: errMsg},
 			}
 		}
 
 		if resp.StatusCode >= 400 && resp.StatusCode < 500 && resp.StatusCode != 408 && resp.StatusCode != 409 {
-			return nil, &FirecrawlError{StatusCode: resp.StatusCode, ErrorCode: errCode, Message: errMsg}
+			return nil, &SitecrawlError{StatusCode: resp.StatusCode, ErrorCode: errCode, Message: errMsg}
 		}
 
 		// Retryable: 408, 409, 5xx
-		lastErr = &FirecrawlError{StatusCode: resp.StatusCode, ErrorCode: errCode, Message: errMsg}
+		lastErr = &SitecrawlError{StatusCode: resp.StatusCode, ErrorCode: errCode, Message: errMsg}
 	}
 
 	if lastErr != nil {
-		if fe, ok := lastErr.(*FirecrawlError); ok {
+		if fe, ok := lastErr.(*SitecrawlError); ok {
 			return nil, fe
 		}
-		return nil, &FirecrawlError{Message: fmt.Sprintf("request failed after %d retries: %v", h.maxRetries, lastErr)}
+		return nil, &SitecrawlError{Message: fmt.Sprintf("request failed after %d retries: %v", h.maxRetries, lastErr)}
 	}
-	return nil, &FirecrawlError{Message: "request failed"}
+	return nil, &SitecrawlError{Message: "request failed"}
 }
 
 func (h *httpClient) sleepBackoff(ctx context.Context, attempt int) error {

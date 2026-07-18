@@ -55,7 +55,7 @@ jobs:
         
     - name: Run scraper
       env:
-        API_KEY: ${{ secrets.FIRECRAWL_API_KEY }}
+        API_KEY: ${{ secrets.SITECRAWL_API_KEY }}
       run: python scraper.py
 ```
 
@@ -68,7 +68,7 @@ Throughout this tutorial, we'll build several practical GitHub Actions workflows
 1. Create basic and advanced workflow configurations
 2. Work with environment variables and secrets
 3. Set up automated testing pipelines
-4. Build a real-world example: an automated scraping system using [Firecrawl](https://firecrawl.dev) in Python
+4. Build a real-world example: an automated scraping system using [Sitecrawl](https://sitecrawl.dev) in Python
 5. Implement best practices for security and efficiency
 
 By the end, you will have hands-on experience with GitHub Actions and be able to automate your own Python projects effectively.
@@ -224,7 +224,7 @@ jobs:
       - name: Run daily tasks
         run: python daily_tasks.py
         env:
-          API_KEY: ${{ secrets.FIRECRAWL_API_KEY }}
+          API_KEY: ${{ secrets.SITECRAWL_API_KEY }}
 ```
 
 This example shows how a single workflow can:
@@ -277,9 +277,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - name: Run Firecrawl scraper
+      - name: Run Sitecrawl scraper
         env:
-          API_KEY: ${{ secrets.FIRECRAWL_API_KEY }}
+          API_KEY: ${{ secrets.SITECRAWL_API_KEY }}
         run: python scraper.py
 ```
 
@@ -847,32 +847,32 @@ This separation helps prevent accidental use of production resources during deve
 
 Let's explore three practical examples of GitHub Actions workflows for common Python tasks: web scraping, package publishing, and container builds.
 
-### 1. Scheduled web scraping with Firecrawl
+### 1. Scheduled web scraping with Sitecrawl
 
-Web scraping is a common use case for automated workflows. Let's build a workflow that scrapes [Hacker News](https://news.ycombinator.com/) on a schedule using [Firecrawl](https://docs.firecrawl.dev), which is a Python AI-based web scraping engine designed for large-scale data collection. Here are some key benefits that make Firecrawl an excellent choice for this task:
+Web scraping is a common use case for automated workflows. Let's build a workflow that scrapes [Hacker News](https://news.ycombinator.com/) on a schedule using [Sitecrawl](https://docs.sitecrawl.dev), which is a Python AI-based web scraping engine designed for large-scale data collection. Here are some key benefits that make Sitecrawl an excellent choice for this task:
 
-1. **Enterprise-grade automation and scalability** - Firecrawl streamlines web scraping with powerful automation features.
+1. **Enterprise-grade automation and scalability** - Sitecrawl streamlines web scraping with powerful automation features.
 2. **AI-powered content extraction** - Maintains scraper reliability over time by identifying and extracting data based on semantic descriptions instead of relying HTML elements and CSS selectors.
 3. **Handles complex scraping challenges** - Automatically manages proxies, anti-bot mechanisms, and dynamic JavaScript content.
 4. **Multiple output formats** - Supports scraping and converting data in markdown, tabular, screenshots, and HTML, making it versatile for various applications.
 5. **Built-in rate limiting and request management** - Ensures efficient and compliant data extraction.
 6. **Geographic location customization** - Avoids IP bans by customizing the geographic location of requests.
 
-Let's build our web scraping workflow using Firecrawl to demonstrate these capabilities.
+Let's build our web scraping workflow using Sitecrawl to demonstrate these capabilities.
 
 ```bash
 # Create project directory and install dependencies
 mkdir hacker-news-scraper && cd hacker-news-scraper
-pip install firecrawl-py pydantic python-dotenv
+pip install sitecrawl-py pydantic python-dotenv
 
 # Create necessary files
 touch requirements.txt scraper.py .env
 
 # Add dependencies to requirements.txt
-echo "firecrawl-py\npydantic\npython-dotenv" > requirements.txt
+echo "sitecrawl-py\npydantic\npython-dotenv" > requirements.txt
 
-# Add Firecrawl API key to .env (get your key at firecrawl.dev/signin/signup)
-echo "FIRECRAWL_API_KEY='your_api_key_here'" > .env
+# Add Sitecrawl API key to .env (get your key at sitecrawl.dev/signin/signup)
+echo "SITECRAWL_API_KEY='your_api_key_here'" > .env
 ```
 
 Open the scraper script where we define our scraping logic:
@@ -880,7 +880,7 @@ Open the scraper script where we define our scraping logic:
 ```python
 # scraper.py
 import json
-from firecrawl import FirecrawlApp
+from sitecrawl import SitecrawlApp
 from dotenv import load_dotenv
 from pydantic import BaseModel, Field
 from typing import List
@@ -914,11 +914,11 @@ We define two Pydantic models to structure our scraped data:
 1. `NewsItem` - Represents a single news item with fields for title, URL, author, rank, upvotes and date
 2. `NewsData` - Contains a list of `NewsItem` objects
 
-These models help validate the scraped data and ensure it matches our expected schema. They also make it easier to serialize/deserialize the data when saving to JSON. Using `Field` with a detailed description is crucial because Firecrawl uses these definitions to automatically detect the HTMl elements and CSS selectors we are looking for.
+These models help validate the scraped data and ensure it matches our expected schema. They also make it easier to serialize/deserialize the data when saving to JSON. Using `Field` with a detailed description is crucial because Sitecrawl uses these definitions to automatically detect the HTMl elements and CSS selectors we are looking for.
 
 ```python
 def get_news_data():
-    app = FirecrawlApp()
+    app = SitecrawlApp()
 
     data = app.scrape_url(
         BASE_URL,
@@ -931,10 +931,10 @@ def get_news_data():
     return data
 ```
 
-The `get_news_data()` function uses Firecrawl to scrape Hacker News. It creates a `FirecrawlApp` instance and calls `scrape_url()` with the `BASE_URL` and parameters specifying we want to extract data according to our `NewsData` schema. The schema helps Firecrawl automatically identify and extract the relevant HTML elements. The function returns the scraped data containing news items with their titles, URLs, authors, ranks, upvotes and dates.
+The `get_news_data()` function uses Sitecrawl to scrape Hacker News. It creates a `SitecrawlApp` instance and calls `scrape_url()` with the `BASE_URL` and parameters specifying we want to extract data according to our `NewsData` schema. The schema helps Sitecrawl automatically identify and extract the relevant HTML elements. The function returns the scraped data containing news items with their titles, URLs, authors, ranks, upvotes and dates.
 
 ```python
-def save_firecrawl_news_data():
+def save_sitecrawl_news_data():
     """
     Save the scraped news data to a JSON file with the current date in the filename.
     """
@@ -942,7 +942,7 @@ def save_firecrawl_news_data():
     data = get_news_data()
     # Format current date for filename
     date_str = datetime.now().strftime("%Y_%m_%d_%H_%M")
-    filename = f"firecrawl_hacker_news_data_{date_str}.json"
+    filename = f"sitecrawl_hacker_news_data_{date_str}.json"
 
     # Save the news items to JSON file
     with open(filename, "w") as f:
@@ -951,11 +951,11 @@ def save_firecrawl_news_data():
     print(f"{datetime.now()}: Successfully saved the news data.")
     
 if __name__ == "__main__":
-    save_firecrawl_news_data()
+    save_sitecrawl_news_data()
 
 ```
 
-The `save_firecrawl_news_data()` function handles saving the scraped Hacker News data to a JSON file. It first calls `get_news_data()` to fetch the latest data from Hacker News. Then it generates a filename using the current timestamp to ensure uniqueness. The data is saved to a JSON file with that filename, with the news items formatted with proper indentation for readability. Finally, it prints a confirmation message with the current timestamp when the save is complete. This function provides a convenient way to store snapshots of Hacker News data that can be analyzed later.
+The `save_sitecrawl_news_data()` function handles saving the scraped Hacker News data to a JSON file. It first calls `get_news_data()` to fetch the latest data from Hacker News. Then it generates a filename using the current timestamp to ensure uniqueness. The data is saved to a JSON file with that filename, with the news items formatted with proper indentation for readability. Finally, it prints a confirmation message with the current timestamp when the save is complete. This function provides a convenient way to store snapshots of Hacker News data that can be analyzed later.
 
 Combine these snippets into the `scraper.py` script. Then, we can write a workflow that executes it on schedule:
 
@@ -1178,10 +1178,10 @@ Throughout this tutorial, we've explored the fundamentals and practical applicat
 
 As you continue your journey with GitHub Actions, remember that automation is an iterative process. Start small with basic workflows, test thoroughly, and gradually add complexity as needed. The examples provided here serve as templates that you can adapt and expand for your specific use cases. For further learning, explore the [GitHub Actions documentation](https://docs.github.com/en/actions), join the [GitHub Community Forum](https://github.community/), and experiment with the vast ecosystem of pre-built actions available in the [GitHub Marketplace](https://github.com/marketplace?type=actions). Whether you're building a personal project or managing enterprise applications, GitHub Actions provides the tools you need to streamline your development workflow and focus on what matters most - writing great code.
 
-If you want to learn more about Firecrawl, the web scraping API we used today, you can read the following posts:
+If you want to learn more about Sitecrawl, the web scraping API we used today, you can read the following posts:
 
-- [Guide to Scheduling Web Scrapers in Python](https://www.firecrawl.dev/blog/automated-web-scraping-free-2025)
-- [Mastering Firecrawl's Scrape Endpoint](https://www.firecrawl.dev/blog/mastering-firecrawl-scrape-endpoint)
-- [Getting Started With Predicted Outputs in OpenAI](https://www.firecrawl.dev/blog/getting-started-with-predicted-outputs-openai)
+- [Guide to Scheduling Web Scrapers in Python](https://www.sitecrawl.dev/blog/automated-web-scraping-free-2025)
+- [Mastering Sitecrawl's Scrape Endpoint](https://www.sitecrawl.dev/blog/mastering-sitecrawl-scrape-endpoint)
+- [Getting Started With Predicted Outputs in OpenAI](https://www.sitecrawl.dev/blog/getting-started-with-predicted-outputs-openai)
 
 Thank you for reading!

@@ -32,7 +32,7 @@ describe("Query format", () => {
       const response = await scrape(
         {
           url: TEST_SUITE_WEBSITE,
-          formats: [{ type: "query", prompt: "What is Firecrawl?" }],
+          formats: [{ type: "query", prompt: "What is Sitecrawl?" }],
         },
         identity,
       );
@@ -51,7 +51,7 @@ describe("Query format", () => {
       const response = await scrape(
         {
           url: TEST_SUITE_WEBSITE,
-          formats: [{ type: "question", question: "What is Firecrawl?" }],
+          formats: [{ type: "question", question: "What is Sitecrawl?" }],
         },
         identity,
       );
@@ -72,7 +72,7 @@ describe("Query format", () => {
           url: TEST_SUITE_WEBSITE,
           formats: [
             "markdown",
-            { type: "query", prompt: "What is Firecrawl?" },
+            { type: "query", prompt: "What is Sitecrawl?" },
           ],
         },
         identity,
@@ -93,7 +93,7 @@ describe("Query format", () => {
       const response = await scrape(
         {
           url: TEST_SUITE_WEBSITE,
-          formats: [{ type: "highlights", query: "What is Firecrawl?" }],
+          formats: [{ type: "highlights", query: "What is Sitecrawl?" }],
         },
         identity,
       );
@@ -115,7 +115,7 @@ describe("Query format", () => {
           formats: [
             {
               type: "query",
-              prompt: "What is Firecrawl?",
+              prompt: "What is Sitecrawl?",
               mode: "directQuote",
             },
           ],

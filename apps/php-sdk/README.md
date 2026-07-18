@@ -1,6 +1,6 @@
-# Firecrawl PHP SDK
+# Sitecrawl PHP SDK
 
-PHP SDK for the [Firecrawl](https://firecrawl.dev) v2 API with first-class Laravel support.
+PHP SDK for the [Sitecrawl](https://sitecrawl.dev) v2 API with first-class Laravel support.
 
 ## Requirements
 
@@ -10,7 +10,7 @@ PHP SDK for the [Firecrawl](https://firecrawl.dev) v2 API with first-class Larav
 ## Installation
 
 ```bash
-composer require firecrawl/firecrawl-sdk
+composer require sitecrawl/sitecrawl-sdk
 ```
 
 ## Quick Start
@@ -18,10 +18,10 @@ composer require firecrawl/firecrawl-sdk
 ```php
 <?php
 
-use Firecrawl\Client\FirecrawlClient;
-use Firecrawl\Models\ScrapeOptions;
+use Sitecrawl\Client\SitecrawlClient;
+use Sitecrawl\Models\ScrapeOptions;
 
-$client = FirecrawlClient::create(apiKey: 'fc-your-api-key');
+$client = SitecrawlClient::create(apiKey: 'fc-your-api-key');
 
 // Scrape a single page
 $doc = $client->scrape('https://example.com', ScrapeOptions::with(
@@ -38,12 +38,12 @@ The SDK reads the following environment variables as fallbacks:
 
 | Variable | Description |
 |---|---|
-| `FIRECRAWL_API_KEY` | API key (required if not passed directly) |
-| `FIRECRAWL_API_URL` | API base URL (defaults to `https://api.firecrawl.dev`) |
+| `SITECRAWL_API_KEY` | API key (required if not passed directly) |
+| `SITECRAWL_API_URL` | API base URL (defaults to `https://api.sitecrawl.dev`) |
 
 ```php
-// Uses FIRECRAWL_API_KEY from environment
-$client = FirecrawlClient::fromEnv();
+// Uses SITECRAWL_API_KEY from environment
+$client = SitecrawlClient::fromEnv();
 ```
 
 ## Usage
@@ -51,8 +51,8 @@ $client = FirecrawlClient::fromEnv();
 ### Scrape
 
 ```php
-use Firecrawl\Models\ScrapeOptions;
-use Firecrawl\Models\JsonFormat;
+use Sitecrawl\Models\ScrapeOptions;
+use Sitecrawl\Models\JsonFormat;
 
 // Basic scrape
 $doc = $client->scrape('https://example.com');
@@ -134,8 +134,8 @@ features such as change tracking, screenshot, branding, product, menu, audio, vi
 waitFor, location, and mobile. The `proxy` option only accepts `"auto"` or `"basic"`.
 
 ```php
-use Firecrawl\Models\ParseFile;
-use Firecrawl\Models\ParseOptions;
+use Sitecrawl\Models\ParseFile;
+use Sitecrawl\Models\ParseOptions;
 
 // From disk
 $file = ParseFile::fromPath('./document.pdf');
@@ -156,8 +156,8 @@ echo $doc->getMarkdown();
 ### Crawl
 
 ```php
-use Firecrawl\Models\CrawlOptions;
-use Firecrawl\Models\ScrapeOptions;
+use Sitecrawl\Models\CrawlOptions;
+use Sitecrawl\Models\ScrapeOptions;
 
 // Crawl with auto-polling (blocks until complete)
 $job = $client->crawl('https://example.com', CrawlOptions::with(
@@ -185,8 +185,8 @@ $client->cancelCrawl($jobId);
 ### Batch Scrape
 
 ```php
-use Firecrawl\Models\BatchScrapeOptions;
-use Firecrawl\Models\ScrapeOptions;
+use Sitecrawl\Models\BatchScrapeOptions;
+use Sitecrawl\Models\ScrapeOptions;
 
 $job = $client->batchScrape(
     ['https://example.com', 'https://example.org'],
@@ -204,7 +204,7 @@ foreach ($job->getData() as $doc) {
 ### Map
 
 ```php
-use Firecrawl\Models\MapOptions;
+use Sitecrawl\Models\MapOptions;
 
 $result = $client->map('https://example.com', MapOptions::with(
     limit: 100,
@@ -219,9 +219,9 @@ foreach ($result->getLinks() as $link) {
 ### Search
 
 ```php
-use Firecrawl\Models\SearchOptions;
+use Sitecrawl\Models\SearchOptions;
 
-$result = $client->search('firecrawl web scraping', SearchOptions::with(
+$result = $client->search('sitecrawl web scraping', SearchOptions::with(
     limit: 5,
 ));
 
@@ -233,7 +233,7 @@ foreach ($result->getWeb() as $item) {
 ### Agent
 
 ```php
-use Firecrawl\Models\AgentOptions;
+use Sitecrawl\Models\AgentOptions;
 
 // Auto-polling (blocks until complete)
 $result = $client->agent(AgentOptions::with(
@@ -295,10 +295,10 @@ echo "Remaining: {$credits->getRemainingCredits()}\n";
 ## Error Handling
 
 ```php
-use Firecrawl\Exceptions\FirecrawlException;
-use Firecrawl\Exceptions\AuthenticationException;
-use Firecrawl\Exceptions\RateLimitException;
-use Firecrawl\Exceptions\JobTimeoutException;
+use Sitecrawl\Exceptions\SitecrawlException;
+use Sitecrawl\Exceptions\AuthenticationException;
+use Sitecrawl\Exceptions\RateLimitException;
+use Sitecrawl\Exceptions\JobTimeoutException;
 
 try {
     $doc = $client->scrape('https://example.com');
@@ -308,7 +308,7 @@ try {
     echo "Rate limited, back off\n";
 } catch (JobTimeoutException $e) {
     echo "Job {$e->getJobId()} timed out after {$e->getTimeoutSeconds()}s\n";
-} catch (FirecrawlException $e) {
+} catch (SitecrawlException $e) {
     echo "Error ({$e->getStatusCode()}): {$e->getMessage()}\n";
 }
 ```
@@ -318,7 +318,7 @@ try {
 ```php
 use GuzzleHttp\Client as GuzzleClient;
 
-$client = FirecrawlClient::create(
+$client = SitecrawlClient::create(
     apiKey: 'fc-your-api-key',
     apiUrl: 'https://custom-api.example.com',
     timeoutSeconds: 120,
@@ -337,34 +337,34 @@ $client = FirecrawlClient::create(
 The service provider is auto-discovered. Publish the config file:
 
 ```bash
-php artisan vendor:publish --tag=firecrawl-config
+php artisan vendor:publish --tag=sitecrawl-config
 ```
 
 Add your API key to `.env`:
 
 ```
-FIRECRAWL_API_KEY=fc-your-api-key
+SITECRAWL_API_KEY=fc-your-api-key
 ```
 
 ### Configuration
 
-The published `config/firecrawl.php` supports these environment variables:
+The published `config/sitecrawl.php` supports these environment variables:
 
 | Variable | Default | Description |
 |---|---|---|
-| `FIRECRAWL_API_KEY` | — | API key (required) |
-| `FIRECRAWL_API_URL` | `https://api.firecrawl.dev` | API base URL |
-| `FIRECRAWL_TIMEOUT` | `300` | Request timeout in seconds |
-| `FIRECRAWL_MAX_RETRIES` | `3` | Max retry attempts |
-| `FIRECRAWL_BACKOFF_FACTOR` | `0.5` | Exponential backoff factor |
+| `SITECRAWL_API_KEY` | — | API key (required) |
+| `SITECRAWL_API_URL` | `https://api.sitecrawl.dev` | API base URL |
+| `SITECRAWL_TIMEOUT` | `300` | Request timeout in seconds |
+| `SITECRAWL_MAX_RETRIES` | `3` | Max retry attempts |
+| `SITECRAWL_BACKOFF_FACTOR` | `0.5` | Exponential backoff factor |
 
 ### Using the Facade
 
 ```php
-use Firecrawl\Laravel\Facades\Firecrawl;
-use Firecrawl\Models\ScrapeOptions;
+use Sitecrawl\Laravel\Facades\Sitecrawl;
+use Sitecrawl\Models\ScrapeOptions;
 
-$doc = Firecrawl::scrape('https://example.com', ScrapeOptions::with(
+$doc = Sitecrawl::scrape('https://example.com', ScrapeOptions::with(
     formats: ['markdown'],
 ));
 ```
@@ -372,17 +372,17 @@ $doc = Firecrawl::scrape('https://example.com', ScrapeOptions::with(
 ### Using Dependency Injection
 
 ```php
-use Firecrawl\Client\FirecrawlClient;
+use Sitecrawl\Client\SitecrawlClient;
 
 class MyController
 {
     public function __construct(
-        private readonly FirecrawlClient $firecrawl,
+        private readonly SitecrawlClient $sitecrawl,
     ) {}
 
     public function scrape(string $url)
     {
-        return $this->firecrawl->scrape($url);
+        return $this->sitecrawl->scrape($url);
     }
 }
 ```
@@ -399,13 +399,13 @@ composer require laravel/ai
 Note for contributors: `laravel/ai` is also a dev dependency of this package,
 so running the SDK's own test suite requires PHP 8.3+.
 
-Add Firecrawl capabilities to any agent, no MCP server or manual HTTP calls needed.
-The tools resolve the `FirecrawlClient` from the container, so your existing
-`config/firecrawl.php` / `FIRECRAWL_API_KEY` setup is reused as-is:
+Add Sitecrawl capabilities to any agent, no MCP server or manual HTTP calls needed.
+The tools resolve the `SitecrawlClient` from the container, so your existing
+`config/sitecrawl.php` / `SITECRAWL_API_KEY` setup is reused as-is:
 
 ```php
-use Firecrawl\Laravel\Tools\FirecrawlScrape;
-use Firecrawl\Laravel\Tools\FirecrawlSearch;
+use Sitecrawl\Laravel\Tools\SitecrawlScrape;
+use Sitecrawl\Laravel\Tools\SitecrawlSearch;
 use Laravel\Ai\Contracts\Agent;
 use Laravel\Ai\Contracts\HasTools;
 use Laravel\Ai\Promptable;
@@ -417,38 +417,38 @@ class ResearchAssistant implements Agent, HasTools
 
     public function instructions(): Stringable|string
     {
-        return 'You are a research assistant. Use the Firecrawl tools to find and read web content.';
+        return 'You are a research assistant. Use the Sitecrawl tools to find and read web content.';
     }
 
     public function tools(): iterable
     {
         return [
-            new FirecrawlScrape,
-            new FirecrawlSearch,
+            new SitecrawlScrape,
+            new SitecrawlSearch,
         ];
     }
 }
 
-$response = ResearchAssistant::make()->prompt('What does firecrawl.dev do?');
+$response = ResearchAssistant::make()->prompt('What does sitecrawl.dev do?');
 ```
 
 Available tools:
 
 | Class | Tool name | Wraps |
 |---|---|---|
-| `FirecrawlScrape` | `firecrawl_scrape` | Scrape one URL to markdown |
-| `FirecrawlSearch` | `firecrawl_search` | Web search with JSON results |
-| `FirecrawlMap` | `firecrawl_map` | Discover a site's URLs |
-| `FirecrawlCrawl` | `firecrawl_crawl` | Crawl multiple pages to markdown |
+| `SitecrawlScrape` | `sitecrawl_scrape` | Scrape one URL to markdown |
+| `SitecrawlSearch` | `sitecrawl_search` | Web search with JSON results |
+| `SitecrawlMap` | `sitecrawl_map` | Discover a site's URLs |
+| `SitecrawlCrawl` | `sitecrawl_crawl` | Crawl multiple pages to markdown |
 
 Register all of them at once with the spread helper:
 
 ```php
-use Firecrawl\Laravel\Tools\FirecrawlTools;
+use Sitecrawl\Laravel\Tools\SitecrawlTools;
 
 public function tools(): iterable
 {
-    return [...FirecrawlTools::all()];
+    return [...SitecrawlTools::all()];
 }
 ```
 
@@ -456,20 +456,20 @@ Every tool also accepts an explicit client, for one-off credentials or use
 outside the container:
 
 ```php
-use Firecrawl\Client\FirecrawlClient;
+use Sitecrawl\Client\SitecrawlClient;
 
-new FirecrawlScrape(FirecrawlClient::create(apiKey: 'fc-other-key'));
+new SitecrawlScrape(SitecrawlClient::create(apiKey: 'fc-other-key'));
 ```
 
 Tool failures (rate limits, timeouts, invalid URLs) are returned to the model
 as readable error strings rather than thrown, so agent runs degrade gracefully.
 
-`firecrawl_crawl` waits up to 55 seconds for the crawl to finish and returns
+`sitecrawl_crawl` waits up to 55 seconds for the crawl to finish and returns
 a JSON object with the crawl status and pages, so failed or partial crawls
 are visible to the model. If your agent runs inside a queued job, keep the
 crawl limit small or raise the worker's job timeout; on timeout the model
 receives a readable message and the crawl may still complete on the server.
-Extend `FirecrawlCrawl` and override `$timeoutSeconds` to change how long it
+Extend `SitecrawlCrawl` and override `$timeoutSeconds` to change how long it
 waits.
 
 ## License

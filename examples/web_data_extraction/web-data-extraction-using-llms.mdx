@@ -1,34 +1,34 @@
 # Extract website data using LLMs
 
-Learn how to use Firecrawl and Groq to extract structured data from a web page in a few lines of code. With Groq fast inference speeds and firecrawl parellization, you can extract data from web pages *super* fast.
+Learn how to use Sitecrawl and Groq to extract structured data from a web page in a few lines of code. With Groq fast inference speeds and sitecrawl parellization, you can extract data from web pages *super* fast.
 
 ## Setup
 
-Install our python dependencies, including groq and firecrawl-py. 
+Install our python dependencies, including groq and sitecrawl-py. 
 
 ```bash
-pip install groq firecrawl-py
+pip install groq sitecrawl-py
 ```
 
-## Getting your Groq and Firecrawl API Keys
+## Getting your Groq and Sitecrawl API Keys
 
-To use Groq and Firecrawl, you will need to get your API keys. You can get your Groq API key from [here](https://groq.com) and your Firecrawl API key from [here](https://firecrawl.dev).   
+To use Groq and Sitecrawl, you will need to get your API keys. You can get your Groq API key from [here](https://groq.com) and your Sitecrawl API key from [here](https://sitecrawl.dev).   
 
-## Load website with Firecrawl
+## Load website with Sitecrawl
 
-To be able to get all the data from a website page and make sure it is in the cleanest format, we will use [FireCrawl](https://firecrawl.dev). It handles by-passing JS-blocked websites, extracting the main content, and outputting in a LLM-readable format for increased accuracy.
+To be able to get all the data from a website page and make sure it is in the cleanest format, we will use [Sitecrawl](https://sitecrawl.dev). It handles by-passing JS-blocked websites, extracting the main content, and outputting in a LLM-readable format for increased accuracy.
 
-Here is how we will scrape a website url using Firecrawl. We will also set a `pageOptions` for only extracting the main content (`onlyMainContent: True`) of the website page - excluding the navs, footers, etc.
+Here is how we will scrape a website url using Sitecrawl. We will also set a `pageOptions` for only extracting the main content (`onlyMainContent: True`) of the website page - excluding the navs, footers, etc.
 
 ```python
-from firecrawl import FirecrawlApp  # Importing the FireCrawlLoader
+from sitecrawl import SitecrawlApp  # Importing the SitecrawlLoader
 
 url = "https://about.fb.com/news/2024/04/introducing-our-open-mixed-reality-ecosystem/"
 
-firecrawl = FirecrawlApp(
-    api_key="fc-YOUR_FIRECRAWL_API_KEY",
+sitecrawl = SitecrawlApp(
+    api_key="fc-YOUR_SITECRAWL_API_KEY",
 )
-page_content = firecrawl.scrape_url(url=url,  # Target URL to crawl
+page_content = sitecrawl.scrape_url(url=url,  # Target URL to crawl
     params={
         "pageOptions":{
             "onlyMainContent": True # Ignore navs, footers, etc.
@@ -87,6 +87,6 @@ print(dataExtracted)
 
 ## And Voila!
 
-You have now built a data extraction bot using Groq and Firecrawl. You can now use this bot to extract structured data from any website.
+You have now built a data extraction bot using Groq and Sitecrawl. You can now use this bot to extract structured data from any website.
 
-If you have any questions or need help, feel free to reach out to us at [Firecrawl](https://firecrawl.dev).
+If you have any questions or need help, feel free to reach out to us at [Sitecrawl](https://sitecrawl.dev).

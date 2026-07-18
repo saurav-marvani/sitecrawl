@@ -50,21 +50,21 @@ describeIf(TEST_PRODUCTION)("V0 threat protection (forced flag)", () => {
   }, 10000);
 
   it.concurrent("rejects v0 scrape with 403", async () => {
-    const res = await scrapeRaw({ url: "https://firecrawl.dev" }, identity);
+    const res = await scrapeRaw({ url: "https://sitecrawl.dev" }, identity);
     expect(res.statusCode).toBe(403);
     expect(res.body.error).toContain("Threat protection");
     expect(res.body.error).toContain("v0");
   });
 
   it.concurrent("rejects v0 crawl with 403", async () => {
-    const res = await crawlRaw({ url: "https://firecrawl.dev" }, identity);
+    const res = await crawlRaw({ url: "https://sitecrawl.dev" }, identity);
     expect(res.statusCode).toBe(403);
     expect(res.body.error).toContain("Threat protection");
     expect(res.body.error).toContain("v0");
   });
 
   it.concurrent("rejects v0 search with 403", async () => {
-    const res = await searchRaw({ query: "firecrawl" }, identity);
+    const res = await searchRaw({ query: "sitecrawl" }, identity);
     expect(res.statusCode).toBe(403);
     expect(res.body.error).toContain("Threat protection");
     expect(res.body.error).toContain("v0");

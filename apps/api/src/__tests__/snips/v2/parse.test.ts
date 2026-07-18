@@ -725,7 +725,7 @@ describe("/v2/parse", () => {
       expect(parseLog).not.toBeNull();
       expect(parseLog!.request_id).toBe(requestLog!.id);
       expect(parseLog!.url).toContain(
-        `https://parse.firecrawl.dev/uploads/${encodeURIComponent(filename)}`,
+        `https://parse.sitecrawl.dev/uploads/${encodeURIComponent(filename)}`,
       );
 
       const scrapeRows = await db

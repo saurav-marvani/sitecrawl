@@ -1,21 +1,21 @@
-# Firecrawl .NET SDK
+# Sitecrawl .NET SDK
 
-.NET SDK for the [Firecrawl API](https://firecrawl.dev) — web scraping, crawling, and data extraction.
+.NET SDK for the [Sitecrawl API](https://sitecrawl.dev) — web scraping, crawling, and data extraction.
 
 ## Installation
 
 ```bash
-dotnet add package firecrawl-sdk
+dotnet add package sitecrawl-sdk
 ```
 
 ## Quick Start
 
 ```csharp
-using Firecrawl;
-using Firecrawl.Models;
+using Sitecrawl;
+using Sitecrawl.Models;
 
 // Create a client
-var client = new FirecrawlClient("fc-your-api-key");
+var client = new SitecrawlClient("fc-your-api-key");
 
 // Scrape a single page
 var doc = await client.ScrapeAsync("https://example.com",
@@ -30,24 +30,24 @@ Console.WriteLine(doc.Markdown);
 
 The API key can be provided in two ways (in order of precedence):
 
-1. Constructor parameter: `new FirecrawlClient("fc-your-api-key")`
-2. Environment variable: `FIRECRAWL_API_KEY`
+1. Constructor parameter: `new SitecrawlClient("fc-your-api-key")`
+2. Environment variable: `SITECRAWL_API_KEY`
 
 ```csharp
 // From environment variable
-var client = new FirecrawlClient();
+var client = new SitecrawlClient();
 
 // Explicit API key
-var client = new FirecrawlClient(apiKey: "fc-your-api-key");
+var client = new SitecrawlClient(apiKey: "fc-your-api-key");
 
 // Custom API URL (for self-hosted instances)
-var client = new FirecrawlClient(
+var client = new SitecrawlClient(
     apiKey: "fc-your-api-key",
-    apiUrl: "https://your-firecrawl-instance.com");
+    apiUrl: "https://your-sitecrawl-instance.com");
 
 // Custom HttpClient
 var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(60) };
-var client = new FirecrawlClient(
+var client = new SitecrawlClient(
     apiKey: "fc-your-api-key",
     httpClient: httpClient);
 ```
@@ -175,10 +175,10 @@ endpoint. Parse does not support browser-rendering options like `actions`,
 `changeTracking` / `audio` / `video` formats.
 
 ```csharp
-using Firecrawl;
-using Firecrawl.Models;
+using Sitecrawl;
+using Sitecrawl.Models;
 
-var client = new FirecrawlClient("fc-your-api-key");
+var client = new SitecrawlClient("fc-your-api-key");
 
 // From a file on disk
 var doc = await client.ParseAsync(
@@ -218,7 +218,7 @@ foreach (var url in data.Links!)
 
 ```csharp
 // Web search
-var results = await client.SearchAsync("firecrawl web scraping",
+var results = await client.SearchAsync("sitecrawl web scraping",
     new SearchOptions
     {
         Limit = 5,
@@ -241,7 +241,7 @@ Console.WriteLine($"Remaining credits: {usage.RemainingCredits}");
 ## Error Handling
 
 ```csharp
-using Firecrawl.Exceptions;
+using Sitecrawl.Exceptions;
 
 try
 {
@@ -262,7 +262,7 @@ catch (JobTimeoutException ex)
     // Async job timed out
     Console.WriteLine($"Job {ex.JobId} timed out after {ex.TimeoutSeconds}s");
 }
-catch (FirecrawlException ex)
+catch (SitecrawlException ex)
 {
     // General API error
     Console.WriteLine($"Error {ex.StatusCode}: {ex.Message}");

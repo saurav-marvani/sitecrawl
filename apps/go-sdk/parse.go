@@ -1,4 +1,4 @@
-package firecrawl
+package sitecrawl
 
 import (
 	"context"
@@ -25,12 +25,12 @@ type ParseFile struct {
 // NewParseFileFromPath reads a file from disk and returns a ParseFile ready for upload.
 func NewParseFileFromPath(path string) (*ParseFile, error) {
 	if path == "" {
-		return nil, &FirecrawlError{Message: "file path is required"}
+		return nil, &SitecrawlError{Message: "file path is required"}
 	}
 
 	content, err := os.ReadFile(path)
 	if err != nil {
-		return nil, &FirecrawlError{Message: fmt.Sprintf("failed to read parse file %q: %v", path, err)}
+		return nil, &SitecrawlError{Message: fmt.Sprintf("failed to read parse file %q: %v", path, err)}
 	}
 
 	filename := filepath.Base(path)
@@ -96,14 +96,14 @@ func (o ParseOptions) MarshalJSON() ([]byte, error) {
 // Parse uploads a file to the `/v2/parse` endpoint and returns the extracted document.
 func (c *Client) Parse(ctx context.Context, file *ParseFile, opts *ParseOptions) (*Document, error) {
 	if file == nil {
-		return nil, &FirecrawlError{Message: "parse file is required"}
+		return nil, &SitecrawlError{Message: "parse file is required"}
 	}
 	filename := strings.TrimSpace(file.Filename)
 	if filename == "" {
-		return nil, &FirecrawlError{Message: "filename cannot be empty"}
+		return nil, &SitecrawlError{Message: "filename cannot be empty"}
 	}
 	if len(file.Content) == 0 {
-		return nil, &FirecrawlError{Message: "file content cannot be empty"}
+		return nil, &SitecrawlError{Message: "file content cannot be empty"}
 	}
 
 	optionsMap := map[string]interface{}{}
@@ -111,7 +111,7 @@ func (c *Client) Parse(ctx context.Context, file *ParseFile, opts *ParseOptions)
 
 	optionsJSON, err := json.Marshal(optionsMap)
 	if err != nil {
-		return nil, &FirecrawlError{Message: fmt.Sprintf("failed to serialize parse options: %v", err)}
+		return nil, &SitecrawlError{Message: fmt.Sprintf("failed to serialize parse options: %v", err)}
 	}
 
 	fields := map[string]string{"options": string(optionsJSON)}

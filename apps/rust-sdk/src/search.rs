@@ -1,4 +1,4 @@
-//! Search endpoint for Firecrawl API v2.
+//! Search endpoint for Sitecrawl API v2.
 
 use serde::{Deserialize, Serialize};
 
@@ -7,7 +7,7 @@ use crate::scrape::ScrapeOptions;
 use crate::types::{
     Document, SearchCategory, SearchResultImage, SearchResultNews, SearchResultWeb, SearchSource,
 };
-use crate::FirecrawlError;
+use crate::SitecrawlError;
 
 /// Options for search requests.
 #[serde_with::skip_serializing_none]
@@ -144,7 +144,7 @@ impl Client {
     /// # Example
     ///
     /// ```no_run
-    /// use firecrawl::{Client, SearchOptions, SearchSource};
+    /// use sitecrawl::{Client, SearchOptions, SearchSource};
     ///
     /// #[tokio::main]
     /// async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -154,10 +154,10 @@ impl Client {
     ///     let results = client.search("rust programming", None).await?;
     ///     for result in results.data.web.unwrap_or_default() {
     ///         match result {
-    ///             firecrawl::SearchResultOrDocument::WebResult(r) => {
+    ///             sitecrawl::SearchResultOrDocument::WebResult(r) => {
     ///                 println!("URL: {}", r.url);
     ///             }
-    ///             firecrawl::SearchResultOrDocument::Document(d) => {
+    ///             sitecrawl::SearchResultOrDocument::Document(d) => {
     ///                 println!("Content: {:?}", d.markdown);
     ///             }
     ///         }
@@ -178,7 +178,7 @@ impl Client {
         &self,
         query: impl AsRef<str>,
         options: impl Into<Option<SearchOptions>>,
-    ) -> Result<SearchResponse, FirecrawlError> {
+    ) -> Result<SearchResponse, SitecrawlError> {
         let mut options = options.into().unwrap_or_default();
         if options.origin.is_none() {
             options.origin = Some(format!("rust-sdk@{}", env!("CARGO_PKG_VERSION")));
@@ -198,7 +198,7 @@ impl Client {
             .send()
             .await
             .map_err(|e| {
-                FirecrawlError::HttpError(format!("Searching for {:?}", query.as_ref()), e)
+                SitecrawlError::HttpError(format!("Searching for {:?}", query.as_ref()), e)
             })?;
 
         self.handle_response(response, "search").await
@@ -220,7 +220,7 @@ impl Client {
     /// # Example
     ///
     /// ```no_run
-    /// use firecrawl::Client;
+    /// use sitecrawl::Client;
     ///
     /// #[tokio::main]
     /// async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -239,7 +239,7 @@ impl Client {
         &self,
         query: impl AsRef<str>,
         limit: u32,
-    ) -> Result<Vec<Document>, FirecrawlError> {
+    ) -> Result<Vec<Document>, SitecrawlError> {
         let options = SearchOptions {
             limit: Some(limit),
             scrape_options: Some(ScrapeOptions::default()),

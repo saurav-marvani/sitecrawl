@@ -1,5 +1,5 @@
 import pytest
-from firecrawl.v2.types import SearchData, SearchResultWeb, SearchResultNews
+from sitecrawl.v2.types import SearchData, SearchResultWeb, SearchResultNews
 
 
 class TestSearchDataDotData:

@@ -1,28 +1,28 @@
 // Placeholder v2 example (JavaScript)
-// Minimal usage of new FirecrawlClient. Replace with your API key before running.
+// Minimal usage of new SitecrawlClient. Replace with your API key before running.
 
-import { FirecrawlClient } from './firecrawl/src/v2/client.js';
+import { SitecrawlClient } from './sitecrawl/src/v2/client.js';
 
 async function run() {
-  const apiKey = (globalThis.process && globalThis.process.env && globalThis.process.env.FIRECRAWL_API_KEY) || 'fc-YOUR_API_KEY';
-  const client = new FirecrawlClient({ apiKey });
+  const apiKey = (globalThis.process && globalThis.process.env && globalThis.process.env.SITECRAWL_API_KEY) || 'fc-YOUR_API_KEY';
+  const client = new SitecrawlClient({ apiKey });
 
-  const doc = await client.scrape('https://docs.firecrawl.dev', { formats: ['markdown'] });
+  const doc = await client.scrape('https://docs.sitecrawl.dev', { formats: ['markdown'] });
   console.log('scrape:', !!doc.markdown);
 
-  const crawl = await client.crawl('https://docs.firecrawl.dev', { limit: 3, pollInterval: 1, timeout: 120 });
+  const crawl = await client.crawl('https://docs.sitecrawl.dev', { limit: 3, pollInterval: 1, timeout: 120 });
   console.log('crawl:', crawl.status, crawl.completed, '/', crawl.total);
 
   const batch = await client.batchScrape([
-    'https://docs.firecrawl.dev',
-    'https://firecrawl.dev',
+    'https://docs.sitecrawl.dev',
+    'https://sitecrawl.dev',
   ], { options: { formats: ['markdown'] }, pollInterval: 1, timeout: 120 });
   console.log('batch:', batch.status, batch.completed, '/', batch.total);
 
   const search = await client.search('What is the capital of France?', { limit: 5 });
   console.log('search web results:', (search.web || []).length);
 
-  const map = await client.map('https://firecrawl.dev');
+  const map = await client.map('https://sitecrawl.dev');
   console.log('map links:', map.links.length);
 }
 
@@ -33,15 +33,15 @@ run().catch((e) => {
 
 // old stuff:
 
-import { Firecrawl } from 'firecrawl';
+import { Sitecrawl } from 'sitecrawl';
 import { z } from 'zod';
 
-const app = new Firecrawl({apiKey: "fc-YOUR_API_KEY"});
+const app = new Sitecrawl({apiKey: "fc-YOUR_API_KEY"});
 
 const main = async () => {
 
   // Scrape a website:
-  const scrapeResult = await app.scrapeUrl('firecrawl.dev');
+  const scrapeResult = await app.scrapeUrl('sitecrawl.dev');
 
   if (scrapeResult.success) {
     console.log(scrapeResult.markdown)
@@ -75,7 +75,7 @@ const main = async () => {
   }
 
   // Map a website:
-  const mapResult = await app.mapUrl('https://firecrawl.dev');
+  const mapResult = await app.mapUrl('https://sitecrawl.dev');
   console.log(mapResult)
 
   // Extract information from a website using LLM:
@@ -85,7 +85,7 @@ const main = async () => {
     links: z.array(z.string())
   });
 
-  const extractResult = await app.extract(['https://firecrawl.dev'], {
+  const extractResult = await app.extract(['https://sitecrawl.dev'], {
     prompt: "Extract the title, description, and links from the website",
     schema: extractSchema
   });

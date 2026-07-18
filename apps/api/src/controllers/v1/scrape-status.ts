@@ -18,7 +18,7 @@ export async function scrapeStatusController(req: any, res: any) {
     return res.status(400).json({
       success: false,
       error:
-        "Your team has zero data retention enabled. This is not supported on scrape status. Please contact support@firecrawl.com to unblock this feature.",
+        "Your team has zero data retention enabled. This is not supported on scrape status. Please contact support@sitecrawl.com to unblock this feature.",
     });
   }
 

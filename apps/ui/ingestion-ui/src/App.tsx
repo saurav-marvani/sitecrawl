@@ -1,6 +1,6 @@
 import { useState } from "react";
-import FirecrawlComponent from "./components/ingestion";
-import FirecrawlComponentV1 from "./components/ingestionV1";
+import SitecrawlComponent from "./components/ingestion";
+import SitecrawlComponentV1 from "./components/ingestionV1";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 
@@ -17,18 +17,18 @@ function App() {
         >
           <div className="flex items-center space-x-2 p-2">
             <RadioGroupItem value="v0" id="v0"></RadioGroupItem>
-            <Label htmlFor="v0">Firecrawl Component V0</Label>
+            <Label htmlFor="v0">Sitecrawl Component V0</Label>
           </div>
           <div className="flex items-center space-x-2 p-2">
             <RadioGroupItem value="v1" id="v1"></RadioGroupItem>
-            <Label htmlFor="v1">Firecrawl Component V1</Label>
+            <Label htmlFor="v1">Sitecrawl Component V1</Label>
           </div>
         </RadioGroup>
       </div>
       {selectedComponent === "v1" ? (
-        <FirecrawlComponentV1 />
+        <SitecrawlComponentV1 />
       ) : (
-        <FirecrawlComponent />
+        <SitecrawlComponent />
       )}
     </>
   );

@@ -1,6 +1,6 @@
 requests
 beautifulsoup4
-firecrawl
+sitecrawl
 pydantic
 python-dotenv
-firecrawl-py
+sitecrawl-py

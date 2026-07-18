@@ -23,11 +23,11 @@ const configSchema = z.object({
   PORT: z.coerce.number().default(3002),
   IS_PRODUCTION: z.stringbool().optional(),
   IS_KUBERNETES: z.stringbool().optional(),
-  FIRECRAWL_APP_HOST: z.string().default("firecrawl-app-service"),
-  FIRECRAWL_APP_PORT: z.string().default("3002"),
-  FIRECRAWL_APP_SCHEME: z.string().default("http"),
+  SITECRAWL_APP_HOST: z.string().default("sitecrawl-app-service"),
+  SITECRAWL_APP_PORT: z.string().default("3002"),
+  SITECRAWL_APP_SCHEME: z.string().default("http"),
   LOGGING_LEVEL: z.string().optional(),
-  FIRECRAWL_DASHBOARD_URL: z.url().default("https://www.firecrawl.dev"),
+  SITECRAWL_DASHBOARD_URL: z.url().default("https://www.sitecrawl.dev"),
   SUPPORT_AGENT_URL: z.string().url().optional(),
   SUPPORT_AGENT_VERCEL_BYPASS_SECRET: z.string().optional(),
   RESEARCH_PROXY_URL: z.string().url().optional(),
@@ -41,7 +41,7 @@ const configSchema = z.object({
   KEYLESS_REQUESTS_PER_DAY: z.coerce.number().int().nonnegative().optional(),
   // Shared secret that lets a trusted proxy (e.g. the hosted MCP server)
   // forward the real client IP for keyless rate-limiting via the
-  // `x-firecrawl-keyless-ip` header. Untrusted callers can't override their IP.
+  // `x-sitecrawl-keyless-ip` header. Untrusted callers can't override their IP.
   KEYLESS_PROXY_SECRET: z.string().optional(),
   // Optional Spur Context API token (https://docs.spur.us/context-api). When
   // set, keyless requests have their client IP checked against Spur and are
@@ -106,7 +106,7 @@ const configSchema = z.object({
   // Agent auth discovery (RFC 9728 WWW-Authenticate on 401)
   AGENT_AUTH_RESOURCE_METADATA_URL: z
     .url()
-    .default("https://www.firecrawl.dev/.well-known/oauth-protected-resource"),
+    .default("https://www.sitecrawl.dev/.well-known/oauth-protected-resource"),
 
   // Database & Storage
   POSTGRES_HOST: z.string().default("localhost"),
@@ -269,7 +269,7 @@ const configSchema = z.object({
   DISABLE_WEBHOOK_DELIVERY: z.stringbool().optional(),
 
   // Slack integration ("Add to Slack" for monitor notifications + /monitor
-  // slash command). Credentials come from the Firecrawl Slack app.
+  // slash command). Credentials come from the Sitecrawl Slack app.
   SLACK_CLIENT_ID: z.string().optional(),
   SLACK_CLIENT_SECRET: z.string().optional(),
   SLACK_SIGNING_SECRET: z.string().optional(),
@@ -282,7 +282,7 @@ const configSchema = z.object({
     ),
   // Absolute URL Slack redirects back to after authorize. Must exactly match a
   // Redirect URL configured on the Slack app (e.g.
-  // https://api.firecrawl.dev/v2/slack/oauth/callback).
+  // https://api.sitecrawl.dev/v2/slack/oauth/callback).
   SLACK_OAUTH_REDIRECT_URL: z.string().optional(),
   // 32-byte key (hex or base64) used to AES-256-GCM encrypt stored bot tokens.
   // If unset, tokens are stored with a `plain:` prefix (self-hosted only).
@@ -290,11 +290,11 @@ const configSchema = z.object({
   ALLOW_LOCAL_WEBHOOKS: z.stringbool().optional(),
   WEBHOOK_USE_RABBITMQ: z.stringbool().optional(),
 
-  // Firecrawl Features
-  FIRECRAWL_DEBUG_FILTER_LINKS: z.stringbool().optional(),
-  FIRECRAWL_LOG_TO_FILE: z.stringbool().optional(),
-  FIRECRAWL_SAVE_MOCKS: z.stringbool().optional(),
-  FIRECRAWL_INDEX_WRITE_ONLY: z.stringbool().optional(),
+  // Sitecrawl Features
+  SITECRAWL_DEBUG_FILTER_LINKS: z.stringbool().optional(),
+  SITECRAWL_LOG_TO_FILE: z.stringbool().optional(),
+  SITECRAWL_SAVE_MOCKS: z.stringbool().optional(),
+  SITECRAWL_INDEX_WRITE_ONLY: z.stringbool().optional(),
   DISABLE_BLOCKLIST: z.stringbool().optional(),
   FORCED_ENGINE_DOMAINS: z.string().optional(),
   DEBUG_BRANDING: z.stringbool().optional(),

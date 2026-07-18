@@ -84,7 +84,7 @@ describe("feedback schema", () => {
     expect(
       searchFeedbackSchema.safeParse({
         rating: "good",
-        valuableSources: [{ url: "https://firecrawl.dev/" }],
+        valuableSources: [{ url: "https://sitecrawl.dev/" }],
       }).success,
     ).toBe(true);
 
@@ -93,7 +93,7 @@ describe("feedback schema", () => {
         endpoint: "search",
         jobId: "01933161-0000-7000-8000-000000000001",
         rating: "good",
-        valuableSources: [{ url: "https://firecrawl.dev/" }],
+        valuableSources: [{ url: "https://sitecrawl.dev/" }],
       }).success,
     ).toBe(true);
 

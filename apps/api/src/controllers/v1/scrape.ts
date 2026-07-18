@@ -280,7 +280,7 @@ export async function scrapeController(
           code: e.code,
           error: e.message,
           sponsor_status: "pending",
-          login_url: "https://firecrawl.dev/signin",
+          login_url: "https://sitecrawl.dev/signin",
         });
       }
 

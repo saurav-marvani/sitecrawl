@@ -1,6 +1,6 @@
 import os
 import json
-from firecrawl import FirecrawlApp
+from sitecrawl import SitecrawlApp
 from dotenv import load_dotenv
 from openai import OpenAI
 
@@ -8,11 +8,11 @@ from openai import OpenAI
 load_dotenv()
 
 # Retrieve API keys from environment variables
-firecrawl_api_key = os.getenv("FIRECRAWL_API_KEY")
+sitecrawl_api_key = os.getenv("SITECRAWL_API_KEY")
 openai_api_key = os.getenv("OPENAI_API_KEY")
 
-# Initialize the FirecrawlApp and set OpenAI API key
-app = FirecrawlApp(api_key=firecrawl_api_key)
+# Initialize the SitecrawlApp and set OpenAI API key
+app = SitecrawlApp(api_key=sitecrawl_api_key)
 client = OpenAI(api_key=openai_api_key)
 
 def main():
@@ -20,7 +20,7 @@ def main():
     blog_url = input("Enter the blog URL: ")
 
     if not blog_url.strip():
-        blog_url = "https://www.firecrawl.dev/blog/how-to-use-openai-o1-reasoning-models-in-applications"
+        blog_url = "https://www.sitecrawl.dev/blog/how-to-use-openai-o1-reasoning-models-in-applications"
 
     # Scrape the blog content
     print("Scraping the blog content...")

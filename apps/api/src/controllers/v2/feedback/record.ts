@@ -105,7 +105,7 @@ function validateAccess(
     return feedbackFailure(
       403,
       "TEAM_OPTED_OUT",
-      "Feedback is disabled for this team. Contact support@firecrawl.com to re-enable.",
+      "Feedback is disabled for this team. Contact support@sitecrawl.com to re-enable.",
     );
   }
 

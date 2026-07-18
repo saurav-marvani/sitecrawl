@@ -38,7 +38,7 @@ describe("Standalone scrapeURL tests", () => {
     it("Basic scrape", async () => {
       const out = await scrapeURL(
         "test:scrape-basic",
-        "https://firecrawl-test-site.vercel.app",
+        "https://sitecrawl-test-site.vercel.app",
         scrapeOptions.parse({}),
         { forceEngine, teamId: "test" },
         new CostTracking(),
@@ -52,21 +52,21 @@ describe("Standalone scrapeURL tests", () => {
         expect(out.document).toHaveProperty("markdown");
         expect(out.document).toHaveProperty("metadata");
         expect(out.document).not.toHaveProperty("html");
-        expect(out.document.markdown).toContain("Firecrawl Test Site");
+        expect(out.document.markdown).toContain("Sitecrawl Test Site");
         expect(out.document.metadata.error).toBeUndefined();
-        expect(out.document.metadata.title).toBe("Firecrawl Test Website");
+        expect(out.document.metadata.title).toBe("Sitecrawl Test Website");
         expect(out.document.metadata.description).toBe(
-          "Welcome to the Firecrawl Test Website!",
+          "Welcome to the Sitecrawl Test Website!",
         );
-        expect(out.document.metadata.ogTitle).toBe("Firecrawl Test Website");
+        expect(out.document.metadata.ogTitle).toBe("Sitecrawl Test Website");
         expect(out.document.metadata.ogDescription).toBe(
-          "Welcome to the Firecrawl Test Website!",
+          "Welcome to the Sitecrawl Test Website!",
         );
-        expect(out.document.metadata.ogUrl).toContain("firecrawl-test-site");
-        expect(out.document.metadata.ogImage).toContain("firecrawl-test-site");
+        expect(out.document.metadata.ogUrl).toContain("sitecrawl-test-site");
+        expect(out.document.metadata.ogImage).toContain("sitecrawl-test-site");
         expect(out.document.metadata.ogLocaleAlternate).toStrictEqual([]);
         expect(out.document.metadata.sourceURL).toBe(
-          "https://firecrawl-test-site.vercel.app",
+          "https://sitecrawl-test-site.vercel.app",
         );
         expect(out.document.metadata.statusCode).toBe(200);
       }
@@ -75,7 +75,7 @@ describe("Standalone scrapeURL tests", () => {
     it("Scrape with formats markdown and html", async () => {
       const out = await scrapeURL(
         "test:scrape-formats-markdown-html",
-        "https://firecrawl-test-site.vercel.app",
+        "https://sitecrawl-test-site.vercel.app",
         scrapeOptions.parse({
           formats: ["markdown", "html"],
         }),
@@ -90,7 +90,7 @@ describe("Standalone scrapeURL tests", () => {
         expect(out.document).toHaveProperty("markdown");
         expect(out.document).toHaveProperty("html");
         expect(out.document).toHaveProperty("metadata");
-        expect(out.document.markdown).toContain("Firecrawl Test Site");
+        expect(out.document.markdown).toContain("Sitecrawl Test Site");
         expect(out.document.html).toContain("<h1");
         expect(out.document.metadata.statusCode).toBe(200);
         expect(out.document.metadata.error).toBeUndefined();
@@ -308,7 +308,7 @@ describe("Standalone scrapeURL tests", () => {
           expect(typeof out.document.screenshot).toBe("string");
           expect(
             out.document.screenshot!.startsWith(
-              "https://service.firecrawl.dev/storage/v1/object/public/media/",
+              "https://service.sitecrawl.dev/storage/v1/object/public/media/",
             ),
           );
           // TODO: attempt to fetch screenshot
@@ -337,7 +337,7 @@ describe("Standalone scrapeURL tests", () => {
           expect(typeof out.document.screenshot).toBe("string");
           expect(
             out.document.screenshot!.startsWith(
-              "https://service.firecrawl.dev/storage/v1/object/public/media/",
+              "https://service.sitecrawl.dev/storage/v1/object/public/media/",
             ),
           );
           // TODO: attempt to fetch screenshot
@@ -419,7 +419,7 @@ describe("Standalone scrapeURL tests", () => {
   it("LLM extract with prompt and schema", async () => {
     const out = await scrapeURL(
       "test:llm-extract-prompt-schema",
-      "https://firecrawl.dev",
+      "https://sitecrawl.dev",
       scrapeOptions.parse({
         formats: ["extract"],
         extract: {
@@ -458,7 +458,7 @@ describe("Standalone scrapeURL tests", () => {
   it("LLM extract with schema only", async () => {
     const out = await scrapeURL(
       "test:llm-extract-schema",
-      "https://firecrawl.dev",
+      "https://sitecrawl.dev",
       scrapeOptions.parse({
         formats: ["extract"],
         extract: {

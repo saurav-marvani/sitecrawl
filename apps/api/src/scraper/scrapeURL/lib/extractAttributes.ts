@@ -1,6 +1,6 @@
 import { load } from "cheerio";
 import { logger } from "../../../lib/logger";
-import { extractAttributes as _extractAttributes } from "@mendable/firecrawl-rs";
+import { extractAttributes as _extractAttributes } from "@mendable/sitecrawl-rs";
 
 type AttributeResult = {
   selector: string;

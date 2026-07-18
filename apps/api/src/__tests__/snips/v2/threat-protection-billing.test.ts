@@ -341,8 +341,8 @@ describeIf(TEST_PRODUCTION)("Threat protection billing", () => {
         const limit = 20;
         const res = await searchRaw(
           {
-            query: "firecrawl",
-            includeDomains: ["firecrawl.dev"],
+            query: "sitecrawl",
+            includeDomains: ["sitecrawl.dev"],
             limit,
             timeout: 120000,
             threatProtection: { mode: "normal", failurePolicy: "open" },
@@ -384,8 +384,8 @@ describeIf(TEST_PRODUCTION)("Threat protection billing", () => {
         // still holds a stronger property: whitelisted domains short-circuit.
         const res = await searchRaw(
           {
-            query: "firecrawl",
-            includeDomains: ["firecrawl.dev"],
+            query: "sitecrawl",
+            includeDomains: ["sitecrawl.dev"],
             limit: 5,
             timeout: 120000,
           } as any,

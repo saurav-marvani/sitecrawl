@@ -11,7 +11,7 @@ type CancelJobArgs = {
 
 const CANCEL_TIMEOUT_MS = 2_000;
 
-/** Best-effort cleanup after Firecrawl abandons an accepted async job. */
+/** Best-effort cleanup after Sitecrawl abandons an accepted async job. */
 export async function cancelJob(args: CancelJobArgs): Promise<void> {
   const { baseUrl, scrapeId, meta, fetchImpl } = args;
   try {

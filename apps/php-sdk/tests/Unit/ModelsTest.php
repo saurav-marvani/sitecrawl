@@ -2,20 +2,20 @@
 
 declare(strict_types=1);
 
-use Firecrawl\Models\CreditUsage;
-use Firecrawl\Models\Document;
-use Firecrawl\Models\Product;
-use Firecrawl\Models\Menu;
-use Firecrawl\Models\MapData;
-use Firecrawl\Models\BatchScrapeJob;
-use Firecrawl\Models\CrawlJob;
-use Firecrawl\Models\HighlightsFormat;
-use Firecrawl\Models\QueryFormat;
-use Firecrawl\Models\QuestionFormat;
-use Firecrawl\Models\ScrapeOptions;
-use Firecrawl\Models\SearchOptions;
-use Firecrawl\Models\Monitor;
-use Firecrawl\Models\MonitorCheck;
+use Sitecrawl\Models\CreditUsage;
+use Sitecrawl\Models\Document;
+use Sitecrawl\Models\Product;
+use Sitecrawl\Models\Menu;
+use Sitecrawl\Models\MapData;
+use Sitecrawl\Models\BatchScrapeJob;
+use Sitecrawl\Models\CrawlJob;
+use Sitecrawl\Models\HighlightsFormat;
+use Sitecrawl\Models\QueryFormat;
+use Sitecrawl\Models\QuestionFormat;
+use Sitecrawl\Models\ScrapeOptions;
+use Sitecrawl\Models\SearchOptions;
+use Sitecrawl\Models\Monitor;
+use Sitecrawl\Models\MonitorCheck;
 
 it('hydrates CreditUsage from nested data key', function (): void {
     $response = [
@@ -102,11 +102,11 @@ it('preserves null creditsUsed in CrawlJob', function (): void {
 it('hydrates video URL in Document', function (): void {
     $doc = Document::fromArray([
         'markdown' => '# Video',
-        'video' => 'https://storage.googleapis.com/firecrawl/video.mp4',
+        'video' => 'https://storage.googleapis.com/sitecrawl/video.mp4',
     ]);
 
     expect($doc->getMarkdown())->toBe('# Video');
-    expect($doc->getVideo())->toBe('https://storage.googleapis.com/firecrawl/video.mp4');
+    expect($doc->getVideo())->toBe('https://storage.googleapis.com/sitecrawl/video.mp4');
 });
 
 it('hydrates product into Product model in Document', function (): void {
@@ -342,12 +342,12 @@ it('serializes redactPII in ScrapeOptions', function (): void {
 
 it('serializes query format mode in ScrapeOptions', function (): void {
     $options = ScrapeOptions::with(
-        formats: [QueryFormat::with('What is Firecrawl?', QueryFormat::MODE_DIRECT_QUOTE)],
+        formats: [QueryFormat::with('What is Sitecrawl?', QueryFormat::MODE_DIRECT_QUOTE)],
     );
 
     expect($options->toArray()['formats'][0])->toMatchArray([
         'type' => 'query',
-        'prompt' => 'What is Firecrawl?',
+        'prompt' => 'What is Sitecrawl?',
         'mode' => 'directQuote',
     ]);
 });
@@ -355,25 +355,25 @@ it('serializes query format mode in ScrapeOptions', function (): void {
 it('serializes question and highlights formats in ScrapeOptions', function (): void {
     $options = ScrapeOptions::with(
         formats: [
-            QuestionFormat::with('What is Firecrawl?'),
-            HighlightsFormat::with('What is Firecrawl?'),
+            QuestionFormat::with('What is Sitecrawl?'),
+            HighlightsFormat::with('What is Sitecrawl?'),
         ],
     );
 
     expect($options->toArray()['formats'])->toMatchArray([
         [
             'type' => 'question',
-            'question' => 'What is Firecrawl?',
+            'question' => 'What is Sitecrawl?',
         ],
         [
             'type' => 'highlights',
-            'query' => 'What is Firecrawl?',
+            'query' => 'What is Sitecrawl?',
         ],
     ]);
 });
 
 it('rejects invalid query format mode', function (): void {
-    QueryFormat::with('What is Firecrawl?', 'quoted');
+    QueryFormat::with('What is Sitecrawl?', 'quoted');
 })->throws(InvalidArgumentException::class, "query mode must be 'freeform' or 'directQuote'");
 
 it('hydrates a search target and goal/judgeEnabled in Monitor', function (): void {
@@ -387,9 +387,9 @@ it('hydrates a search target and goal/judgeEnabled in Monitor', function (): voi
             [
                 'id' => 'tgt-1',
                 'type' => 'search',
-                'queries' => ['firecrawl release', 'firecrawl changelog'],
+                'queries' => ['sitecrawl release', 'sitecrawl changelog'],
                 'searchWindow' => '24h',
-                'includeDomains' => ['firecrawl.dev'],
+                'includeDomains' => ['sitecrawl.dev'],
                 'excludeDomains' => ['spam.example'],
                 'maxResults' => 10,
             ],
@@ -402,9 +402,9 @@ it('hydrates a search target and goal/judgeEnabled in Monitor', function (): voi
 
     $target = $monitor->getTargets()[0];
     expect($target['type'])->toBe('search');
-    expect($target['queries'])->toBe(['firecrawl release', 'firecrawl changelog']);
+    expect($target['queries'])->toBe(['sitecrawl release', 'sitecrawl changelog']);
     expect($target['searchWindow'])->toBe('24h');
-    expect($target['includeDomains'])->toBe(['firecrawl.dev']);
+    expect($target['includeDomains'])->toBe(['sitecrawl.dev']);
     expect($target['excludeDomains'])->toBe(['spam.example']);
     expect($target['maxResults'])->toBe(10);
 });

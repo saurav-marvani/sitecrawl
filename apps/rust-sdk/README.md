@@ -1,13 +1,13 @@
-# Firecrawl Rust SDK
-The Firecrawl Rust SDK is a library that lets you easily search, scrape, and interact with the web for AI agents — returning clean Markdown or structured data your agents can ship with. It provides a simple and intuitive interface for the Firecrawl API.
+# Sitecrawl Rust SDK
+The Sitecrawl Rust SDK is a library that lets you easily search, scrape, and interact with the web for AI agents — returning clean Markdown or structured data your agents can ship with. It provides a simple and intuitive interface for the Sitecrawl API.
 
 ## Installation
 
-To install the Firecrawl Rust SDK, add the following to your `Cargo.toml`:
+To install the Sitecrawl Rust SDK, add the following to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-firecrawl = "2.5.0"
+sitecrawl = "2.5.0"
 tokio = { version = "^1", features = ["full"] }
 ```
 
@@ -15,10 +15,10 @@ To add it in your codebase.
 
 ## Usage
 
-First, you need to obtain an API key from [firecrawl.dev](https://firecrawl.dev). Then, you need to initialize the `Client` like so:
+First, you need to obtain an API key from [sitecrawl.dev](https://sitecrawl.dev). Then, you need to initialize the `Client` like so:
 
 ```rust
-use firecrawl::Client;
+use sitecrawl::Client;
 
 #[tokio::main]
 async fn main() {
@@ -33,7 +33,7 @@ async fn main() {
 To scrape a single URL, use the `scrape_url` method. It takes the URL as a parameter and returns the scraped data as a `Document`.
 
 ```rust
-let scrape_result = app.scrape_url("https://firecrawl.dev", None).await;
+let scrape_result = app.scrape_url("https://sitecrawl.dev", None).await;
 match scrape_result {
     Ok(data) => println!("Scrape result:\n{}", data.markdown),
     Err(e) => eprintln!("Scrape failed: {}", e),
@@ -45,7 +45,7 @@ match scrape_result {
 Use `Format::Video` on supported video URLs, including YouTube and TikTok. The returned `video` field is a signed URL to the extracted video file.
 
 ```rust
-use firecrawl::{Format, ScrapeOptions};
+use sitecrawl::{Format, ScrapeOptions};
 
 let options = ScrapeOptions {
     formats: Some(vec![Format::Video]),
@@ -63,7 +63,7 @@ println!("{:?}", doc.video);
 Use `Format::Product` on product pages for structured product extraction (title, price, availability, variants). The result is returned on the document's `product` field. This is the deterministic counterpart to the LLM-based `json` format.
 
 ```rust
-use firecrawl::{Format, ScrapeOptions};
+use sitecrawl::{Format, ScrapeOptions};
 
 let options = ScrapeOptions {
     formats: Some(vec![Format::Product]),
@@ -81,7 +81,7 @@ println!("{:?}", doc.product);
 Use `Format::Menu` on restaurant/menu pages for structured menu extraction (merchant, sections, items, prices, availability). The result is returned on the document's `menu` field. This is the deterministic counterpart to the LLM-based `json` format.
 
 ```rust
-use firecrawl::{Format, ScrapeOptions};
+use sitecrawl::{Format, ScrapeOptions};
 
 let options = ScrapeOptions {
     formats: Some(vec![Format::Menu]),
@@ -99,7 +99,7 @@ println!("{:?}", doc.menu);
 Use the v2 client `parse` method to upload local files (`html`, `pdf`, `docx`, etc.) as multipart form data.
 
 ```rust
-use firecrawl::{Client, ParseFile, ParseFormat, ParseOptions};
+use sitecrawl::{Client, ParseFile, ParseFormat, ParseOptions};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -213,7 +213,7 @@ Map all associated links from a starting URL.
 
 ```rust
 let map_result = app
-    .map_url("https://firecrawl.dev", None)
+    .map_url("https://sitecrawl.dev", None)
     .await;
 
 match map_result {
@@ -227,7 +227,7 @@ match map_result {
 Use a scrape job ID to keep interacting with the replayed browser context:
 
 ```rust
-use firecrawl::{Client, ScrapeExecuteLanguage, ScrapeExecuteOptions};
+use sitecrawl::{Client, ScrapeExecuteLanguage, ScrapeExecuteOptions};
 
 let client = Client::new("fc-YOUR-API-KEY")?;
 let job_id = "550e8400-e29b-41d4-a716-446655440000";
@@ -250,11 +250,11 @@ client.stop_interaction(job_id).await?;
 
 ## Error Handling
 
-The SDK handles errors returned by the Firecrawl API and by our dependencies, and combines them into the `FirecrawlError` enum, implementing `Error`, `Debug` and `Display`. All of our methods return a `Result<T, FirecrawlError>`.
+The SDK handles errors returned by the Sitecrawl API and by our dependencies, and combines them into the `SitecrawlError` enum, implementing `Error`, `Debug` and `Display`. All of our methods return a `Result<T, SitecrawlError>`.
 
 ## Running the Tests with Cargo
 
-To ensure the functionality of the Firecrawl Rust SDK, we have included end-to-end tests using `cargo`. These tests cover various aspects of the SDK, including URL scraping, web searching, and website crawling.
+To ensure the functionality of the Sitecrawl Rust SDK, we have included end-to-end tests using `cargo`. These tests cover various aspects of the SDK, including URL scraping, web searching, and website crawling.
 
 ### Running the Tests
 
@@ -266,8 +266,8 @@ $ cargo test --test e2e_with_auth
 
 ## Contributing
 
-Contributions to the Firecrawl Rust SDK are welcome! If you find any issues or have suggestions for improvements, please open an issue or submit a pull request on the GitHub repository.
+Contributions to the Sitecrawl Rust SDK are welcome! If you find any issues or have suggestions for improvements, please open an issue or submit a pull request on the GitHub repository.
 
 ## License
 
-The Firecrawl Rust SDK is open-source and released under the [MIT License](https://opensource.org/licenses/MIT).
+The Sitecrawl Rust SDK is open-source and released under the [MIT License](https://opensource.org/licenses/MIT).

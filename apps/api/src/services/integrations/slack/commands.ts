@@ -42,7 +42,7 @@ type SlackSlashCommandInput = {
 const DEFAULT_WATCH_CRON = "0 9 * * *"; // daily at 09:00 UTC
 
 function dashboardUrl(path: string): string {
-  return new URL(path, config.FIRECRAWL_DASHBOARD_URL).toString();
+  return new URL(path, config.SITECRAWL_DASHBOARD_URL).toString();
 }
 
 function ephemeral(text: string, blocks?: unknown[]): SlackCommandResponse {
@@ -145,7 +145,7 @@ function monitorHasSearchTarget(monitor: MonitorRow): boolean {
 
 function helpResponse(): SlackCommandResponse {
   const lines = [
-    "*Firecrawl `/monitor` — commands*",
+    "*Sitecrawl `/monitor` — commands*",
     "`/monitor watch <url> [prompt]` — monitor a page; add a prompt to alert only on *meaningful* changes",
     "`/monitor watch <prompt>` — monitor the *whole web* for new results matching the prompt",
     "`/monitor list` — list your monitors",
@@ -155,26 +155,26 @@ function helpResponse(): SlackCommandResponse {
     "`/monitor pause <id>` · `/monitor resume <id>` — pause or resume",
     "`/monitor help` — show this",
     "",
-    `Account & credits: \`/firecrawl account\`. Delete monitors from the ${slackLink(dashboardUrl("/app/monitoring"), "dashboard")}.`,
+    `Account & credits: \`/sitecrawl account\`. Delete monitors from the ${slackLink(dashboardUrl("/app/monitoring"), "dashboard")}.`,
   ];
   return ephemeral(lines.join("\n"));
 }
 
-// The `/firecrawl` slash command — account/workspace things that aren't
+// The `/sitecrawl` slash command — account/workspace things that aren't
 // monitor-specific. Monitoring lives under `/monitor`.
-function firecrawlHelpResponse(): SlackCommandResponse {
+function sitecrawlHelpResponse(): SlackCommandResponse {
   const lines = [
-    "*Firecrawl `/firecrawl` — commands*",
-    "`/firecrawl account` — credits, plan usage, and concurrency",
-    "`/firecrawl status` — this workspace's Firecrawl connection",
-    "`/firecrawl help` — show this",
+    "*Sitecrawl `/sitecrawl` — commands*",
+    "`/sitecrawl account` — credits, plan usage, and concurrency",
+    "`/sitecrawl status` — this workspace's Sitecrawl connection",
+    "`/sitecrawl help` — show this",
     "",
     "Monitoring lives under `/monitor` — try `/monitor help`.",
   ];
   return ephemeral(lines.join("\n"));
 }
 
-export async function handleFirecrawlCommand(
+export async function handleSitecrawlCommand(
   input: SlackSlashCommandInput,
 ): Promise<SlackCommandResponse> {
   const [subcommand] = input.text.trim().split(/\s+/);
@@ -185,15 +185,15 @@ export async function handleFirecrawlCommand(
     case "credits":
     case "whoami":
     case "me":
-      // Bare `/firecrawl` defaults to the account overview.
+      // Bare `/sitecrawl` defaults to the account overview.
       return accountResponse(input.installation);
     case "status":
     case "connection":
       return statusResponse(input.installation);
     case "help":
-      return firecrawlHelpResponse();
+      return sitecrawlHelpResponse();
     default:
-      return firecrawlHelpResponse();
+      return sitecrawlHelpResponse();
   }
 }
 
@@ -203,7 +203,7 @@ function statusResponse(
   const workspace = installation.slack_team_name ?? installation.slack_team_id;
   return ephemeral(
     [
-      `:white_check_mark: This Slack workspace (*${escapeSlackText(workspace)}*) is linked to your Firecrawl account.`,
+      `:white_check_mark: This Slack workspace (*${escapeSlackText(workspace)}*) is linked to your Sitecrawl account.`,
       "Monitors created here bill your team's API key automatically — no key to paste.",
       `Open the ${slackLink(dashboardUrl("/app/monitoring"), "monitoring dashboard")} to configure more.`,
     ].join("\n"),
@@ -384,7 +384,7 @@ function watchFooter(monitorId: string): string[] {
       dashboardUrl(`/app/monitoring/${monitorId}`),
       "dashboard",
     )} (\`${monitorId}\`).`,
-    `_Tip: if you don't see alerts in a private channel, invite the bot with \`/invite @Firecrawl\`._`,
+    `_Tip: if you don't see alerts in a private channel, invite the bot with \`/invite @Sitecrawl\`._`,
   ];
 }
 
@@ -459,7 +459,7 @@ async function cancelResponse(
   );
 }
 
-// CLI `firecrawl --status` / `credit-usage` equivalent: credits, plan usage,
+// CLI `sitecrawl --status` / `credit-usage` equivalent: credits, plan usage,
 // and live concurrency for the linked team — no API key to paste.
 async function accountResponse(
   installation: SlackInstallationRow,
@@ -471,7 +471,7 @@ async function accountResponse(
     getConcurrencyLimitActiveJobsCount(teamId).catch(() => null),
   ]);
 
-  const lines: string[] = [":bar_chart: *Your Firecrawl account*"];
+  const lines: string[] = [":bar_chart: *Your Sitecrawl account*"];
 
   if (balance) {
     if (balance.unlimited) {
@@ -509,7 +509,7 @@ async function accountResponse(
   return ephemeral(lines.join("\n"));
 }
 
-// `firecrawl monitor get <id>` — a readable monitor summary.
+// `sitecrawl monitor get <id>` — a readable monitor summary.
 async function getResponse(
   installation: SlackInstallationRow,
   monitorId: string,
@@ -557,7 +557,7 @@ async function getResponse(
   return ephemeral(lines.join("\n"));
 }
 
-// `firecrawl monitor checks <id>` — recent check history.
+// `sitecrawl monitor checks <id>` — recent check history.
 async function checksResponse(
   installation: SlackInstallationRow,
   monitorId: string,
@@ -593,7 +593,7 @@ async function checksResponse(
   );
 }
 
-// `firecrawl monitor run <id>` — trigger a check now.
+// `sitecrawl monitor run <id>` — trigger a check now.
 async function runResponse(
   installation: SlackInstallationRow,
   monitorId: string,
@@ -631,7 +631,7 @@ async function runResponse(
   );
 }
 
-// `firecrawl monitor update <id> --state active` — resume a paused monitor.
+// `sitecrawl monitor update <id> --state active` — resume a paused monitor.
 async function resumeResponse(
   installation: SlackInstallationRow,
   monitorId: string,

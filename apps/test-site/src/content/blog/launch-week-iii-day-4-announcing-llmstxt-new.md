@@ -1,6 +1,6 @@
 ---
 title: "Announcing LLMstxt.new: Launch Week III - Day 4"
-description: "Turn any website into a clean, LLM-ready text file in seconds with llmstxt.new — powered by Firecrawl."
+description: "Turn any website into a clean, LLM-ready text file in seconds with llmstxt.new — powered by Sitecrawl."
 pubDate: "Apr 17, 2025"
 heroImage: "../../assets/blog/lw3-d4-2.webp"
 category: "updates"
@@ -17,20 +17,20 @@ Just add `llmstxt.new/` in front of any URL and get back clean, structured text 
 ## Key Features
 
 - **Instant Usage:** Add `llmstxt.new/` before any URL.
-  - Example: `llmstxt.new/https://firecrawl.dev`
+  - Example: `llmstxt.new/https://sitecrawl.dev`
 - **Two Outputs:**
   - `llms.txt` – a concise, structured summary.
   - `llms-full.txt` – the complete page content.
-- **API Friendly:** Use it via `http://llmstxt.new/{YOUR_URL}` or integrate with your Firecrawl API key for full control.
+- **API Friendly:** Use it via `http://llmstxt.new/{YOUR_URL}` or integrate with your Sitecrawl API key for full control.
 - **LLM-Ready Format:** Built for modern LLM pipelines, both training and inference.
 
-## Built on Firecrawl
+## Built on Sitecrawl
 
-llmstxt.new is powered by Firecrawl’s extraction engine, ensuring reliable parsing, smart content filtering, and high-quality text generation from any web source.
+llmstxt.new is powered by Sitecrawl’s extraction engine, ensuring reliable parsing, smart content filtering, and high-quality text generation from any web source.
 
 Whether you’re prepping datasets, building LLM apps, or feeding prompts — this tool gets you to usable text faster than ever.
 
 ## Try it Now
 
 - **Get started:** [llmstxt.new](https://llmstxt.new)
-- **Need help?** Join the [Discord](https://discord.gg/S7Enyh9Abh) or reach out via [help@firecrawl.com](mailto:help@firecrawl.com)
+- **Need help?** Join the [Discord](https://discord.gg/S7Enyh9Abh) or reach out via [help@sitecrawl.com](mailto:help@sitecrawl.com)

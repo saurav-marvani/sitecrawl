@@ -70,7 +70,7 @@ export function checkCreditsMiddleware(
               error: "sponsor_verification_expired",
               message:
                 "Sponsor verification has expired. The account holder needs to log in to confirm.",
-              login_url: "https://firecrawl.dev/signin",
+              login_url: "https://sitecrawl.dev/signin",
             });
           }
 
@@ -102,8 +102,8 @@ export function checkCreditsMiddleware(
               credit_limit: UNVERIFIED_CREDIT_LIMIT,
               credits_used: unverifiedCreditsUsed,
               sponsor_status: "pending",
-              login_url: "https://firecrawl.dev/signin",
-              upgrade_url: "https://firecrawl.dev/pricing",
+              login_url: "https://sitecrawl.dev/signin",
+              upgrade_url: "https://sitecrawl.dev/pricing",
             });
           }
 
@@ -205,8 +205,8 @@ export function checkCreditsMiddleware(
               currencyName +
               ", you can upgrade your plan at " +
               (currencyName === "credits"
-                ? "https://firecrawl.dev/pricing or try changing the request limit to a lower value"
-                : "https://www.firecrawl.dev/extract#pricing") +
+                ? "https://sitecrawl.dev/pricing or try changing the request limit to a lower value"
+                : "https://www.sitecrawl.dev/extract#pricing") +
               ".",
           });
         }
@@ -407,7 +407,7 @@ export function countryCheck(
       success: false,
       error: isSelfHosted()
         ? "Use of headers, actions, and the FIRE-1 agent is not allowed by default in your country. Please check your server configuration."
-        : "Use of headers, actions, and the FIRE-1 agent is not allowed by default in your country. Please contact us at help@firecrawl.com",
+        : "Use of headers, actions, and the FIRE-1 agent is not allowed by default in your country. Please contact us at help@sitecrawl.com",
     });
   }
 

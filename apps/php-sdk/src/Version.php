@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Firecrawl;
+namespace Sitecrawl;
 
 final class Version
 {

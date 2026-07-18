@@ -5,30 +5,30 @@ import inspect
 
 import pytest
 
-from firecrawl.v2.client import FirecrawlClient, _SCRAPE_OPTION_KEYS
-from firecrawl.v2.client_async import AsyncFirecrawlClient
-from firecrawl.v2.types import ScrapeOptions
-import firecrawl.v2.methods.crawl as crawl_mod
-from firecrawl.v2.methods.aio import crawl as async_crawl_mod
+from sitecrawl.v2.client import SitecrawlClient, _SCRAPE_OPTION_KEYS
+from sitecrawl.v2.client_async import AsyncSitecrawlClient
+from sitecrawl.v2.types import ScrapeOptions
+import sitecrawl.v2.methods.crawl as crawl_mod
+from sitecrawl.v2.methods.aio import crawl as async_crawl_mod
 
 
 @pytest.fixture
 def client():
-    return FirecrawlClient(api_key="fc-test", api_url="http://localhost:9")
+    return SitecrawlClient(api_key="fc-test", api_url="http://localhost:9")
 
 
 @pytest.fixture
 def async_client():
-    return AsyncFirecrawlClient(api_key="fc-test", api_url="http://localhost:9")
+    return AsyncSitecrawlClient(api_key="fc-test", api_url="http://localhost:9")
 
 
 class TestSyncCrawlDirectKwargs:
     def test_crawl_signature_accepts_formats(self):
-        sig = inspect.signature(FirecrawlClient.crawl)
+        sig = inspect.signature(SitecrawlClient.crawl)
         assert "formats" in sig.parameters
 
     def test_start_crawl_signature_accepts_formats(self):
-        sig = inspect.signature(FirecrawlClient.start_crawl)
+        sig = inspect.signature(SitecrawlClient.start_crawl)
         assert "formats" in sig.parameters
 
     def test_direct_kwargs_build_scrape_options(self, client, monkeypatch):
@@ -201,7 +201,7 @@ class TestThreatProtectionDirectKwargs:
 
     @staticmethod
     def _threat_protection():
-        from firecrawl.v2.types import ThreatProtectionOptions
+        from sitecrawl.v2.types import ThreatProtectionOptions
 
         return ThreatProtectionOptions(
             mode="normal", risk_score_threshold=80, blocked_tlds=["zip"]

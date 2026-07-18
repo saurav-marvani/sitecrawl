@@ -501,7 +501,7 @@ v2Router.get(
 
 // Slack integration ("Add to Slack" + /monitor slash command).
 // Public endpoints (OAuth callback, slash command, events) authenticate via the
-// OAuth state nonce / Slack request signature rather than a Firecrawl API key.
+// OAuth state nonce / Slack request signature rather than a Sitecrawl API key.
 v2Router.post(
   "/slack/oauth/start",
   authMiddleware(RateLimiterMode.CrawlStatus),

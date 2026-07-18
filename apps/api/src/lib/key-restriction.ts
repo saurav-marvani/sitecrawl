@@ -8,7 +8,7 @@ import type { TeamFlags } from "../controllers/v1/types";
 // Propagation delay for dashboard edits to key_restriction_config.
 const CONFIG_CACHE_TTL_SECONDS = 60;
 
-const MANAGE_RESTRICTIONS_URL = "https://www.firecrawl.dev/app/api-keys";
+const MANAGE_RESTRICTIONS_URL = "https://www.sitecrawl.dev/app/api-keys";
 
 const configCacheKey = (apiKeyId: number) => `key-restriction:${apiKeyId}`;
 

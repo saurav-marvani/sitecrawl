@@ -5,7 +5,7 @@ use serde_json::Value;
 use thiserror::Error;
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
-pub struct FirecrawlAPIError {
+pub struct SitecrawlAPIError {
     /// Always false.
     pub success: bool,
 
@@ -16,7 +16,7 @@ pub struct FirecrawlAPIError {
     pub details: Option<Value>,
 }
 
-impl Display for FirecrawlAPIError {
+impl Display for SitecrawlAPIError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         if let Some(details) = self.details.as_ref() {
             write!(f, "{} ({})", self.error, details)
@@ -27,7 +27,7 @@ impl Display for FirecrawlAPIError {
 }
 
 #[derive(Error, Debug)]
-pub enum FirecrawlError {
+pub enum SitecrawlError {
     #[error("{0} failed: HTTP error {1}: {2}")]
     HttpRequestFailed(String, u16, String),
     #[error("{0} failed: HTTP error: {1}")]
@@ -37,7 +37,7 @@ pub enum FirecrawlError {
     #[error("Failed to parse response: {0}")]
     ResponseParseError(serde_json::Error),
     #[error("{0} failed: {1}")]
-    APIError(String, FirecrawlAPIError),
+    APIError(String, SitecrawlAPIError),
     #[error("Job failed: {0} (status: {1:?})")]
     JobFailed(String, crate::types::JobStatus),
     #[error("Misuse: {0}")]

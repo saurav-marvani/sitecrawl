@@ -24,15 +24,15 @@ apps/playwright-service-ts/package-lock.json
 *.pyc
 .rdb
 
-apps/js-sdk/firecrawl/dist
+apps/js-sdk/sitecrawl/dist
 
-/examples/o1_web_crawler/firecrawl_env
+/examples/o1_web_crawler/sitecrawl_env
 /examples/crm_lead_enrichment/crm_lead_enrichment_env
 /.venv
-/examples/claude_web_crawler/firecrawl_env
-/examples/haiku_web_crawler/firecrawl_env
-/examples/sonnet_web_crawler/firecrawl_env
-/examples/internal_link_assitant/firecrawl_env
+/examples/claude_web_crawler/sitecrawl_env
+/examples/haiku_web_crawler/sitecrawl_env
+/examples/sonnet_web_crawler/sitecrawl_env
+/examples/internal_link_assitant/sitecrawl_env
 
 /apps/api/logs/*
 /apps/api/debug/*

@@ -1,4 +1,4 @@
-package firecrawl
+package sitecrawl
 
 import (
 	"encoding/json"
@@ -10,7 +10,7 @@ func TestScrapeOptionsSerializesQueryFormatMode(t *testing.T) {
 	payload, err := json.Marshal(ScrapeOptions{
 		FormatOptions: []interface{}{
 			QueryFormat{
-				Prompt: "What is Firecrawl?",
+				Prompt: "What is Sitecrawl?",
 				Mode:   QueryModeDirectQuote,
 			},
 		},
@@ -21,7 +21,7 @@ func TestScrapeOptionsSerializesQueryFormatMode(t *testing.T) {
 
 	jsonBody := string(payload)
 	for _, want := range []string{
-		`"formats":[{"type":"query","prompt":"What is Firecrawl?","mode":"directQuote"}]`,
+		`"formats":[{"type":"query","prompt":"What is Sitecrawl?","mode":"directQuote"}]`,
 	} {
 		if !strings.Contains(jsonBody, want) {
 			t.Fatalf("serialized query format = %s, want to contain %s", jsonBody, want)
@@ -32,8 +32,8 @@ func TestScrapeOptionsSerializesQueryFormatMode(t *testing.T) {
 func TestScrapeOptionsSerializesQuestionAndHighlightsFormats(t *testing.T) {
 	payload, err := json.Marshal(ScrapeOptions{
 		FormatOptions: []interface{}{
-			QuestionFormat{Question: "What is Firecrawl?"},
-			HighlightsFormat{Query: "What is Firecrawl?"},
+			QuestionFormat{Question: "What is Sitecrawl?"},
+			HighlightsFormat{Query: "What is Sitecrawl?"},
 		},
 	})
 	if err != nil {
@@ -42,8 +42,8 @@ func TestScrapeOptionsSerializesQuestionAndHighlightsFormats(t *testing.T) {
 
 	jsonBody := string(payload)
 	for _, want := range []string{
-		`{"type":"question","question":"What is Firecrawl?"}`,
-		`{"type":"highlights","query":"What is Firecrawl?"}`,
+		`{"type":"question","question":"What is Sitecrawl?"}`,
+		`{"type":"highlights","query":"What is Sitecrawl?"}`,
 	} {
 		if !strings.Contains(jsonBody, want) {
 			t.Fatalf("serialized formats = %s, want to contain %s", jsonBody, want)

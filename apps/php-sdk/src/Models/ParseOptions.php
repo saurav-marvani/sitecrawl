@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Firecrawl\Models;
+namespace Sitecrawl\Models;
 
-use Firecrawl\Exceptions\FirecrawlException;
+use Sitecrawl\Exceptions\SitecrawlException;
 
 /**
  * Options for parsing uploaded files via `/v2/parse`.
@@ -72,18 +72,18 @@ final class ParseOptions
         ?bool $redactPII = null,
     ): self {
         if ($timeout !== null && $timeout <= 0) {
-            throw new FirecrawlException('timeout must be positive');
+            throw new SitecrawlException('timeout must be positive');
         }
 
         if ($proxy !== null && $proxy !== '' && !in_array($proxy, ['auto', 'basic'], true)) {
-            throw new FirecrawlException("parse only supports proxy values 'auto' or 'basic'");
+            throw new SitecrawlException("parse only supports proxy values 'auto' or 'basic'");
         }
 
         if ($formats !== null) {
             foreach ($formats as $fmt) {
                 $type = self::extractFormatType($fmt);
                 if ($type !== null && in_array($type, self::UNSUPPORTED_FORMATS, true)) {
-                    throw new FirecrawlException('parse does not support format: ' . $type);
+                    throw new SitecrawlException('parse does not support format: ' . $type);
                 }
             }
         }

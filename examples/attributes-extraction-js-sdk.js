@@ -1,10 +1,10 @@
 /**
- * Example: Using Firecrawl JS SDK v2 to extract attributes from HTML elements
+ * Example: Using Sitecrawl JS SDK v2 to extract attributes from HTML elements
  */
 
-import { Firecrawl } from 'firecrawl';
+import { Sitecrawl } from 'sitecrawl';
 
-const app = new Firecrawl({ apiKey: process.env.FIRECRAWL_API_KEY });
+const app = new Sitecrawl({ apiKey: process.env.SITECRAWL_API_KEY });
 
 async function main() {
   console.log('🎯 Extracting attributes from Hacker News...');

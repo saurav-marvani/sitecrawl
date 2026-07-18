@@ -1,4 +1,4 @@
-package firecrawl
+package sitecrawl
 
 import (
 	"encoding/json"
@@ -41,9 +41,9 @@ func TestMonitorSearchTargetRoundTrips(t *testing.T) {
 	max := 25
 	target := MonitorSearchTarget{
 		Type:           "search",
-		Queries:        []string{"firecrawl pricing", "firecrawl changelog"},
+		Queries:        []string{"sitecrawl pricing", "sitecrawl changelog"},
 		SearchWindow:   "24h",
-		IncludeDomains: []string{"firecrawl.dev"},
+		IncludeDomains: []string{"sitecrawl.dev"},
 		ExcludeDomains: []string{"example.com"},
 		MaxResults:     &max,
 	}

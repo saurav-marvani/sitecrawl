@@ -32,7 +32,7 @@ const crawlTarget: MonitorTarget = {
 const searchTarget: MonitorTarget = {
   id: "target-search",
   type: "search",
-  queries: ["firecrawl launch"],
+  queries: ["sitecrawl launch"],
   searchWindow: "24h",
   alertMode: "first_match",
   depth: "deep",
@@ -118,7 +118,7 @@ describe("monitor target interest tracking", () => {
     expect(signatureFor({ ...searchTarget, maxResults: 25 })).not.toBe(base);
     expect(signatureFor({ ...searchTarget, depth: "standard" })).not.toBe(base);
     expect(
-      signatureFor({ ...searchTarget, includeDomains: ["firecrawl.dev"] }),
+      signatureFor({ ...searchTarget, includeDomains: ["sitecrawl.dev"] }),
     ).not.toBe(base);
     expect(
       signatureFor({ ...searchTarget, excludeDomains: ["spam.example"] }),

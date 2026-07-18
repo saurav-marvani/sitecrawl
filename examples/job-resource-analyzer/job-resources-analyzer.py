@@ -17,11 +17,11 @@ load_dotenv()
 
 # Initialize clients
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-firecrawl_api_key = os.getenv("FIRECRAWL_API_KEY")
+sitecrawl_api_key = os.getenv("SITECRAWL_API_KEY")
 serp_api_key = os.getenv("SERP_API_KEY")
 
 def extract_job_requirements(url, api_key):
-    """Extract essential job requirements using Firecrawl."""
+    """Extract essential job requirements using Sitecrawl."""
     print(f"{Colors.YELLOW}Extracting job requirements...{Colors.RESET}")
     
     headers = {
@@ -44,7 +44,7 @@ def extract_job_requirements(url, api_key):
     
     try:
         response = requests.post(
-            "https://api.firecrawl.dev/v1/extract",
+            "https://api.sitecrawl.dev/v1/extract",
             headers=headers,
             json=payload,
             timeout=30
@@ -62,7 +62,7 @@ def extract_job_requirements(url, api_key):
 
 def poll_extraction_result(extraction_id, api_key, interval=5, max_attempts=12):
     """Poll for extraction results."""
-    url = f"https://api.firecrawl.dev/v1/extract/{extraction_id}"
+    url = f"https://api.sitecrawl.dev/v1/extract/{extraction_id}"
     headers = {'Authorization': f'Bearer {api_key}'}
 
     for _ in range(max_attempts):
@@ -245,7 +245,7 @@ def main():
         job_url = input(f"{Colors.YELLOW}Enter job posting URL: {Colors.RESET}")
         
         # Extract requirements
-        job_info = extract_job_requirements(job_url, firecrawl_api_key)
+        job_info = extract_job_requirements(job_url, sitecrawl_api_key)
         if not job_info:
             print(f"{Colors.RED}Failed to extract job requirements.{Colors.RESET}")
             return

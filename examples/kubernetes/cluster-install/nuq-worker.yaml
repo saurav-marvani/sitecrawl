@@ -17,7 +17,7 @@ spec:
       terminationGracePeriodSeconds: 60
       containers:
         - name: nuq-worker
-          image: ghcr.io/firecrawl/firecrawl:latest
+          image: ghcr.io/sitecrawl/sitecrawl:latest
           imagePullPolicy: Always
           command: [ "node" ]
           args: [ "--max-old-space-size=3072", "dist/src/services/worker/nuq-worker.js" ]
@@ -28,9 +28,9 @@ spec:
               value: "3006"
           envFrom:
             - configMapRef:
-                name: firecrawl-config
+                name: sitecrawl-config
             - secretRef:
-                name: firecrawl-secret
+                name: sitecrawl-secret
           resources:
             requests:
               memory: "3G"

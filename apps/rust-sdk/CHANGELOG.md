@@ -10,4 +10,4 @@
 
 ### Added
 
-- [feat] Firecrawl rust sdk.
+- [feat] Sitecrawl rust sdk.

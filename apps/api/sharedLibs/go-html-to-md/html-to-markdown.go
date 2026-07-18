@@ -7,8 +7,8 @@ import "C"
 import (
 	"unsafe"
 
-	md "github.com/firecrawl/html-to-markdown"
-	"github.com/firecrawl/html-to-markdown/plugin"
+	md "github.com/sitecrawl/html-to-markdown"
+	"github.com/sitecrawl/html-to-markdown/plugin"
 )
 
 //export ConvertHTMLToMarkdown

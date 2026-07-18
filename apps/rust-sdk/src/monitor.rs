@@ -1,10 +1,10 @@
-//! Monitor endpoint for Firecrawl API v2.
+//! Monitor endpoint for Sitecrawl API v2.
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::client::Client;
-use crate::FirecrawlError;
+use crate::SitecrawlError;
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
@@ -284,7 +284,7 @@ impl Client {
     pub async fn create_monitor(
         &self,
         request: CreateMonitorRequest,
-    ) -> Result<Monitor, FirecrawlError> {
+    ) -> Result<Monitor, SitecrawlError> {
         let response = self
             .client
             .post(self.url("/monitor"))
@@ -292,7 +292,7 @@ impl Client {
             .json(&request)
             .send()
             .await
-            .map_err(|e| FirecrawlError::HttpError("Creating monitor".to_string(), e))?;
+            .map_err(|e| SitecrawlError::HttpError("Creating monitor".to_string(), e))?;
 
         let response: DataResponse<Monitor> =
             self.handle_response(response, "create monitor").await?;
@@ -303,14 +303,14 @@ impl Client {
         &self,
         limit: Option<u32>,
         offset: Option<u32>,
-    ) -> Result<Vec<Monitor>, FirecrawlError> {
+    ) -> Result<Vec<Monitor>, SitecrawlError> {
         let response = self
             .client
             .get(self.url(&format!("/monitor{}", query(limit, offset, None))))
             .headers(self.prepare_headers(None))
             .send()
             .await
-            .map_err(|e| FirecrawlError::HttpError("Listing monitors".to_string(), e))?;
+            .map_err(|e| SitecrawlError::HttpError("Listing monitors".to_string(), e))?;
 
         let response: DataResponse<Vec<Monitor>> =
             self.handle_response(response, "list monitors").await?;
@@ -320,14 +320,14 @@ impl Client {
     pub async fn get_monitor(
         &self,
         monitor_id: impl AsRef<str>,
-    ) -> Result<Monitor, FirecrawlError> {
+    ) -> Result<Monitor, SitecrawlError> {
         let response = self
             .client
             .get(self.url(&format!("/monitor/{}", monitor_id.as_ref())))
             .headers(self.prepare_headers(None))
             .send()
             .await
-            .map_err(|e| FirecrawlError::HttpError("Getting monitor".to_string(), e))?;
+            .map_err(|e| SitecrawlError::HttpError("Getting monitor".to_string(), e))?;
 
         let response: DataResponse<Monitor> = self.handle_response(response, "get monitor").await?;
         Ok(response.data)
@@ -337,7 +337,7 @@ impl Client {
         &self,
         monitor_id: impl AsRef<str>,
         request: UpdateMonitorRequest,
-    ) -> Result<Monitor, FirecrawlError> {
+    ) -> Result<Monitor, SitecrawlError> {
         let response = self
             .client
             .patch(self.url(&format!("/monitor/{}", monitor_id.as_ref())))
@@ -345,7 +345,7 @@ impl Client {
             .json(&request)
             .send()
             .await
-            .map_err(|e| FirecrawlError::HttpError("Updating monitor".to_string(), e))?;
+            .map_err(|e| SitecrawlError::HttpError("Updating monitor".to_string(), e))?;
 
         let response: DataResponse<Monitor> =
             self.handle_response(response, "update monitor").await?;
@@ -355,14 +355,14 @@ impl Client {
     pub async fn delete_monitor(
         &self,
         monitor_id: impl AsRef<str>,
-    ) -> Result<bool, FirecrawlError> {
+    ) -> Result<bool, SitecrawlError> {
         let response = self
             .client
             .delete(self.url(&format!("/monitor/{}", monitor_id.as_ref())))
             .headers(self.prepare_headers(None))
             .send()
             .await
-            .map_err(|e| FirecrawlError::HttpError("Deleting monitor".to_string(), e))?;
+            .map_err(|e| SitecrawlError::HttpError("Deleting monitor".to_string(), e))?;
 
         let response: SuccessResponse = self.handle_response(response, "delete monitor").await?;
         Ok(response.success)
@@ -371,7 +371,7 @@ impl Client {
     pub async fn run_monitor(
         &self,
         monitor_id: impl AsRef<str>,
-    ) -> Result<MonitorCheck, FirecrawlError> {
+    ) -> Result<MonitorCheck, SitecrawlError> {
         let response = self
             .client
             .post(self.url(&format!("/monitor/{}/run", monitor_id.as_ref())))
@@ -379,7 +379,7 @@ impl Client {
             .json(&serde_json::json!({}))
             .send()
             .await
-            .map_err(|e| FirecrawlError::HttpError("Running monitor".to_string(), e))?;
+            .map_err(|e| SitecrawlError::HttpError("Running monitor".to_string(), e))?;
 
         let response: DataResponse<MonitorCheck> =
             self.handle_response(response, "run monitor").await?;
@@ -391,7 +391,7 @@ impl Client {
         monitor_id: impl AsRef<str>,
         limit: Option<u32>,
         offset: Option<u32>,
-    ) -> Result<Vec<MonitorCheck>, FirecrawlError> {
+    ) -> Result<Vec<MonitorCheck>, SitecrawlError> {
         let path = format!(
             "/monitor/{}/checks{}",
             monitor_id.as_ref(),
@@ -403,7 +403,7 @@ impl Client {
             .headers(self.prepare_headers(None))
             .send()
             .await
-            .map_err(|e| FirecrawlError::HttpError("Listing monitor checks".to_string(), e))?;
+            .map_err(|e| SitecrawlError::HttpError("Listing monitor checks".to_string(), e))?;
 
         let response: DataResponse<Vec<MonitorCheck>> = self
             .handle_response(response, "list monitor checks")
@@ -418,7 +418,7 @@ impl Client {
         limit: Option<u32>,
         skip: Option<u32>,
         status: Option<&str>,
-    ) -> Result<MonitorCheckDetail, FirecrawlError> {
+    ) -> Result<MonitorCheckDetail, SitecrawlError> {
         let path = format!(
             "/monitor/{}/checks/{}{}",
             monitor_id.as_ref(),
@@ -431,7 +431,7 @@ impl Client {
             .headers(self.prepare_headers(None))
             .send()
             .await
-            .map_err(|e| FirecrawlError::HttpError("Getting monitor check".to_string(), e))?;
+            .map_err(|e| SitecrawlError::HttpError("Getting monitor check".to_string(), e))?;
 
         let response: DataResponse<MonitorCheckDetail> =
             self.handle_response(response, "get monitor check").await?;
@@ -445,7 +445,7 @@ impl Client {
                 .send()
                 .await
                 .map_err(|e| {
-                    FirecrawlError::HttpError("Getting monitor check page".to_string(), e)
+                    SitecrawlError::HttpError("Getting monitor check page".to_string(), e)
                 })?;
             let response: DataResponse<MonitorCheckDetail> = self
                 .handle_response(response, "get monitor check page")
@@ -464,7 +464,7 @@ impl Client {
         limit: Option<u32>,
         skip: Option<u32>,
         status: Option<&str>,
-    ) -> Result<MonitorCheckDetail, FirecrawlError> {
+    ) -> Result<MonitorCheckDetail, SitecrawlError> {
         let path = format!(
             "/monitor/{}/checks/{}{}",
             monitor_id.as_ref(),
@@ -477,7 +477,7 @@ impl Client {
             .headers(self.prepare_headers(None))
             .send()
             .await
-            .map_err(|e| FirecrawlError::HttpError("Getting monitor check".to_string(), e))?;
+            .map_err(|e| SitecrawlError::HttpError("Getting monitor check".to_string(), e))?;
 
         let response: DataResponse<MonitorCheckDetail> =
             self.handle_response(response, "get monitor check").await?;
@@ -494,8 +494,8 @@ mod tests {
         let target = MonitorSearchTarget {
             id: Some("t1".to_string()),
             queries: vec![
-                "firecrawl funding".to_string(),
-                "firecrawl news".to_string(),
+                "sitecrawl funding".to_string(),
+                "sitecrawl news".to_string(),
             ],
             search_window: Some(MonitorSearchWindow::TwentyFourHours),
             include_domains: Some(vec!["techcrunch.com".to_string()]),
@@ -506,7 +506,7 @@ mod tests {
         let json = serde_json::to_value(&target).unwrap();
         assert_eq!(json["type"], "search");
         assert_eq!(json["id"], "t1");
-        assert_eq!(json["queries"][0], "firecrawl funding");
+        assert_eq!(json["queries"][0], "sitecrawl funding");
         assert_eq!(json["searchWindow"], "24h");
         assert_eq!(json["includeDomains"][0], "techcrunch.com");
         assert_eq!(json["maxResults"], 10);

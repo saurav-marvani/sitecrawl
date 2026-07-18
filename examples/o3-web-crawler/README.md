@@ -1,6 +1,6 @@
 # O3 Web Crawler
 
-A Python tool that uses OpenAI's o3 model and Firecrawl to intelligently crawl websites based on specific objectives.
+A Python tool that uses OpenAI's o3 model and Sitecrawl to intelligently crawl websites based on specific objectives.
 
 ## Features
 
@@ -12,7 +12,7 @@ A Python tool that uses OpenAI's o3 model and Firecrawl to intelligently crawl w
 ## Prerequisites
 
 - Python 3.6+
-- Firecrawl API key
+- Sitecrawl API key
 - OpenAI API key
 
 ## Installation

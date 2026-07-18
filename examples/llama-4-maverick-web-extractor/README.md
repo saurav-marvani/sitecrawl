@@ -1,12 +1,12 @@
 # Web Information Extractor with Llama 4 Maverick
 
-This tool uses Llama 4 Maverick (via Together AI), SerpAPI, and Firecrawl to automatically extract structured information about companies from the web. It performs intelligent URL selection and information extraction from web content.
+This tool uses Llama 4 Maverick (via Together AI), SerpAPI, and Sitecrawl to automatically extract structured information about companies from the web. It performs intelligent URL selection and information extraction from web content.
 
 ## Features
 
 - Automated Google search using SerpAPI
 - Intelligent URL selection using Llama 4 Maverick
-- Structured data extraction using Firecrawl
+- Structured data extraction using Sitecrawl
 - Color-coded console output for better readability
 
 ## Prerequisites
@@ -14,7 +14,7 @@ This tool uses Llama 4 Maverick (via Together AI), SerpAPI, and Firecrawl to aut
 - Python 3.8+
 - Together AI API key
 - SerpAPI API key
-- Firecrawl API key
+- Sitecrawl API key
 
 ## Installation
 
@@ -42,7 +42,7 @@ cp .env.example .env
 ```
 TOGETHER_API_KEY=your_together_ai_key
 SERP_API_KEY=your_serpapi_key
-FIRECRAWL_API_KEY=your_firecrawl_key
+SITECRAWL_API_KEY=your_sitecrawl_key
 ```
 
 ## Usage

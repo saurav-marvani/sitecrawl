@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>Sitecrawl</RootNamespace>
+
+    <!-- NuGet package metadata -->
+    <PackageId>sitecrawl-sdk</PackageId>
+    <Version>1.9.1</Version>
+    <Authors>Sitecrawl</Authors>
+    <Company>Sitecrawl</Company>
+    <Description>.NET SDK for the Sitecrawl API - web scraping, crawling, and data extraction</Description>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/saurav-marvani/kineticrawl</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/saurav-marvani/kineticrawl</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageTags>sitecrawl;web-scraping;crawling;api;sdk</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Sitecrawl.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.Text.Json" Version="9.0.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="../README.md" Pack="true" PackagePath="/" />
+  </ItemGroup>
+
+</Project>

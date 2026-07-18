@@ -1,12 +1,12 @@
-import { Firecrawl } from 'firecrawl';
+import { Sitecrawl } from 'sitecrawl';
 
 // Placeholder v1 example (JavaScript)
 // Mirrors the older SDK usage. Replace with your API key before running.
 
 async function main() {
-  const app = new Firecrawl({ apiKey: process.env.FIRECRAWL_API_KEY || 'fc-YOUR_API_KEY' });
+  const app = new Sitecrawl({ apiKey: process.env.SITECRAWL_API_KEY || 'fc-YOUR_API_KEY' });
 
-  const scrape = await app.v1.scrapeUrl('firecrawl.dev');
+  const scrape = await app.v1.scrapeUrl('sitecrawl.dev');
   if (scrape && scrape.success) console.log(scrape.markdown);
 
   const crawl = await app.v1.crawlUrl('mendable.ai', { excludePaths: ['blog/*'], limit: 3 });

@@ -35,7 +35,7 @@ describeIf(TEST_PRODUCTION)("Search feedback tests", () => {
     "records feedback and refunds 1 credit on first submission",
     async () => {
       const raw = await searchRawFull(
-        { query: "firecrawl", limit: 3 },
+        { query: "sitecrawl", limit: 3 },
         identity,
       );
       expect(raw.statusCode).toBe(200);
@@ -64,7 +64,7 @@ describeIf(TEST_PRODUCTION)("Search feedback tests", () => {
             },
           ],
           querySuggestions:
-            "Include site:firecrawl.dev when the user mentions firecrawl by name.",
+            "Include site:sitecrawl.dev when the user mentions sitecrawl by name.",
         },
         identity,
       );
@@ -81,7 +81,7 @@ describeIf(TEST_PRODUCTION)("Search feedback tests", () => {
     "is idempotent — second submission returns 0 refund",
     async () => {
       const raw = await searchRawFull(
-        { query: "firecrawl docs", limit: 3 },
+        { query: "sitecrawl docs", limit: 3 },
         identity,
       );
       expect(raw.statusCode).toBe(200);
@@ -122,7 +122,7 @@ describeIf(TEST_PRODUCTION)("Search feedback tests", () => {
     "rejects feedback for a search owned by another team",
     async () => {
       const raw = await searchRawFull(
-        { query: "firecrawl api", limit: 3 },
+        { query: "sitecrawl api", limit: 3 },
         identity,
       );
       expect(raw.statusCode).toBe(200);
@@ -132,7 +132,7 @@ describeIf(TEST_PRODUCTION)("Search feedback tests", () => {
         searchId,
         {
           rating: "good",
-          valuableSources: [{ url: "https://firecrawl.dev/" }],
+          valuableSources: [{ url: "https://sitecrawl.dev/" }],
         },
         secondaryIdentity,
       );
@@ -166,7 +166,7 @@ describeIf(TEST_PRODUCTION)("Search feedback tests", () => {
         "not-a-uuid",
         {
           rating: "good",
-          valuableSources: [{ url: "https://firecrawl.dev/" }],
+          valuableSources: [{ url: "https://sitecrawl.dev/" }],
         },
         identity,
       );
@@ -180,7 +180,7 @@ describeIf(TEST_PRODUCTION)("Search feedback tests", () => {
     "rejects an invalid rating value",
     async () => {
       const raw = await searchRawFull(
-        { query: "firecrawl", limit: 3 },
+        { query: "sitecrawl", limit: 3 },
         identity,
       );
       expect(raw.statusCode).toBe(200);
@@ -200,7 +200,7 @@ describeIf(TEST_PRODUCTION)("Search feedback tests", () => {
     "rejects feedback with a non-http URL in valuableSources",
     async () => {
       const raw = await searchRawFull(
-        { query: "firecrawl", limit: 3 },
+        { query: "sitecrawl", limit: 3 },
         identity,
       );
       expect(raw.statusCode).toBe(200);
@@ -225,7 +225,7 @@ describeIf(TEST_PRODUCTION)("Search feedback tests", () => {
     "rejects 'good' rating without any valuableSources",
     async () => {
       const raw = await searchRawFull(
-        { query: "firecrawl", limit: 3 },
+        { query: "sitecrawl", limit: 3 },
         identity,
       );
       expect(raw.statusCode).toBe(200);
@@ -249,7 +249,7 @@ describeIf(TEST_PRODUCTION)("Search feedback tests", () => {
     "rejects 'partial' rating with no sources and no missing content",
     async () => {
       const raw = await searchRawFull(
-        { query: "firecrawl", limit: 3 },
+        { query: "sitecrawl", limit: 3 },
         identity,
       );
       expect(raw.statusCode).toBe(200);
@@ -269,7 +269,7 @@ describeIf(TEST_PRODUCTION)("Search feedback tests", () => {
     "rejects 'bad' rating with no missing content or query suggestions",
     async () => {
       const raw = await searchRawFull(
-        { query: "firecrawl", limit: 3 },
+        { query: "sitecrawl", limit: 3 },
         identity,
       );
       expect(raw.statusCode).toBe(200);
@@ -278,7 +278,7 @@ describeIf(TEST_PRODUCTION)("Search feedback tests", () => {
         raw.body.id,
         {
           rating: "bad",
-          valuableSources: [{ url: "https://firecrawl.dev/" }],
+          valuableSources: [{ url: "https://sitecrawl.dev/" }],
         },
         identity,
       );
@@ -292,7 +292,7 @@ describeIf(TEST_PRODUCTION)("Search feedback tests", () => {
     "rejects missingContent entries without a topic",
     async () => {
       const raw = await searchRawFull(
-        { query: "firecrawl", limit: 3 },
+        { query: "sitecrawl", limit: 3 },
         identity,
       );
       expect(raw.statusCode).toBe(200);
@@ -316,7 +316,7 @@ describeIf(TEST_PRODUCTION)("Search feedback tests", () => {
     "accepts a structured 'partial' rating with multiple missing topics",
     async () => {
       const raw = await searchRawFull(
-        { query: "firecrawl pricing", limit: 3 },
+        { query: "sitecrawl pricing", limit: 3 },
         identity,
       );
       expect(raw.statusCode).toBe(200);
@@ -370,7 +370,7 @@ describeIf(TEST_PRODUCTION)("Search feedback tests", () => {
         search_id: seedSearchId,
         team_id: cappedIdentity.teamId,
         overall_rating: "good",
-        valuable_sources: [{ url: "https://firecrawl.dev/" }],
+        valuable_sources: [{ url: "https://sitecrawl.dev/" }],
         missing_content: [],
         integration: null,
         origin: "test-seed",
@@ -379,7 +379,7 @@ describeIf(TEST_PRODUCTION)("Search feedback tests", () => {
 
       // Now do a real search and submit feedback.
       const raw = await searchRawFull(
-        { query: "firecrawl daily cap", limit: 3 },
+        { query: "sitecrawl daily cap", limit: 3 },
         cappedIdentity,
       );
       expect(raw.statusCode).toBe(200);
@@ -414,7 +414,7 @@ describeIf(TEST_PRODUCTION)("Search feedback tests", () => {
     "rejects feedback submitted outside the configured time window",
     async () => {
       const raw = await searchRawFull(
-        { query: "firecrawl windowed", limit: 3 },
+        { query: "sitecrawl windowed", limit: 3 },
         identity,
       );
       expect(raw.statusCode).toBe(200);
@@ -436,7 +436,7 @@ describeIf(TEST_PRODUCTION)("Search feedback tests", () => {
         searchId,
         {
           rating: "good",
-          valuableSources: [{ url: "https://firecrawl.dev/" }],
+          valuableSources: [{ url: "https://sitecrawl.dev/" }],
         },
         identity,
       );

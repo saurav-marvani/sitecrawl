@@ -8,7 +8,7 @@ import { CostTracking } from "../../lib/cost-tracking";
 import {
   processSitemap,
   SitemapProcessingResult,
-} from "@mendable/firecrawl-rs";
+} from "@mendable/sitecrawl-rs";
 import { fetchFileToBuffer } from "../scrapeURL/engines/utils/downloadFile";
 import { gunzip } from "node:zlib";
 import { promisify } from "node:util";
